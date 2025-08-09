@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none">
+  <!-- Background circle -->
+  <circle cx="8" cy="8" r="8" fill="#16a34a"/>
+  
+  <!-- Plant stem -->
+  <rect x="7.5" y="6" width="1" height="6" fill="#ffffff" rx="0.5"/>
+  
+  <!-- Leaves -->
+  <ellipse cx="6" cy="5" rx="1.5" ry="1" fill="#22c55e" transform="rotate(-30 6 5)"/>
+  <ellipse cx="10" cy="5" rx="1.5" ry="1" fill="#22c55e" transform="rotate(30 10 5)"/>
+  <ellipse cx="5.5" cy="7.5" rx="1.2" ry="0.8" fill="#22c55e" transform="rotate(-45 5.5 7.5)"/>
+  <ellipse cx="10.5" cy="7.5" rx="1.2" ry="0.8" fill="#22c55e" transform="rotate(45 10.5 7.5)"/>
+</svg>

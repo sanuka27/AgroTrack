@@ -1,0 +1,357 @@
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { GeminiLogo } from "@/components/ui/gemini-logo";
+import { useAuth } from "@/contexts/AuthContext";
+import { Camera, Image as ImageIcon, Send, Sparkles, Bot, Loader2, Leaf, AlertTriangle, Lock, Users, TrendingUp } from "lucide-react";
+
+interface AnalysisResult {
+  diagnosis: string;
+  confidence: number;
+  causes: string[];
+  treatments: string[];
+  nextActions: string[];
+}
+
+export function AIAssistant() {
+  const { user } = useAuth();
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [guestUsageCount, setGuestUsageCount] = useState(() => {
+    return parseInt(sessionStorage.getItem('guest_ai_usage') || '0');
+  });
+
+  const GUEST_USAGE_LIMIT = 2;
+
+  const handleFile = (f: File | null) => {
+    setFile(f);
+    if (f) {
+      const url = URL.createObjectURL(f);
+      setPreview(url);
+    } else {
+      setPreview(null);
+    }
+  };
+
+  const canAnalyze = useMemo(() => {
+    if (!user && guestUsageCount >= GUEST_USAGE_LIMIT) return false;
+    return !!file || prompt.trim().length > 5;
+  }, [file, prompt, user, guestUsageCount]);
+
+  const analyze = () => {
+    if (!canAnalyze) return;
+    
+    // Track guest usage
+    if (!user) {
+      const newCount = guestUsageCount + 1;
+      setGuestUsageCount(newCount);
+      sessionStorage.setItem('guest_ai_usage', newCount.toString());
+    }
+    
+    setLoading(true);
+    setResult(null);
+    setTimeout(() => {
+      setResult({
+        diagnosis: "Nutrient Deficiency (Likely Potassium)",
+        confidence: 0.87,
+        causes: [
+          "Irregular fertilization schedule",
+          "Soil potassium lockout due to pH imbalance",
+          "Overwatering reducing nutrient uptake",
+        ],
+        treatments: [
+          "Apply a balanced organic fertilizer (NPK 5-5-5) with added potassium",
+          "Test soil pH and adjust to 6.0-7.0 if necessary",
+          "Reduce watering frequency and ensure proper drainage",
+        ],
+        nextActions: [
+          "Apply fertilizer within 2-3 days",
+          "Monitor for improvement over 1-2 weeks",
+          "Schedule monthly fertilization going forward",
+        ],
+      });
+      setLoading(false);
+    }, 900);
+  };
+
+  return (
+    <section id="ai" className="py-16 lg:py-24 bg-background">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="text-center space-y-3 mb-10 animate-fade-in">
+          <div className="inline-flex items-center gap-2 bg-green-50 border border-green-200 px-4 py-2 rounded-full text-sm font-medium">
+            <Sparkles className="w-4 h-4 text-green-600" />
+            <span className="text-green-700 font-semibold">Live AI Assistant</span>
+          </div>
+          <h2 className="text-3xl lg:text-5xl font-bold text-foreground">
+            Diagnose • Plan • Grow
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Upload a plant photo or describe the issue. AgroTrack's AI provides instant diagnosis, care plans, and reminders.
+          </p>
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <span>Powered by</span>
+            <GeminiLogo className="h-4" />
+            <span>— demo simulation</span>
+          </div>
+        </div>
+
+        {/* Guest Limitations Banner */}
+        {!user && (
+          <div className="mb-8 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6">
+            <div className="flex items-start space-x-4">
+              <div className="bg-amber-100 p-2 rounded-full flex-shrink-0">
+                <Lock className="w-5 h-5 text-amber-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-900 mb-2">
+                  🌱 Guest Mode: Limited AI Analysis ({GUEST_USAGE_LIMIT - guestUsageCount} remaining)
+                </h3>
+                <p className="text-amber-800 mb-4">
+                  You're using our AI as a guest. Join AgroTrack for unlimited plant analysis, personalized care plans, and smart reminders!
+                </p>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                  <div className="flex items-center space-x-2 text-amber-700">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-sm">Unlimited AI analysis</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-amber-700">
+                    <TrendingUp className="w-4 h-4" />
+                    <span className="text-sm">Plant growth tracking</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-amber-700">
+                    <Users className="w-4 h-4" />
+                    <span className="text-sm">Community support</span>
+                  </div>
+                </div>
+                
+                {guestUsageCount >= GUEST_USAGE_LIMIT ? (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <p className="text-red-800 font-medium mb-2">🚫 Guest limit reached!</p>
+                    <p className="text-red-700 text-sm">You've used all guest analyses. Sign up for unlimited access!</p>
+                  </div>
+                ) : null}
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button asChild className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
+                    <Link to="/register">
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Get Unlimited Access - Free!
+                    </Link>
+                  </Button>
+                  <Button variant="outline" asChild>
+                    <Link to="/login">Already a member? Sign In</Link>
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Input Panel */}
+          <Card className="hover-scale border-border/60">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Camera className="w-5 h-5 text-primary" />
+                Plant Analysis
+              </CardTitle>
+              <CardDescription>
+                Upload a photo or describe your plant's symptoms for AI analysis
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* File Upload */}
+              <div className="border-2 border-dashed border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
+                <div className="text-center">
+                  <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Drag and drop or click to upload
+                  </p>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFile(e.target.files?.[0] || null)}
+                    className="text-sm file:mr-4 file:py-1 file:px-2 file:border-0 file:rounded file:bg-primary file:text-primary-foreground file:hover:bg-primary/90"
+                  />
+                </div>
+                
+                {preview && (
+                  <div className="mt-4">
+                    <img 
+                      src={preview} 
+                      alt="Plant preview" 
+                      className="max-h-32 mx-auto rounded object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Text Description */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Describe the issue (optional)
+                </label>
+                <Textarea
+                  placeholder="Describe any symptoms you've noticed: yellowing leaves, brown spots, wilting, etc."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  className="min-h-20 resize-none"
+                />
+              </div>
+
+              {/* Analyze Button */}
+              <Button 
+                onClick={analyze}
+                disabled={!canAnalyze || loading}
+                className="w-full bg-primary hover:bg-primary/90"
+                size="lg"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : !user && guestUsageCount >= GUEST_USAGE_LIMIT ? (
+                  <>
+                    <Lock className="w-4 h-4 mr-2" />
+                    Sign Up for Unlimited Access
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    {!user ? `Analyze Plant (${GUEST_USAGE_LIMIT - guestUsageCount} left)` : 'Analyze Plant'}
+                  </>
+                )}
+              </Button>
+              
+              {!user && guestUsageCount >= GUEST_USAGE_LIMIT && (
+                <div className="mt-3 text-center">
+                  <Button asChild variant="outline" className="w-full">
+                    <Link to="/register">
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Continue with Free Account
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Results Panel */}
+          <Card className="hover-scale border-border/60">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bot className="w-5 h-5 text-primary" />
+                AI Analysis Results
+              </CardTitle>
+              <CardDescription>
+                Detailed diagnosis and treatment recommendations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading && (
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <div className="relative">
+                    <div className="w-16 h-16 border-4 border-primary/20 rounded-full animate-pulse" />
+                    <Bot className="w-8 h-8 text-primary absolute top-4 left-4 animate-bounce" />
+                  </div>
+                  <p className="text-sm text-muted-foreground text-center">
+                    AI is analyzing your plant...
+                  </p>
+                </div>
+              )}
+
+              {!loading && !result && (
+                <div className="text-center py-12 space-y-4">
+                  <Leaf className="w-16 h-16 text-muted-foreground/40 mx-auto" />
+                  <div>
+                    <p className="font-medium text-muted-foreground">Ready to help!</p>
+                    <p className="text-sm text-muted-foreground">
+                      Upload a photo or describe symptoms to get started
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {result && (
+                <div className="space-y-6">
+                  {/* Diagnosis */}
+                  <div className="border border-border rounded-lg p-4 bg-accent/5">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5" />
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-foreground mb-1">Diagnosis</h3>
+                        <p className="text-sm text-muted-foreground mb-2">{result.diagnosis}</p>
+                        <Badge variant="secondary" className="text-xs">
+                          {Math.round(result.confidence * 100)}% confidence
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Causes */}
+                  <div>
+                    <h4 className="font-medium text-foreground mb-3">Likely Causes</h4>
+                    <ul className="space-y-2">
+                      {result.causes.map((cause, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <div className="w-1.5 h-1.5 bg-destructive rounded-full mt-2 flex-shrink-0" />
+                          <span className="text-muted-foreground">{cause}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Treatments */}
+                  <div>
+                    <h4 className="font-medium text-foreground mb-3">Recommended Treatments</h4>
+                    <ul className="space-y-2">
+                      {result.treatments.map((treatment, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0" />
+                          <span className="text-muted-foreground">{treatment}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Next Actions */}
+                  <div>
+                    <h4 className="font-medium text-foreground mb-3">Next Actions</h4>
+                    <ul className="space-y-2">
+                      {result.nextActions.map((action, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2 flex-shrink-0" />
+                          <span className="text-muted-foreground">{action}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 pt-4">
+                    <Button variant="outline" size="sm" className="flex-1">
+                      Save Results
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1">
+                      Set Reminders
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </section>
+  );
+}

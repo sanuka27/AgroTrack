@@ -1,0 +1,170 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* AgroTrack Nature-Inspired Color Palette */
+    --background: 0 0% 100%;
+    --foreground: 140 100% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 140 100% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 140 100% 15%;
+
+    /* Primary green theme */
+    --primary: 120 100% 25%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 120 100% 22%;
+
+    /* Secondary nature tones */
+    --secondary: 120 25% 96%;
+    --secondary-foreground: 140 100% 15%;
+
+    --muted: 120 20% 94%;
+    --muted-foreground: 120 30% 40%;
+
+    --accent: 100 100% 35%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Success/growth colors */
+    --success: 85 100% 44%;
+    --success-foreground: 0 0% 100%;
+
+    /* Bright accent for CTAs */
+    --vibrant: 80 90% 53%;
+    --vibrant-foreground: 140 100% 15%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 120 20% 90%;
+    --input: 120 20% 94%;
+    --ring: 120 100% 25%;
+
+    --radius: 0.75rem;
+
+    /* Custom gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(140 100% 15%), hsl(120 100% 25%));
+    --gradient-hero: linear-gradient(135deg, hsl(120 100% 25%), hsl(100 100% 35%), hsl(85 100% 44%));
+    --gradient-accent: linear-gradient(90deg, hsl(85 100% 44%), hsl(80 90% 53%));
+    --gradient-subtle: linear-gradient(180deg, hsl(120 25% 98%), hsl(120 20% 94%));
+
+    /* Shadows with green tint */
+    --shadow-soft: 0 2px 8px hsl(120 100% 25% / 0.08);
+    --shadow-medium: 0 4px 16px hsl(120 100% 25% / 0.12);
+    --shadow-strong: 0 8px 32px hsl(120 100% 25% / 0.16);
+    --shadow-glow: 0 0 24px hsl(85 100% 44% / 0.3);
+
+    /* Animation timings */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Underline Animation */
+  .story-link {
+    position: relative;
+    display: inline-block;
+  }
+  .story-link::after {
+    content: "";
+    position: absolute;
+    width: 100%;
+    transform: scaleX(0);
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background: hsl(var(--primary));
+    transform-origin: bottom right;
+    transition: transform 300ms ease;
+  }
+  .story-link:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom left;
+  }
+
+  /* Hover Scale Animation */
+  .hover-scale {
+    transition: transform 200ms ease;
+  }
+  .hover-scale:hover {
+    transform: scale(1.05);
+  }
+
+  /* Pulse Animation */
+  .pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
