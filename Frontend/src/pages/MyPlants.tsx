@@ -1,13 +1,80 @@
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
+import { AddPlantModal } from "@/components/AddPlantModal";
+import { PlantCard } from "@/components/PlantCard";
+import { Plant } from "@/types/plant";
 import { Leaf, Plus, Calendar, Droplets, Sun, Bell, TrendingUp, MessageSquare } from "lucide-react";
 
 const MyPlants = () => {
   const { user } = useAuth();
+  const [plants, setPlants] = useState<Plant[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPlant, setEditingPlant] = useState<Plant | null>(null);
+
+  // Load plants from localStorage on mount
+  useEffect(() => {
+    const storedPlants = localStorage.getItem('agrotrack:plants');
+    if (storedPlants) {
+      try {
+        const parsedPlants = JSON.parse(storedPlants);
+        setPlants(parsedPlants);
+      } catch (error) {
+        console.error('Error loading plants from localStorage:', error);
+      }
+    }
+  }, []);
+
+  // Save plants to localStorage whenever plants change
+  useEffect(() => {
+    localStorage.setItem('agrotrack:plants', JSON.stringify(plants));
+  }, [plants]);
+
+  // CRUD operations
+  const handleCreatePlant = (newPlant: Plant) => {
+    setPlants(prev => [newPlant, ...prev]);
+  };
+
+  const handleUpdatePlant = (updatedPlant: Plant) => {
+    setPlants(prev => prev.map(plant => 
+      plant.id === updatedPlant.id ? updatedPlant : plant
+    ));
+  };
+
+  const handleDeletePlant = (plantId: string) => {
+    setPlants(prev => prev.filter(plant => plant.id !== plantId));
+  };
+
+  const handleWateredPlant = (plantId: string) => {
+    setPlants(prev => prev.map(plant => 
+      plant.id === plantId 
+        ? { ...plant, lastWatered: new Date().toISOString() }
+        : plant
+    ));
+  };
+
+  // Modal handlers
+  const handleOpenModal = (plant?: Plant) => {
+    setEditingPlant(plant || null);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingPlant(null);
+  };
+
+  const handleSubmitPlant = (plantData: Plant) => {
+    if (editingPlant) {
+      handleUpdatePlant(plantData);
+    } else {
+      handleCreatePlant(plantData);
+    }
+  };
   
   return (
     <div className="min-h-screen bg-background">
@@ -29,7 +96,13 @@ const MyPlants = () => {
               AI Plant Analysis
             </Link>
           </Button>
-          <Button variant="outline" size="lg" className="h-20 flex-col">
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="h-20 flex-col"
+            onClick={() => handleOpenModal()}
+            data-testid="add-plant-btn"
+          >
             <Plus className="w-8 h-8 mb-2" />
             Add New Plant
           </Button>
@@ -169,7 +242,7 @@ const MyPlants = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-green-800">Your Plant Collection</CardTitle>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleOpenModal()}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add Plant
                   </Button>
@@ -177,66 +250,31 @@ const MyPlants = () => {
                 <CardDescription>Track care history and manage multiple plants</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {/* Mock plant cards */}
+                {plants.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card className="border border-green-200">
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-3 mb-3">
-                          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                            <Leaf className="w-6 h-6 text-green-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">Monstera Deliciosa</h3>
-                            <p className="text-sm text-muted-foreground">Indoor • 2 years old</p>
-                          </div>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span>Last watered:</span>
-                            <span className="text-blue-600">2 days ago</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Health status:</span>
-                            <span className="text-green-600">Excellent</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Growth rate:</span>
-                            <span className="text-purple-600">+15% this month</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card className="border border-yellow-200">
-                      <CardContent className="p-4">
-                        <div className="flex items-center space-x-3 mb-3">
-                          <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                            <Sun className="w-6 h-6 text-yellow-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">Snake Plant</h3>
-                            <p className="text-sm text-muted-foreground">Indoor • 1 year old</p>
-                          </div>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span>Last watered:</span>
-                            <span className="text-blue-600">1 week ago</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Health status:</span>
-                            <span className="text-yellow-600">Needs light</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Growth rate:</span>
-                            <span className="text-purple-600">+8% this month</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    {plants.map((plant) => (
+                      <PlantCard 
+                        key={plant.id} 
+                        plant={plant} 
+                        onEdit={handleOpenModal}
+                        onDelete={handleDeletePlant}
+                        onWatered={handleWateredPlant}
+                      />
+                    ))}
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Leaf className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No plants yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Start your garden by adding your first plant!
+                    </p>
+                    <Button onClick={() => handleOpenModal()}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Your First Plant
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -284,6 +322,16 @@ const MyPlants = () => {
           </div>
         </div>
       </main>
+
+      {/* Add Plant Modal */}
+      <AddPlantModal
+        mode={editingPlant ? "edit" : "create"}
+        open={isModalOpen}
+        initial={editingPlant || undefined}
+        onCancel={handleCloseModal}
+        onSubmit={handleSubmitPlant}
+      />
+
       <Footer />
     </div>
   );
