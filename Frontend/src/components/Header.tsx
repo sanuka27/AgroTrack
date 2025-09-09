@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Leaf, Menu, X, User, MessageSquare, BarChart3, LogOut, Shield, Settings } from "lucide-react";
+import { Leaf, Menu, X, User, MessageSquare, BarChart3, LogOut, Shield, Settings, Bot } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function Header() {
@@ -22,6 +22,7 @@ export function Header() {
   // User-specific navigation items
   const userNavItems = [
     { label: "My Plants", href: "/plants", icon: Leaf, permission: "view_plants" },
+    { label: "AI Assistant", href: "/assistant", icon: Bot, permission: "view_assistant" },
     { label: "Community", href: "/community", icon: MessageSquare, permission: "view_community" },
     { label: "Analytics", href: "/analytics", icon: BarChart3, permission: "view_analytics" },
   ];
