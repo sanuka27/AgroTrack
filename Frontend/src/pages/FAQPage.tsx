@@ -248,7 +248,7 @@ const FAQPage = () => {
               <Button 
                 onClick={() => setSearchQuery('')}
                 variant="outline"
-                className="rounded-2xl"
+                className="rounded-2xl border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 Clear Search
               </Button>
@@ -280,7 +280,7 @@ const FAQPage = () => {
                 <p className="text-gray-700 text-sm">
                   Can't find the answer you're looking for? Our support team is ready to help with any questions about your plants or account.
                 </p>
-                <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl">
+                <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-medium">
                   <Link to="/contact">
                     Contact Support
                     <ArrowRight className="w-4 h-4 ml-2" />
@@ -310,7 +310,7 @@ const FAQPage = () => {
                 <p className="text-gray-700 text-sm">
                   Connect with thousands of gardeners sharing tips, experiences, and advice. Get help with plant identification and care.
                 </p>
-                <Button asChild variant="outline" className="w-full rounded-2xl border-green-200 text-green-700 hover:bg-green-50">
+                <Button asChild variant="outline" className="w-full rounded-2xl border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400">
                   <Link to="/community">
                     Explore Community
                     <ArrowRight className="w-4 h-4 ml-2" />
@@ -333,13 +333,13 @@ const FAQPage = () => {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button asChild size="lg" className="bg-white text-green-600 hover:bg-gray-100">
+            <Button asChild size="lg" className="bg-white text-green-600 hover:bg-gray-100 font-medium shadow-sm">
               <Link to="/register">
                 Get Started Free
                 <Leaf className="w-5 h-5 ml-2" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-green-600">
+            <Button asChild variant="outline" size="lg" className="border-2 border-white text-white hover:bg-white hover:text-green-600 hover:border-white">
               <Link to="/how-it-works">
                 Learn How It Works
               </Link>
