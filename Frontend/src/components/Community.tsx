@@ -18,7 +18,7 @@ const communityPosts = [
     id: 1,
     author: {
       name: "Sarah Chen",
-      avatar: "/api/placeholder/40/40",
+      avatar: "/placeholder.svg",
       initials: "SC"
     },
     title: "My tomato plant recovery journey 🍅",
@@ -33,7 +33,7 @@ const communityPosts = [
     id: 2,
     author: {
       name: "Mike Rodriguez",
-      avatar: "/api/placeholder/40/40",
+      avatar: "/placeholder.svg",
       initials: "MR"
     },
     title: "Space-saving herb garden setup for apartments",
@@ -48,7 +48,7 @@ const communityPosts = [
     id: 3,
     author: {
       name: "Emma Thompson",
-      avatar: "/api/placeholder/40/40",
+      avatar: "/placeholder.svg",
       initials: "ET"
     },
     title: "Help! White spots on my fiddle leaf fig 😰",
