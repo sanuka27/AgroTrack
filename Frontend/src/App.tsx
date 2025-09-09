@@ -6,7 +6,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DemoProvider } from "@/contexts/DemoContext";
-import GuestConversionModal from "@/components/GuestConversionModal";
 import GuestCTABanner from "@/components/GuestCTABanner";
 import GuestFloatingCTA from "@/components/GuestFloatingCTA";
 import BackToTop from "@/components/BackToTop";
@@ -88,7 +87,6 @@ const App = () => {
             </Routes>
             
             {/* Guest Conversion Components */}
-            <GuestConversionModal delayMs={8000} />
             <GuestCTABanner />
             <GuestFloatingCTA />
             
