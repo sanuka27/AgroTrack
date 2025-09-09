@@ -80,7 +80,7 @@ const Register = () => {
     try {
       const success = await register(formData.email, formData.password, formData.name);
       if (success) {
-        navigate('/my-plants'); // Redirect to protected area after registration
+        navigate('/plants'); // Redirect to protected area after registration
       } else {
         setRegisterError("Registration failed. Please try again.");
       }

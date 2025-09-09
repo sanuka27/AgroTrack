@@ -13,7 +13,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
-  const from = location.state?.from?.pathname || "/my-plants";
+  const from = location.state?.from?.pathname || "/plants";
   
   const [formData, setFormData] = useState({
     email: "",

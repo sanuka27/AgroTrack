@@ -36,6 +36,7 @@ const GuidesPage = lazy(() => import("./pages/GuidesPage"));
 const FAQPage = lazy(() => import("./pages/FAQPage"));
 const BlogPage = lazy(() => import("./pages/BlogPage"));
 const BlogDetailPage = lazy(() => import("./pages/BlogDetailPage"));
+const StatusPage = lazy(() => import("./pages/StatusPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 const queryClient = new QueryClient();
@@ -61,6 +62,11 @@ const App = () => {
                 </ProtectedRoute>
               } />
               <Route path="/my-plants" element={
+                <ProtectedRoute>
+                  <MyPlants />
+                </ProtectedRoute>
+              } />
+              <Route path="/plants" element={
                 <ProtectedRoute>
                   <MyPlants />
                 </ProtectedRoute>
@@ -91,6 +97,7 @@ const App = () => {
               <Route path="/faq" element={<FAQPage />} />
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/blog/:slug" element={<BlogDetailPage />} />
+              <Route path="/status" element={<StatusPage />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFoundPage />} />
