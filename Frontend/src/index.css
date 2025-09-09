@@ -85,7 +85,7 @@ All colors MUST be HSL.
 }
 
 @layer base {
-  * {
+  *:not(html):not(body):not(#root) {
     @apply border-border;
   }
 
