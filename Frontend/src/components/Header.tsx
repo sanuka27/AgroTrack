@@ -116,6 +116,12 @@ export function Header() {
               <div className="flex items-center space-x-3">
                 {getUserDisplayName()}
                 <Button variant="ghost" size="sm" asChild>
+                  <NavLink to="/settings">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </NavLink>
+                </Button>
+                <Button variant="ghost" size="sm" asChild>
                   <NavLink to="/profile">
                     <User className="w-4 h-4 mr-2" />
                     Profile
@@ -183,6 +189,12 @@ export function Header() {
                     <div className="py-2">
                       {getUserDisplayName()}
                     </div>
+                    <Button variant="ghost" size="sm" className="justify-start" asChild>
+                      <NavLink to="/settings" onClick={() => setIsMenuOpen(false)}>
+                        <Settings className="w-4 h-4 mr-2" />
+                        Settings
+                      </NavLink>
+                    </Button>
                     <Button variant="ghost" size="sm" className="justify-start" asChild>
                       <NavLink to="/profile" onClick={() => setIsMenuOpen(false)}>
                         <User className="w-4 h-4 mr-2" />

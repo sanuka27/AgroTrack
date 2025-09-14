@@ -39,6 +39,7 @@ const BlogDetailPage = lazy(() => import("./pages/BlogDetailPage"));
 const StatusPage = lazy(() => import("./pages/StatusPage"));
 const AssistantPage = lazy(() => import("./pages/AssistantPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 const queryClient = new QueryClient();
@@ -77,6 +78,11 @@ const App = () => {
               <Route path="/analytics" element={
                 <ProtectedRoute>
                   <Analytics />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <SettingsPage />
                 </ProtectedRoute>
               } />
               <Route path="/profile" element={
