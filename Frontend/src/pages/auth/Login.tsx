@@ -141,7 +141,22 @@ const Login = () => {
                 </Button>
               </form>
               
-              <div className="text-center">
+              <div className="text-center space-y-3">
+                <div className="space-y-1">
+                  <Link 
+                    to="/reset-password"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors block"
+                  >
+                    Forgot your password?
+                  </Link>
+                  <Link 
+                    to="/verify-email"
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors block"
+                  >
+                    Need to verify your email?
+                  </Link>
+                </div>
+                
                 <p className="text-sm text-muted-foreground">
                   Don't have an account?{" "}
                   <Link 

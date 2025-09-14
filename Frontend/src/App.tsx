@@ -17,6 +17,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 const Login = lazy(() => import("./pages/auth/Login"));
 const Register = lazy(() => import("./pages/auth/Register"));
 const Signup = lazy(() => import("./pages/auth/Signup"));
+const PasswordResetPage = lazy(() => import("./pages/auth/PasswordResetPage"));
+const EmailVerificationPage = lazy(() => import("./pages/auth/EmailVerificationPage"));
 const MyPlants = lazy(() => import("./pages/MyPlants"));
 const Community = lazy(() => import("./pages/Community"));
 const Analytics = lazy(() => import("./pages/Analytics"));
@@ -59,6 +61,8 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/reset-password" element={<PasswordResetPage />} />
+              <Route path="/verify-email" element={<EmailVerificationPage />} />
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <MyPlants />

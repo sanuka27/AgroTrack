@@ -80,7 +80,9 @@ const Register = () => {
     try {
       const success = await register(formData.email, formData.password, formData.name);
       if (success) {
-        navigate('/plants'); // Redirect to protected area after registration
+        navigate('/verify-email', { 
+          state: { email: formData.email }
+        }); // Redirect to email verification after registration
       } else {
         setRegisterError("Registration failed. Please try again.");
       }
