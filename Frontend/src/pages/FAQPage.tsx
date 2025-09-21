@@ -339,7 +339,7 @@ const FAQPage = () => {
                 <Leaf className="w-5 h-5 ml-2" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="border-2 border-white text-white hover:bg-white hover:text-green-600 hover:border-white">
+            <Button asChild variant="outline" size="lg" className="border-2 border-white/80 text-white bg-white/10 hover:bg-white hover:text-green-600 hover:border-white backdrop-blur-sm">
               <Link to="/how-it-works">
                 Learn How It Works
               </Link>

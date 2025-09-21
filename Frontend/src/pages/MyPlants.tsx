@@ -7,14 +7,46 @@ import { Footer } from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { AddPlantModal } from "@/components/AddPlantModal";
 import { PlantCard } from "@/components/PlantCard";
+import { PlantFiltersComponent, PlantFilters } from "@/components/PlantFilters";
 import { Plant } from "@/types/plant";
-import { Leaf, Plus, Calendar, Droplets, Sun, Bell, TrendingUp, MessageSquare } from "lucide-react";
+import { filterAndSortPlants } from "@/utils/plantFiltering";
+import { useBulkSelection } from "@/hooks/use-bulk-selection";
+import { exportPlantsToCSV, exportPlantsToJSON } from "@/utils/exportUtils";
+import { BulkOperationsBar } from "@/components/BulkOperationsBar";
+import { useSearchDebounce } from "@/hooks/use-search";
+import { Leaf, Plus, Calendar, Droplets, Sun, Bell, TrendingUp, MessageSquare, CheckSquare, Square } from "lucide-react";
 
 const MyPlants = () => {
   const { user } = useAuth();
   const [plants, setPlants] = useState<Plant[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlant, setEditingPlant] = useState<Plant | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+
+  // Filters state
+  const [filters, setFilters] = useState<PlantFilters>({
+    search: '',
+    healthStatus: 'all',
+    category: 'all',
+    careNeeds: 'all',
+    sortBy: 'name',
+    sortOrder: 'asc'
+  });
+
+  // Bulk selection management
+  const {
+    selectedCount,
+    selectedItems,
+    isSelected,
+    toggleSelection,
+    selectAll,
+    clearSelection,
+    isAllSelected,
+    isSomeSelected
+  } = useBulkSelection(plants);
+
+  // Filtered and sorted plants
+  const filteredPlants = filterAndSortPlants(plants, filters);
 
   // Load plants from localStorage on mount
   useEffect(() => {
@@ -57,6 +89,72 @@ const MyPlants = () => {
     ));
   };
 
+  // Bulk operation handlers
+  const handleBulkDelete = () => {
+    if (selectedItems.length === 0) return;
+    
+    const confirmMessage = `Are you sure you want to delete ${selectedItems.length} plant${selectedItems.length > 1 ? 's' : ''}?`;
+    if (confirm(confirmMessage)) {
+      const selectedIds = selectedItems.map(plant => plant.id);
+      setPlants(prev => prev.filter(plant => !selectedIds.includes(plant.id)));
+      clearSelection();
+      setSelectionMode(false);
+    }
+  };
+
+  const handleBulkWater = () => {
+    if (selectedItems.length === 0) return;
+    
+    const now = new Date().toISOString();
+    const selectedIds = selectedItems.map(plant => plant.id);
+    
+    setPlants(prev => prev.map(plant => 
+      selectedIds.includes(plant.id) 
+        ? { ...plant, lastWatered: now }
+        : plant
+    ));
+    clearSelection();
+    setSelectionMode(false);
+  };
+
+  const handleBulkMarkHealthy = () => {
+    if (selectedItems.length === 0) return;
+    
+    const selectedIds = selectedItems.map(plant => plant.id);
+    
+    setPlants(prev => prev.map(plant => 
+      selectedIds.includes(plant.id) 
+        ? { ...plant, health: 'Excellent' as const }
+        : plant
+    ));
+    clearSelection();
+    setSelectionMode(false);
+  };
+
+  const handleBulkExport = () => {
+    if (selectedItems.length === 0) return;
+    
+    const exportFormat = confirm('Export as JSON? (Cancel for CSV)') ? 'json' : 'csv';
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `plants-export-${timestamp}.${exportFormat}`;
+    
+    if (exportFormat === 'json') {
+      exportPlantsToJSON(selectedItems, filename);
+    } else {
+      exportPlantsToCSV(selectedItems, filename);
+    }
+    
+    clearSelection();
+    setSelectionMode(false);
+  };
+
+  const handleToggleSelectionMode = () => {
+    setSelectionMode(!selectionMode);
+    if (selectionMode) {
+      clearSelection();
+    }
+  };
+
   // Modal handlers
   const handleOpenModal = (plant?: Plant) => {
     setEditingPlant(plant || null);
@@ -89,7 +187,7 @@ const MyPlants = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Button variant="default" size="lg" asChild className="h-20 flex-col">
             <Link to="/plant-analysis">
               <Leaf className="w-8 h-8 mb-2" />
@@ -105,6 +203,16 @@ const MyPlants = () => {
           >
             <Plus className="w-8 h-8 mb-2" />
             Add New Plant
+          </Button>
+          <Button 
+            variant={selectionMode ? "default" : "outline"} 
+            size="lg" 
+            className="h-20 flex-col"
+            onClick={handleToggleSelectionMode}
+            disabled={plants.length === 0}
+          >
+            {selectionMode ? <CheckSquare className="w-8 h-8 mb-2" /> : <Square className="w-8 h-8 mb-2" />}
+            {selectionMode ? "Exit Select" : "Select Plants"}
           </Button>
           <Button variant="outline" size="lg" asChild className="h-20 flex-col">
             <Link to="/community">
@@ -122,7 +230,7 @@ const MyPlants = () => {
                 <Leaf className="w-5 h-5 text-green-600" />
                 <div>
                   <p className="text-sm text-muted-foreground">Total Plants</p>
-                  <p className="text-xl font-bold text-green-800">12</p>
+                  <p className="text-xl font-bold text-green-800">{plants.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -134,7 +242,9 @@ const MyPlants = () => {
                 <Droplets className="w-5 h-5 text-blue-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Need Water</p>
-                  <p className="text-xl font-bold text-blue-600">3</p>
+                  <p className="text-xl font-bold text-blue-600">
+                    {filterAndSortPlants(plants, { ...filters, careNeeds: 'needs-water' }).length}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -145,8 +255,10 @@ const MyPlants = () => {
               <div className="flex items-center space-x-2">
                 <Bell className="w-5 h-5 text-orange-500" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Reminders</p>
-                  <p className="text-xl font-bold text-orange-600">5</p>
+                  <p className="text-sm text-muted-foreground">Overdue Care</p>
+                  <p className="text-xl font-bold text-orange-600">
+                    {filterAndSortPlants(plants, { ...filters, careNeeds: 'overdue' }).length}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -157,8 +269,10 @@ const MyPlants = () => {
               <div className="flex items-center space-x-2">
                 <TrendingUp className="w-5 h-5 text-purple-500" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Growth Score</p>
-                  <p className="text-xl font-bold text-purple-600">87%</p>
+                  <p className="text-sm text-muted-foreground">Healthy Plants</p>
+                  <p className="text-xl font-bold text-purple-600">
+                    {plants.filter(p => p.health === 'Excellent' || p.health === 'Good').length}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -251,16 +365,50 @@ const MyPlants = () => {
               </CardHeader>
               <CardContent>
                 {plants.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {plants.map((plant) => (
-                      <PlantCard 
-                        key={plant.id} 
-                        plant={plant} 
-                        onEdit={handleOpenModal}
-                        onDelete={handleDeletePlant}
-                        onWatered={handleWateredPlant}
-                      />
-                    ))}
+                  <div className="space-y-6">
+                    {/* Plant Filters */}
+                    <PlantFiltersComponent
+                      filters={filters}
+                      onFiltersChange={setFilters}
+                      plantsCount={plants.length}
+                      filteredCount={filteredPlants.length}
+                    />
+                    
+                    {/* Filtered Plants Grid */}
+                    {filteredPlants.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {filteredPlants.map((plant) => (
+                          <PlantCard 
+                            key={plant.id} 
+                            plant={plant} 
+                            onEdit={handleOpenModal}
+                            onDelete={handleDeletePlant}
+                            onWatered={handleWateredPlant}
+                            isSelected={isSelected(plant.id)}
+                            onSelectionChange={toggleSelection}
+                            selectionMode={selectionMode}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Leaf className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No plants match your filters</h3>
+                        <p className="text-muted-foreground mb-4">
+                          Try adjusting your search or filter criteria
+                        </p>
+                        <Button variant="ghost" onClick={() => setFilters({
+                          search: '',
+                          healthStatus: 'all',
+                          category: 'all',
+                          careNeeds: 'all',
+                          sortBy: 'name',
+                          sortOrder: 'asc'
+                        })}>
+                          Clear All Filters
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-8">
@@ -330,6 +478,19 @@ const MyPlants = () => {
         initial={editingPlant || undefined}
         onCancel={handleCloseModal}
         onSubmit={handleSubmitPlant}
+      />
+
+      {/* Bulk Operations Bar */}
+      <BulkOperationsBar
+        selectedCount={selectedCount}
+        onClearSelection={() => {
+          clearSelection();
+          setSelectionMode(false);
+        }}
+        onBulkDelete={handleBulkDelete}
+        onBulkWater={handleBulkWater}
+        onBulkExport={handleBulkExport}
+        onBulkMarkHealthy={handleBulkMarkHealthy}
       />
 
       <Footer />

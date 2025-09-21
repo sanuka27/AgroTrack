@@ -3,6 +3,7 @@ import { Plant } from '@/types/plant';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Leaf, Droplets, Edit, Trash2, Sun } from 'lucide-react';
 import { formatLastWatered, getHealthStatusColor, getGrowthRateColor } from '@/utils/plantUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -12,9 +13,20 @@ interface PlantCardProps {
   onEdit: (plant: Plant) => void;
   onDelete: (plantId: string) => void;
   onWatered: (plantId: string) => void;
+  isSelected?: boolean;
+  onSelectionChange?: (plantId: string, selected: boolean) => void;
+  selectionMode?: boolean;
 }
 
-export function PlantCard({ plant, onEdit, onDelete, onWatered }: PlantCardProps) {
+export function PlantCard({ 
+  plant, 
+  onEdit, 
+  onDelete, 
+  onWatered, 
+  isSelected = false, 
+  onSelectionChange, 
+  selectionMode = false 
+}: PlantCardProps) {
   const { toast } = useToast();
 
   const handleWatered = () => {
@@ -37,8 +49,22 @@ export function PlantCard({ plant, onEdit, onDelete, onWatered }: PlantCardProps
 
   const healthColor = getHealthStatusColor(plant.health);
   const growthColor = getGrowthRateColor(plant.growthRatePctThisMonth || 0);
+  
   return (
-    <Card className={`overflow-hidden border-2 transition-shadow hover:shadow-lg ${healthColor.border}`}>
+    <Card className={`relative overflow-hidden border-2 transition-shadow hover:shadow-lg ${healthColor.border} ${
+      isSelected ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
+    }`}>
+      {/* Selection Checkbox */}
+      {selectionMode && (
+        <div className="absolute top-2 left-2 z-10">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={(checked) => onSelectionChange?.(plant.id, checked as boolean)}
+            className="bg-white border-2 shadow-md"
+          />
+        </div>
+      )}
+      
       <div className="flex">
         {/* Plant Image */}
         {plant.imageUrl && (
