@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 
 // User role types matching frontend AuthContext
 export type UserRole = 'guest' | 'user' | 'admin';
@@ -267,26 +267,30 @@ userSchema.methods.comparePassword = async function(candidatePassword: string): 
 // Method to generate authentication token
 userSchema.methods.generateAuthToken = function(): string {
   const payload = {
-    id: this._id,
+    id: this._id.toString(),
     email: this.email,
     role: this.role
   };
   
-  return jwt.sign(payload, process.env.JWT_SECRET!, {
-    expiresIn: process.env.JWT_ACCESS_EXPIRE || '15m'
-  });
+  const options: SignOptions = {
+    expiresIn: (process.env.JWT_ACCESS_EXPIRE || '15m') as string
+  };
+  
+  return jwt.sign(payload, process.env.JWT_SECRET || 'default-secret', options);
 };
 
 // Method to generate refresh token
 userSchema.methods.generateRefreshToken = function(): string {
   const payload = {
-    id: this._id,
+    id: this._id.toString(),
     type: 'refresh'
   };
   
-  const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET!, {
-    expiresIn: process.env.JWT_REFRESH_EXPIRE || '7d'
-  });
+  const options: SignOptions = {
+    expiresIn: (process.env.JWT_REFRESH_EXPIRE || '7d') as string
+  };
+  
+  const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET || 'default-refresh-secret', options);
   
   // Add refresh token to user's refresh tokens array
   this.refreshTokens.push(refreshToken);
