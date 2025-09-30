@@ -71,11 +71,6 @@ const UserDashboard = () => {
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load data on component mount
-  useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
-
   const loadDashboardData = useCallback(() => {
     try {
       // Load plants
@@ -109,6 +104,11 @@ const UserDashboard = () => {
       setLoading(false);
     }
   }, [preferences]);
+
+  // Load data on component mount
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   const calculateStats = (plantsData: Plant[], remindersData: Reminder[], careLogsData: CareLog[]) => {
     const now = new Date();
