@@ -273,8 +273,8 @@ userSchema.methods.generateAuthToken = function(): string {
   };
   
   const options: SignOptions = {
-    expiresIn: (process.env.JWT_ACCESS_EXPIRE || '15m') as string
-  };
+    expiresIn: process.env.JWT_ACCESS_EXPIRE || '15m'
+  } as SignOptions;
   
   return jwt.sign(payload, process.env.JWT_SECRET || 'default-secret', options);
 };
@@ -287,8 +287,8 @@ userSchema.methods.generateRefreshToken = function(): string {
   };
   
   const options: SignOptions = {
-    expiresIn: (process.env.JWT_REFRESH_EXPIRE || '7d') as string
-  };
+    expiresIn: process.env.JWT_REFRESH_EXPIRE || '7d'
+  } as SignOptions;
   
   const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET || 'default-refresh-secret', options);
   
