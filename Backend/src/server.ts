@@ -10,8 +10,8 @@ import { connectDatabase } from './config/database';
 import { logger } from './config/logger';
 import { errorHandler, notFound } from './middleware/errorMiddleware';
 
-// Import routes (commented out until routes are created)
-// import authRoutes from './routes/authRoutes';
+// Import routes
+import authRoutes from './routes/authRoutes';
 // import userRoutes from './routes/userRoutes';
 // import plantRoutes from './routes/plantRoutes';
 // import careLogRoutes from './routes/careLogRoutes';
@@ -69,8 +69,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes (commented out until routes are created)
-// app.use('/api/auth', authRoutes);
+// API routes
+app.use('/api/auth', authRoutes);
 // app.use('/api/users', userRoutes);
 // app.use('/api/plants', plantRoutes);
 // app.use('/api/care-logs', careLogRoutes);
