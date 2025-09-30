@@ -19,6 +19,7 @@ const Register = lazy(() => import("./pages/auth/Register"));
 const Signup = lazy(() => import("./pages/auth/Signup"));
 const PasswordResetPage = lazy(() => import("./pages/auth/PasswordResetPage"));
 const EmailVerificationPage = lazy(() => import("./pages/auth/EmailVerificationPage"));
+const UserDashboard = lazy(() => import("./pages/UserDashboard"));
 const MyPlants = lazy(() => import("./pages/MyPlants"));
 const Community = lazy(() => import("./pages/Community"));
 const Analytics = lazy(() => import("./pages/Analytics"));
@@ -67,7 +68,7 @@ const App = () => {
               <Route path="/verify-email" element={<EmailVerificationPage />} />
               <Route path="/dashboard" element={
                 <ProtectedRoute>
-                  <MyPlants />
+                  <UserDashboard />
                 </ProtectedRoute>
               } />
               <Route path="/my-plants" element={

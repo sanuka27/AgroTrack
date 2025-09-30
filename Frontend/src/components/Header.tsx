@@ -21,6 +21,7 @@ export function Header() {
 
   // User-specific navigation items
   const userNavItems = [
+    { label: "Dashboard", href: "/dashboard", icon: Leaf, permission: "view_plants" },
     { label: "My Plants", href: "/plants", icon: Leaf, permission: "view_plants" },
     { label: "AI Assistant", href: "/assistant", icon: Bot, permission: "view_assistant" },
     { label: "Community", href: "/community", icon: MessageSquare, permission: "view_community" },
