@@ -15,6 +15,7 @@ import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import plantRoutes from './routes/plantRoutes';
 import careLogRoutes from './routes/careLogRoutes';
+import reminderRoutes from './routes/reminderRoutes';
 // import reminderRoutes from './routes/reminderRoutes';
 // import analyticsRoutes from './routes/analyticsRoutes';
 
@@ -74,7 +75,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/plants', plantRoutes);
 app.use('/api/care-logs', careLogRoutes);
-// app.use('/api/reminders', reminderRoutes);
+app.use('/api/reminders', reminderRoutes);
 // app.use('/api/analytics', analyticsRoutes);
 
 // Serve uploaded files (if in production, use a CDN or cloud storage)
