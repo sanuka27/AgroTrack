@@ -18,6 +18,7 @@ import careLogRoutes from './routes/careLogRoutes';
 import reminderRoutes from './routes/reminderRoutes';
 import communityRoutes from './routes/communityRoutes';
 import expertRoutes from './routes/expertRoutes';
+import diseaseDetectionRoutes from './routes/diseaseDetectionRoutes';
 // import reminderRoutes from './routes/reminderRoutes';
 // import analyticsRoutes from './routes/analyticsRoutes';
 
@@ -80,6 +81,7 @@ app.use('/api/care-logs', careLogRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/community', communityRoutes);
 app.use('/api/experts', expertRoutes);
+app.use('/api/disease-detection', diseaseDetectionRoutes);
 // app.use('/api/analytics', analyticsRoutes);
 
 // Serve uploaded files (if in production, use a CDN or cloud storage)
