@@ -21,7 +21,7 @@ import expertRoutes from './routes/expertRoutes';
 import diseaseDetectionRoutes from './routes/diseaseDetectionRoutes';
 import weatherRoutes from './routes/weatherRoutes';
 import notificationRoutes from './routes/notificationRoutes';
-// import analyticsRoutes from './routes/analyticsRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -85,7 +85,7 @@ app.use('/api/experts', expertRoutes);
 app.use('/api/disease-detection', diseaseDetectionRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/notifications', notificationRoutes);
-// app.use('/api/analytics', analyticsRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Serve uploaded files (if in production, use a CDN or cloud storage)
 app.use('/uploads', express.static('uploads'));
