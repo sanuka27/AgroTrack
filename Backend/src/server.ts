@@ -7,9 +7,11 @@ import dotenv from 'dotenv';
 
 import { connectDatabase } from './config/database';
 import { logger } from './config/logger';
+import { cache } from './config/redis';
 import { errorHandler, notFound } from './middleware/errorMiddleware';
 import { globalRateLimit, burstLimiter } from './middleware/rateLimiting';
 import { setupSwagger } from './config/swagger';
+import { CacheWarmer } from './middleware/cacheMiddleware';
 
 // Import routes
 import authRoutes from './routes/authRoutes';
@@ -26,6 +28,7 @@ import analyticsRoutes from './routes/analyticsRoutes';
 import exportImportRoutes from './routes/exportImportRoutes';
 import searchRoutes from './routes/searchRoutes';
 import adminRoutes from './routes/adminRoutes';
+import cacheRoutes from './routes/cacheRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -92,6 +95,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/export-import', exportImportRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/cache', cacheRoutes);
 
 // Serve uploaded files (if in production, use a CDN or cloud storage)
 app.use('/uploads', express.static('uploads'));
@@ -153,12 +157,28 @@ const startServer = async () => {
     // Connect to MongoDB
     await connectDatabase();
     
+    // Initialize Redis cache
+    try {
+      await cache.connect();
+      logger.info('✅ Redis cache connected successfully');
+      
+      // Start cache warming in background
+      if (process.env.NODE_ENV === 'production') {
+        CacheWarmer.startPeriodicWarmup();
+        logger.info('🔥 Cache warming started');
+      }
+    } catch (cacheError) {
+      logger.warn('⚠️ Redis cache connection failed, continuing without cache:', cacheError);
+    }
+    
     // Start server
     app.listen(PORT, () => {
       logger.info(`🌱 AgroTrack API server running on port ${PORT}`);
       logger.info(`🚀 Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`📚 API docs available at http://localhost:${PORT}/api/docs`);
+      logger.info(`📚 Swagger UI available at http://localhost:${PORT}/api-docs`);
       logger.info(`💚 Health check at http://localhost:${PORT}/health`);
+      logger.info(`🗄️ Cache management at http://localhost:${PORT}/api/cache/health`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
@@ -179,13 +199,25 @@ process.on('uncaughtException', (err: Error) => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   logger.info('SIGTERM received. Shutting down gracefully...');
+  try {
+    await cache.disconnect();
+    logger.info('📦 Redis cache disconnected');
+  } catch (error) {
+    logger.error('Error disconnecting cache:', error);
+  }
   process.exit(0);
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   logger.info('SIGINT received. Shutting down gracefully...');
+  try {
+    await cache.disconnect();
+    logger.info('📦 Redis cache disconnected');
+  } catch (error) {
+    logger.error('Error disconnecting cache:', error);
+  }
   process.exit(0);
 });
 

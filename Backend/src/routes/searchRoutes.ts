@@ -4,6 +4,7 @@ import { validate } from '../middleware/validate';
 import { query, body } from 'express-validator';
 import { searchController } from '../controllers/searchController';
 import { searchLimiter } from '../middleware/rateLimiting';
+import { cacheMiddleware } from '../middleware/cacheMiddleware';
 
 const router = express.Router();
 
@@ -183,6 +184,13 @@ const plantSearchValidation = [
 router.get('/',
   searchLimiter,
   protect,
+  cacheMiddleware({
+    ttl: 300, // 5 minutes
+    keyGenerator: (req) => {
+      const query = new URLSearchParams(req.query as any).toString();
+      return `search:universal:${query}:user:${(req.user as any).id}`;
+    }
+  }),
   universalSearchValidation,
   validate,
   searchController.universalSearch
@@ -197,6 +205,10 @@ router.get('/',
 router.get('/suggestions',
   searchLimiter,
   protect,
+  cacheMiddleware({
+    ttl: 600, // 10 minutes
+    keyGenerator: (req) => `search:suggestions:${req.query.q}:user:${(req.user as any).id}`
+  }),
   suggestionValidation,
   validate,
   searchController.getSearchSuggestions
@@ -212,6 +224,13 @@ router.get('/suggestions',
 router.get('/plants',
   searchLimiter,
   protect,
+  cacheMiddleware({
+    ttl: 420, // 7 minutes
+    keyGenerator: (req) => {
+      const query = new URLSearchParams(req.query as any).toString();
+      return `search:plants:${query}:user:${(req.user as any).id}`;
+    }
+  }),
   plantSearchValidation,
   validate,
   searchController.searchPlants
@@ -224,6 +243,10 @@ router.get('/plants',
  */
 router.get('/facets',
   protect,
+  cacheMiddleware({
+    ttl: 1800, // 30 minutes
+    keyGenerator: (req) => `search:facets:user:${(req.user as any).id}`
+  }),
   searchController.getSearchFacets
 );
 

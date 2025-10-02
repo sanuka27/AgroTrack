@@ -4,6 +4,7 @@ import { body, query, param } from 'express-validator';
 import { PlantController } from '../controllers/plantController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validate } from '../middleware/validate';
+import { cacheMiddleware, invalidateCache } from '../middleware/cacheMiddleware';
 
 const router = express.Router();
 
@@ -382,6 +383,11 @@ const importPlantsValidation = [
 router.post('/', 
   plantRateLimit,
   authMiddleware,
+  invalidateCache((req) => [
+    `plants:user:${(req.user as any).id}*`,
+    `plants:analytics:user:${(req.user as any).id}*`,
+    'plants:categories:all'
+  ]),
   createPlantValidation,
   validate,
   PlantController.createPlant
@@ -390,6 +396,11 @@ router.post('/',
 router.get('/', 
   plantRateLimit,
   authMiddleware,
+  cacheMiddleware({
+    ttl: 300, // 5 minutes
+    keyGenerator: (req) => `plants:user:${(req.user as any).id}:${JSON.stringify(req.query)}`,
+    varyBy: ['user-agent']
+  }),
   searchPlantsValidation,
   validate,
   PlantController.getPlants
@@ -398,18 +409,30 @@ router.get('/',
 router.get('/categories', 
   plantRateLimit,
   authMiddleware,
+  cacheMiddleware({
+    ttl: 1800, // 30 minutes
+    keyGenerator: () => 'plants:categories:all'
+  }),
   PlantController.getPlantCategories
 );
 
 router.get('/analytics', 
   plantRateLimit,
   authMiddleware,
+  cacheMiddleware({
+    ttl: 600, // 10 minutes
+    keyGenerator: (req) => `plants:analytics:user:${(req.user as any).id}:${JSON.stringify(req.query)}`
+  }),
   PlantController.getPlantAnalytics
 );
 
 router.get('/:plantId', 
   plantRateLimit,
   authMiddleware,
+  cacheMiddleware({
+    ttl: 900, // 15 minutes
+    keyGenerator: (req) => `plant:details:${req.params.plantId}`
+  }),
   plantIdValidation,
   validate,
   PlantController.getPlantById
@@ -418,6 +441,11 @@ router.get('/:plantId',
 router.put('/:plantId', 
   plantRateLimit,
   authMiddleware,
+  invalidateCache((req) => [
+    `plant:details:${req.params.plantId}`,
+    `plants:user:${(req.user as any).id}*`,
+    `plants:analytics:user:${(req.user as any).id}*`
+  ]),
   plantIdValidation,
   updatePlantValidation,
   validate,
@@ -427,6 +455,12 @@ router.put('/:plantId',
 router.delete('/:plantId', 
   plantRateLimit,
   authMiddleware,
+  invalidateCache((req) => [
+    `plant:details:${req.params.plantId}`,
+    `plants:user:${(req.user as any).id}*`,
+    `plants:analytics:user:${(req.user as any).id}*`,
+    'plants:categories:all'
+  ]),
   plantIdValidation,
   validate,
   PlantController.deletePlant
