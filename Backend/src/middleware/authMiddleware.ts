@@ -12,6 +12,10 @@ declare global {
   }
 }
 
+export const authMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  await protect(req, res, next);
+};
+
 export const protect = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     let token: string | undefined;

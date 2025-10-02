@@ -23,6 +23,7 @@ import weatherRoutes from './routes/weatherRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import exportImportRoutes from './routes/exportImportRoutes';
+import searchRoutes from './routes/searchRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -88,6 +89,7 @@ app.use('/api/weather', weatherRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/export-import', exportImportRoutes);
+app.use('/api/search', searchRoutes);
 
 // Serve uploaded files (if in production, use a CDN or cloud storage)
 app.use('/uploads', express.static('uploads'));

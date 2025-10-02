@@ -96,7 +96,7 @@ export interface IUserAnalytics extends Document {
   createdAt: Date;
   
   // Methods
-  static trackEvent(
+  trackEvent(
     userId: mongoose.Types.ObjectId,
     eventType: AnalyticsEventType,
     eventData?: any,
@@ -245,6 +245,25 @@ userAnalyticsSchema.statics.getEventCounts = function(
     },
     { $sort: { count: -1 } }
   ]);
+};
+
+userAnalyticsSchema.statics.trackEvent = async function(
+  userId: mongoose.Types.ObjectId,
+  eventType: AnalyticsEventType,
+  eventData?: any,
+  context?: any
+): Promise<IUserAnalytics> {
+  const analytics = new this({
+    userId,
+    eventType,
+    eventData,
+    sessionId: context?.sessionId,
+    deviceInfo: context?.deviceInfo,
+    location: context?.location,
+    timestamp: new Date()
+  });
+  
+  return analytics.save();
 };
 
 userAnalyticsSchema.statics.getActiveUsers = function(
