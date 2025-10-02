@@ -24,6 +24,7 @@ import notificationRoutes from './routes/notificationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import exportImportRoutes from './routes/exportImportRoutes';
 import searchRoutes from './routes/searchRoutes';
+import adminRoutes from './routes/adminRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -90,6 +91,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/export-import', exportImportRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Serve uploaded files (if in production, use a CDN or cloud storage)
 app.use('/uploads', express.static('uploads'));

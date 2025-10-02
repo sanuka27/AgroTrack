@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { logger } from '../config/logger';
 
 // Define allowed roles type
-export type UserRole = 'guest' | 'user' | 'admin';
+export type UserRole = 'guest' | 'user' | 'moderator' | 'admin' | 'super_admin';
 
 /**
  * Role-based access control middleware
@@ -108,3 +108,8 @@ export const isAdmin = (user: any): boolean => {
 export const isVerifiedUser = (user: any): boolean => {
   return hasAnyRole(user, ['user', 'admin']);
 };
+
+/**
+ * Alias for roleGuard to match expected import
+ */
+export const requireRole = roleGuard;
