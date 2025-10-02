@@ -1,36 +1,12 @@
 import express from 'express';
 import { body, query, param } from 'express-validator';
-import rateLimit from 'express-rate-limit';
 import { protect } from '../middleware/authMiddleware';
 import { requireRole } from '../middleware/roleGuard';
 import { validate } from '../middleware/validate';
 import { adminController } from '../controllers/adminController';
+import { adminLimiter, sensitiveAdminLimiter } from '../middleware/rateLimiting';
 
 const router = express.Router();
-
-// Rate limiting for admin operations
-const adminLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: {
-    success: false,
-    message: 'Too many admin requests, please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Stricter rate limiting for sensitive operations
-const sensitiveAdminLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // limit each IP to 20 requests per windowMs
-  message: {
-    success: false,
-    message: 'Too many sensitive admin operations, please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 // Validation schemas
 const paginationValidation = [

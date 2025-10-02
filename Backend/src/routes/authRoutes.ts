@@ -3,32 +3,9 @@ import { body, param } from 'express-validator';
 import { AuthController } from '../controllers/authController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validate } from '../middleware/validate';
-import rateLimit from 'express-rate-limit';
+import { authLimiter, loginLimiter, passwordResetLimiter } from '../middleware/rateLimiting';
 
 const router = Router();
-
-// Rate limiting for auth routes
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs
-  message: {
-    success: false,
-    message: 'Too many authentication attempts, please try again later.',
-    retryAfter: 15 * 60 // 15 minutes in seconds
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
-const passwordResetLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // Limit each IP to 3 password reset requests per hour
-  message: {
-    success: false,
-    message: 'Too many password reset attempts, please try again later.',
-    retryAfter: 60 * 60 // 1 hour in seconds
-  }
-});
 
 // Validation rules
 const registerValidation = [
@@ -152,7 +129,7 @@ router.post('/register',
  * @access  Public
  */
 router.post('/login',
-  authLimiter,
+  loginLimiter,
   loginValidation,
   validate,
   AuthController.login

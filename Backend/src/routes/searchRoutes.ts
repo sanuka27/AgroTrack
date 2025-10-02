@@ -3,20 +3,9 @@ import { protect } from '../middleware/authMiddleware';
 import { validate } from '../middleware/validate';
 import { query, body } from 'express-validator';
 import { searchController } from '../controllers/searchController';
-import rateLimit from 'express-rate-limit';
+import { searchLimiter } from '../middleware/rateLimiting';
 
 const router = express.Router();
-
-// Rate limiting for search operations
-const searchLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 60, // Limit each IP to 60 search requests per minute
-  message: {
-    error: 'Too many search requests, please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 // Validation schemas
 const universalSearchValidation = [

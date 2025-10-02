@@ -3,12 +3,12 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
 import { connectDatabase } from './config/database';
 import { logger } from './config/logger';
 import { errorHandler, notFound } from './middleware/errorMiddleware';
+import { globalRateLimit, burstLimiter } from './middleware/rateLimiting';
 
 // Import routes
 import authRoutes from './routes/authRoutes';
@@ -43,15 +43,11 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // limit each IP to 100 requests per windowMs
-  message: {
-    error: 'Too many requests from this IP, please try again later.'
-  }
-});
-app.use('/api/', limiter);
+// Global rate limiting - applies to all routes
+app.use(globalRateLimit);
+
+// Burst protection - prevents rapid-fire requests
+app.use('/api/', burstLimiter);
 
 // Compression middleware
 app.use(compression());
