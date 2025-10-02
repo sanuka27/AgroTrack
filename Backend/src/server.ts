@@ -9,6 +9,7 @@ import { connectDatabase } from './config/database';
 import { logger } from './config/logger';
 import { errorHandler, notFound } from './middleware/errorMiddleware';
 import { globalRateLimit, burstLimiter } from './middleware/rateLimiting';
+import { setupSwagger } from './config/swagger';
 
 // Import routes
 import authRoutes from './routes/authRoutes';
@@ -72,6 +73,9 @@ app.get('/health', (req, res) => {
     environment: process.env.NODE_ENV || 'development'
   });
 });
+
+// Setup Swagger documentation
+setupSwagger(app);
 
 // API routes
 app.use('/api/auth', authRoutes);

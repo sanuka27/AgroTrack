@@ -112,9 +112,82 @@ const resendVerificationValidation = [
 // Routes
 
 /**
- * @route   POST /api/auth/register
- * @desc    Register a new user
- * @access  Public
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Register a new user account
+ *     description: Create a new user account with email verification
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 50
+ *                 pattern: '^[a-zA-Z\s]+$'
+ *                 example: 'John Doe'
+ *                 description: 'Full name (letters and spaces only)'
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: 'john.doe@example.com'
+ *                 description: 'Valid email address'
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *                 pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]'
+ *                 example: 'SecurePass123!'
+ *                 description: 'Password with uppercase, lowercase, number, and special character'
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'User registered successfully. Please check your email for verification.'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                     accessToken:
+ *                       type: string
+ *                       example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+ *                     refreshToken:
+ *                       type: string
+ *                       example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       409:
+ *         description: Email already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: 'User with this email already exists'
+ *       429:
+ *         $ref: '#/components/responses/RateLimitError'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
  */
 router.post('/register', 
   authLimiter,
@@ -124,9 +197,83 @@ router.post('/register',
 );
 
 /**
- * @route   POST /api/auth/login
- * @desc    Login user
- * @access  Public
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Login with email and password
+ *     description: Authenticate user and return access/refresh tokens
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: 'john.doe@example.com'
+ *               password:
+ *                 type: string
+ *                 example: 'SecurePass123!'
+ *               rememberMe:
+ *                 type: boolean
+ *                 default: false
+ *                 description: 'Extended session duration'
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Login successful'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                     accessToken:
+ *                       type: string
+ *                       example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+ *                     refreshToken:
+ *                       type: string
+ *                       example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: 'Invalid email or password'
+ *       423:
+ *         description: Account locked due to too many failed attempts
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: 'Account temporarily locked due to too many failed login attempts'
+ *       429:
+ *         $ref: '#/components/responses/RateLimitError'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
  */
 router.post('/login',
   loginLimiter,
@@ -136,9 +283,62 @@ router.post('/login',
 );
 
 /**
- * @route   POST /api/auth/refresh
- * @desc    Refresh access token
- * @access  Public
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Refresh access token
+ *     description: Get a new access token using a valid refresh token
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+ *                 description: 'Valid refresh token'
+ *     responses:
+ *       200:
+ *         description: Token refreshed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Token refreshed successfully'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     accessToken:
+ *                       type: string
+ *                       example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+ *                     refreshToken:
+ *                       type: string
+ *                       example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         description: Invalid or expired refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: 'Invalid or expired refresh token'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
  */
 router.post('/refresh',
   refreshTokenValidation,
