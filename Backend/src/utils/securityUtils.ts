@@ -453,7 +453,7 @@ export class IPSecurity {
     // X-Forwarded-For can contain multiple IPs, take the first one
     if (forwarded) {
       const ips = forwarded.split(',').map(ip => ip.trim());
-      return ips[0] || remoteIP;
+      return (ips.length > 0 ? ips[0] : null) || (remoteIP as string) || 'unknown';
     }
 
     if (realIP) return realIP;

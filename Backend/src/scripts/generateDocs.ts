@@ -107,10 +107,12 @@ class DocumentationGenerator {
 
     Object.keys(groupedEndpoints).sort().forEach(tag => {
       summary += `## ${tag}\n\n`;
-      groupedEndpoints[tag].forEach(endpoint => {
-        const securityIcon = endpoint.security ? '🔒' : '🌐';
-        summary += `- ${securityIcon} **${endpoint.method}** \`${endpoint.path}\` - ${endpoint.summary}\n`;
-      });
+      if (groupedEndpoints[tag]) {
+        groupedEndpoints[tag].forEach(endpoint => {
+          const securityIcon = endpoint.security ? '🔒' : '🌐';
+          summary += `- ${securityIcon} **${endpoint.method}** \`${endpoint.path}\` - ${endpoint.summary}\n`;
+        });
+      }
       summary += '\n';
     });
 
