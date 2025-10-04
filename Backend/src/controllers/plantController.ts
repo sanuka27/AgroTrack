@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { Plant } from '../models/Plant';
 import { PlantCareAnalytics } from '../models/PlantCareAnalytics';
-import { UserAnalytics } from '../models/UserAnalytics';
+import { UserAnalytics, AnalyticsEventType } from '../models/UserAnalytics';
 import { logger } from '../config/logger';
 
 // Extended Request interfaces for type safety
@@ -103,7 +103,7 @@ export class PlantController {
    */
   static async createPlant(req: CreatePlantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const plantData = {
         ...req.body,
         userId,
@@ -128,7 +128,7 @@ export class PlantController {
         // Track plant creation event
         await UserAnalytics.trackEvent(
           userId,
-          'plant_created',
+          AnalyticsEventType.PLANT_ADDED,
           {
             plantId: plant._id,
             category: plant.category,
@@ -170,7 +170,7 @@ export class PlantController {
    */
   static async getPlants(req: SearchPlantsRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const {
         q = '',
         category,
@@ -251,10 +251,10 @@ export class PlantController {
   static async getPlantById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { plantId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       // Check if plantId is valid MongoDB ObjectId
-      if (!mongoose.Types.ObjectId.isValid(plantId)) {
+      if (!mongoose.Types.ObjectId.isValid(plantId!)) {
         res.status(400).json({
           success: false,
           message: 'Invalid plant ID format'
@@ -262,7 +262,7 @@ export class PlantController {
         return;
       }
 
-      const plant = await Plant.findOne({ _id: plantId, userId })
+      const plant = await Plant.findOne({ _id: new mongoose.Types.ObjectId(plantId!), userId })
         .populate('careAnalytics', 'totalCareLogs lastCareDate nextCareDate careScore streakDays');
 
       if (!plant) {
@@ -277,7 +277,7 @@ export class PlantController {
       try {
         await UserAnalytics.trackEvent(
           userId,
-          'plant_viewed',
+          AnalyticsEventType.PLANT_VIEWED,
           {
             plantId: plant._id,
             plantName: plant.name,
@@ -304,11 +304,11 @@ export class PlantController {
   static async updatePlant(req: UpdatePlantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { plantId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const updateData = { ...req.body, updatedAt: new Date() };
 
       // Check if plantId is valid MongoDB ObjectId
-      if (!mongoose.Types.ObjectId.isValid(plantId)) {
+      if (!mongoose.Types.ObjectId.isValid(plantId!)) {
         res.status(400).json({
           success: false,
           message: 'Invalid plant ID format'
@@ -317,7 +317,7 @@ export class PlantController {
       }
 
       const plant = await Plant.findOneAndUpdate(
-        { _id: plantId, userId },
+        { _id: new mongoose.Types.ObjectId(plantId!), userId },
         { $set: updateData },
         { new: true, runValidators: true }
       ).populate('careAnalytics');
@@ -350,7 +350,7 @@ export class PlantController {
       try {
         await UserAnalytics.trackEvent(
           userId,
-          'plant_updated',
+          AnalyticsEventType.PLANT_UPDATED,
           {
             plantId: plant._id,
             plantName: plant.name,
@@ -379,10 +379,10 @@ export class PlantController {
   static async deletePlant(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { plantId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       // Check if plantId is valid MongoDB ObjectId
-      if (!mongoose.Types.ObjectId.isValid(plantId)) {
+      if (!mongoose.Types.ObjectId.isValid(plantId!)) {
         res.status(400).json({
           success: false,
           message: 'Invalid plant ID format'
@@ -390,7 +390,7 @@ export class PlantController {
         return;
       }
 
-      const plant = await Plant.findOneAndDelete({ _id: plantId, userId });
+      const plant = await Plant.findOneAndDelete({ _id: new mongoose.Types.ObjectId(plantId!), userId });
 
       if (!plant) {
         res.status(404).json({
@@ -413,7 +413,7 @@ export class PlantController {
         // Track plant deletion
         await UserAnalytics.trackEvent(
           userId,
-          'plant_deleted',
+          AnalyticsEventType.PLANT_DELETED,
           {
             plantId: plant._id,
             plantName: plant.name,
@@ -446,10 +446,10 @@ export class PlantController {
    */
   static async getPlantCategories(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       const categoryCounts = await Plant.aggregate([
-        { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+        { $match: { userId } },
         { $group: { _id: '$category', count: { $sum: 1 } } },
         { $sort: { count: -1 } }
       ]);
@@ -485,7 +485,7 @@ export class PlantController {
   static async bulkOperation(req: BulkOperationRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { plantIds, operation, data } = req.body;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       // Validate plant IDs
       const validPlantIds = plantIds.filter(id => mongoose.Types.ObjectId.isValid(id));
@@ -599,11 +599,11 @@ export class PlantController {
       try {
         await UserAnalytics.trackEvent(
           userId,
-          'plants_bulk_operation',
+          AnalyticsEventType.PLANTS_BULK_OPERATION,
           {
             operation,
             plantsCount: validPlantIds.length,
-            affectedCount: result?.modifiedCount || result?.deletedCount || 0,
+            affectedCount: 'deletedCount' in result ? result.deletedCount : 'modifiedCount' in result ? result.modifiedCount : 0,
             sessionId: req.sessionID
           }
         );
@@ -617,7 +617,7 @@ export class PlantController {
         data: {
           operation,
           requestedCount: validPlantIds.length,
-          affectedCount: result?.modifiedCount || result?.deletedCount || 0
+          affectedCount: 'deletedCount' in result ? result.deletedCount : 'modifiedCount' in result ? result.modifiedCount : 0
         }
       });
     } catch (error) {
@@ -632,7 +632,7 @@ export class PlantController {
   static async importPlants(req: ImportPlantsRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { plants, overwrite = false } = req.body;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       if (!Array.isArray(plants) || plants.length === 0) {
         res.status(400).json({
@@ -689,7 +689,7 @@ export class PlantController {
           results.imported++;
         } catch (plantError) {
           results.errors++;
-          results.errorDetails.push(`Plant "${plantData.name}": ${plantError.message}`);
+          results.errorDetails.push(`Plant "${plantData.name}": ${(plantError as Error).message}`);
         }
       }
 
@@ -708,7 +708,7 @@ export class PlantController {
           // Track import event
           await UserAnalytics.trackEvent(
             userId,
-            'plants_imported',
+            AnalyticsEventType.PLANTS_IMPORTED,
             {
               totalPlants: plants.length,
               importedCount: results.imported,
@@ -738,7 +738,7 @@ export class PlantController {
    */
   static async exportPlants(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { format = 'json' } = req.query;
 
       const plants = await Plant.find({ userId })
@@ -749,7 +749,7 @@ export class PlantController {
       try {
         await UserAnalytics.trackEvent(
           userId,
-          'plants_exported',
+          AnalyticsEventType.PLANTS_EXPORTED,
           {
             plantsCount: plants.length,
             format,
@@ -788,10 +788,10 @@ export class PlantController {
    */
   static async getPlantAnalytics(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       const analytics = await Plant.aggregate([
-        { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+        { $match: { userId } },
         {
           $group: {
             _id: null,

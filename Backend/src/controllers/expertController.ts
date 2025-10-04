@@ -103,9 +103,9 @@ export class ExpertController {
   /**
    * Create or update expert profile
    */
-  static async createExpertProfile(req: Request, res: Response) {
+  static async createExpertProfile(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const {
         specializations,
         yearsOfExperience,
@@ -120,18 +120,17 @@ export class ExpertController {
       // Check if user is eligible to become an expert
       const user = await User.findById(userId);
       if (!user) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'User not found'
         });
+        return;
       }
 
       // Check if expert profile already exists
-      const existingProfile = ExpertProfiles.find(profile => 
-        profile.userId.toString() === userId
-      );
-
-      const profileData: ExpertProfile = {
+      const existingProfile = ExpertProfiles.find(profile =>
+        profile.userId.toString() === userId.toString()
+      );      const profileData: ExpertProfile = {
         userId: new mongoose.Types.ObjectId(userId),
         specializations,
         yearsOfExperience,
@@ -182,7 +181,7 @@ export class ExpertController {
       res.status(500).json({
         success: false,
         message: 'Failed to create/update expert profile',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -190,7 +189,7 @@ export class ExpertController {
   /**
    * Get expert profiles with filtering and search
    */
-  static async getExperts(req: Request, res: Response) {
+  static async getExperts(req: Request, res: Response): Promise<void> {
     try {
       const {
         specialization,
@@ -305,7 +304,7 @@ export class ExpertController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve experts',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -313,7 +312,7 @@ export class ExpertController {
   /**
    * Get expert profile by ID
    */
-  static async getExpertProfile(req: Request, res: Response) {
+  static async getExpertProfile(req: Request, res: Response): Promise<void> {
     try {
       const { expertId } = req.params;
 
@@ -322,10 +321,11 @@ export class ExpertController {
       );
 
       if (!expert) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Expert profile not found'
         });
+        return;
       }
 
       // Get user data
@@ -371,7 +371,7 @@ export class ExpertController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve expert profile',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -379,9 +379,9 @@ export class ExpertController {
   /**
    * Book a consultation with an expert
    */
-  static async bookConsultation(req: Request, res: Response) {
+  static async bookConsultation(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const {
         expertId,
         plantId,
@@ -400,20 +400,22 @@ export class ExpertController {
       );
 
       if (!expert || !expert.isActive || expert.verificationStatus !== 'verified') {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Expert not found or not available'
         });
+        return;
       }
 
       // Validate plant if provided
       if (plantId) {
         const plant = await Plant.findOne({ _id: plantId, userId });
         if (!plant) {
-          return res.status(404).json({
+          res.status(404).json({
             success: false,
             message: 'Plant not found or not owned by user'
           });
+          return;
         }
       }
 
@@ -483,7 +485,7 @@ export class ExpertController {
       res.status(500).json({
         success: false,
         message: 'Failed to book consultation',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -491,10 +493,10 @@ export class ExpertController {
   /**
    * Get user consultations
    */
-  static async getConsultations(req: Request, res: Response) {
+  static async getConsultations(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
-      const userRole = req.user?.role;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+      const userRole = (req.user as any).role;
       const {
         status,
         type,
@@ -511,8 +513,8 @@ export class ExpertController {
       // Build filter
       let filteredConsultations = Consultations.filter(consultation => {
         // User can see their own consultations as client or expert
-        const isClient = consultation.client.toString() === userId;
-        const isExpert = consultation.expert.toString() === userId;
+        const isClient = consultation.client.toString() === userId.toString();
+        const isExpert = consultation.expert.toString() === userId.toString();
         
         if (!isClient && !isExpert && !['admin', 'moderator'].includes(userRole)) {
           return false;
@@ -614,7 +616,7 @@ export class ExpertController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve consultations',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -622,32 +624,32 @@ export class ExpertController {
   /**
    * Update consultation status
    */
-  static async updateConsultationStatus(req: Request, res: Response) {
+  static async updateConsultationStatus(req: Request, res: Response): Promise<void> {
     try {
       const { consultationId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { status, expertNotes, summary, recommendations } = req.body;
 
       const consultation = Consultations.find(c => c._id?.toString() === consultationId);
       if (!consultation) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Consultation not found'
         });
+        return;
       }
 
       // Check authorization
-      const isExpert = consultation.expert.toString() === userId;
-      const isClient = consultation.client.toString() === userId;
-      
+      const isExpert = consultation.expert.toString() === userId.toString();
+      const isClient = consultation.client.toString() === userId.toString();
+
       if (!isExpert && !isClient) {
-        return res.status(403).json({
+        res.status(403).json({
           success: false,
           message: 'Not authorized to update this consultation'
         });
-      }
-
-      // Validate status transitions
+        return;
+      }      // Validate status transitions
       const validTransitions: { [key: string]: string[] } = {
         'pending': ['confirmed', 'cancelled'],
         'confirmed': ['in-progress', 'cancelled'],
@@ -656,11 +658,12 @@ export class ExpertController {
         'cancelled': []
       };
 
-      if (!validTransitions[consultation.status].includes(status)) {
-        return res.status(400).json({
+      if (!validTransitions[consultation.status]?.includes(status)) {
+        res.status(400).json({
           success: false,
           message: `Cannot change status from ${consultation.status} to ${status}`
         });
+        return;
       }
 
       // Update consultation
@@ -697,7 +700,7 @@ export class ExpertController {
       res.status(500).json({
         success: false,
         message: 'Failed to update consultation status',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -705,40 +708,41 @@ export class ExpertController {
   /**
    * Send message in consultation chat
    */
-  static async sendMessage(req: Request, res: Response) {
+  static async sendMessage(req: Request, res: Response): Promise<void> {
     try {
       const { consultationId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { message, messageType = 'text', attachments = [] } = req.body;
 
       const consultation = Consultations.find(c => c._id?.toString() === consultationId);
       if (!consultation) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Consultation not found'
         });
+        return;
       }
 
       // Check authorization
-      const isExpert = consultation.expert.toString() === userId;
-      const isClient = consultation.client.toString() === userId;
-      
+      const isExpert = consultation.expert.toString() === userId.toString();
+      const isClient = consultation.client.toString() === userId.toString();
+
       if (!isExpert && !isClient) {
-        return res.status(403).json({
+        res.status(403).json({
           success: false,
           message: 'Not authorized to send messages in this consultation'
         });
+        return;
       }
 
       // Check if chat is active
       if (!consultation.chat.isActive) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Chat is not active for this consultation'
         });
-      }
-
-      // Create message
+        return;
+      }      // Create message
       const newMessage = {
         sender: new mongoose.Types.ObjectId(userId),
         senderType: isExpert ? 'expert' as const : 'client' as const,
@@ -766,7 +770,7 @@ export class ExpertController {
       res.status(500).json({
         success: false,
         message: 'Failed to send message',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -774,32 +778,32 @@ export class ExpertController {
   /**
    * Get consultation chat messages
    */
-  static async getChatMessages(req: Request, res: Response) {
+  static async getChatMessages(req: Request, res: Response): Promise<void> {
     try {
       const { consultationId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { page = 1, limit = 50 } = req.query;
 
       const consultation = Consultations.find(c => c._id?.toString() === consultationId);
       if (!consultation) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Consultation not found'
         });
+        return;
       }
 
       // Check authorization
-      const isExpert = consultation.expert.toString() === userId;
-      const isClient = consultation.client.toString() === userId;
-      
+      const isExpert = consultation.expert.toString() === userId.toString();
+      const isClient = consultation.client.toString() === userId.toString();
+
       if (!isExpert && !isClient) {
-        return res.status(403).json({
+        res.status(403).json({
           success: false,
           message: 'Not authorized to view messages in this consultation'
         });
-      }
-
-      // Get messages with pagination
+        return;
+      }      // Get messages with pagination
       const messages = consultation.chat.messages
         .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
@@ -840,7 +844,7 @@ export class ExpertController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve chat messages',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -848,10 +852,10 @@ export class ExpertController {
   /**
    * Submit expert review
    */
-  static async submitReview(req: Request, res: Response) {
+  static async submitReview(req: Request, res: Response): Promise<void> {
     try {
       const { consultationId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const {
         rating,
         review,
@@ -865,26 +869,29 @@ export class ExpertController {
 
       const consultation = Consultations.find(c => c._id?.toString() === consultationId);
       if (!consultation) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Consultation not found'
         });
+        return;
       }
 
       // Only client can review the expert
-      if (consultation.client.toString() !== userId) {
-        return res.status(403).json({
+      if (consultation.client.toString() !== userId.toString()) {
+        res.status(403).json({
           success: false,
           message: 'Only the client can review the expert'
         });
+        return;
       }
 
       // Check if consultation is completed
       if (consultation.status !== 'completed') {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Can only review completed consultations'
         });
+        return;
       }
 
       // Check if review already exists
@@ -893,10 +900,11 @@ export class ExpertController {
       );
 
       if (existingReview) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Review already submitted for this consultation'
         });
+        return;
       }
 
       // Create review
@@ -945,7 +953,7 @@ export class ExpertController {
       res.status(500).json({
         success: false,
         message: 'Failed to submit review',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -953,7 +961,7 @@ export class ExpertController {
   /**
    * Get expert reviews
    */
-  static async getExpertReviews(req: Request, res: Response) {
+  static async getExpertReviews(req: Request, res: Response): Promise<void> {
     try {
       const { expertId } = req.params;
       const {
@@ -1052,7 +1060,7 @@ export class ExpertController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve expert reviews',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -1060,20 +1068,21 @@ export class ExpertController {
   /**
    * Get expert dashboard statistics
    */
-  static async getExpertDashboard(req: Request, res: Response) {
+  static async getExpertDashboard(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       // Find expert profile
       const expert = ExpertProfiles.find(profile => 
-        profile.userId.toString() === userId
+        profile.userId.toString() === userId.toString()
       );
 
       if (!expert) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Expert profile not found'
         });
+        return;
       }
 
       // Get consultation statistics
@@ -1130,7 +1139,7 @@ export class ExpertController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve expert dashboard',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }

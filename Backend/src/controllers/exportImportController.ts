@@ -45,7 +45,7 @@ class ExportImportController {
     let operation: any = null;
     
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const options: ExportOptions = {
         format: req.body.format || 'json',
         dataTypes: req.body.dataTypes || ['plants', 'careLogs', 'reminders', 'profile'],
@@ -232,7 +232,7 @@ class ExportImportController {
     let operation: any = null;
     
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const file = req.file;
       const options = {
         overwrite: req.body.overwrite === 'true',
@@ -274,7 +274,7 @@ class ExportImportController {
       const importData = await this.parseImportFile(file);
       
       // Validate import data
-      const validation = await this.validateImportData(importData, userId);
+      const validation = await this.validateImportData(importData, userId.toString());
       if (!validation.valid) {
         res.status(400).json({
           message: 'Import validation failed',
@@ -297,7 +297,7 @@ class ExportImportController {
       }
 
       // Perform import
-      const result = await this.performImport(importData, userId, options);
+      const result = await this.performImport(importData, userId.toString(), options);
 
       // Mark operation as completed
       operation.markAsCompleted({
@@ -333,7 +333,7 @@ class ExportImportController {
   async downloadExport(req: Request, res: Response): Promise<void> {
     try {
       const { exportId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       if (!userId) {
         res.status(401).json({ message: 'Unauthorized' });
@@ -388,7 +388,7 @@ class ExportImportController {
   // Get export history
   async getExportHistory(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const operationType = req.query.type as 'export' | 'import' | undefined;
       const limit = parseInt(req.query.limit as string) || 20;
 
@@ -471,13 +471,15 @@ class ExportImportController {
         throw new Error('Empty CSV file');
       }
       
-      const headers = lines[0].split(',');
+      const headers = lines[0]?.split(',') || [];
       const data = lines.slice(1).map(line => {
         const values = line.split(',');
         const obj: any = {};
-        headers.forEach((header, index) => {
-          obj[header.trim()] = values[index]?.trim();
-        });
+        for (let i = 0; i < headers.length; i++) {
+          const header = headers[i]?.trim() || '';
+          const value = (values as string[])[i] || '';
+          obj[header] = value.trim();
+        }
         return obj;
       });
       return { importData: data };
@@ -636,7 +638,7 @@ class ExportImportController {
   // Get detailed operation information
   async getOperationDetails(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { operationId } = req.params;
 
       if (!userId) {

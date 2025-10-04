@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { Post } from '../models/Post';
 import { Comment } from '../models/Comment';
 import { Like } from '../models/Like';
@@ -7,7 +8,7 @@ import { BlogCategory } from '../models/BlogCategory';
 import { BlogSeries } from '../models/BlogSeries';
 import { BlogTag } from '../models/BlogTag';
 import { User } from '../models/User';
-import { UserAnalytics } from '../models/UserAnalytics';
+import { UserAnalytics, AnalyticsEventType } from '../models/UserAnalytics';
 import logger from '../config/logger';
 
 export class CommunityController {
@@ -17,9 +18,9 @@ export class CommunityController {
   /**
    * Create a new forum post
    */
-  static async createPost(req: Request, res: Response) {
+  static async createPost(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const {
         title,
         content,
@@ -100,7 +101,7 @@ export class CommunityController {
       res.status(500).json({
         success: false,
         message: 'Failed to create forum post',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -108,7 +109,7 @@ export class CommunityController {
   /**
    * Get forum posts with filtering and pagination
    */
-  static async getPosts(req: Request, res: Response) {
+  static async getPosts(req: Request, res: Response): Promise<void> {
     try {
       const {
         category,
@@ -201,7 +202,7 @@ export class CommunityController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve forum posts',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -209,10 +210,10 @@ export class CommunityController {
   /**
    * Get a single forum post by ID
    */
-  static async getPostById(req: Request, res: Response) {
+  static async getPostById(req: Request, res: Response): Promise<void> {
     try {
       const { postId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       const post = await Post.findById(postId)
         .populate('author', 'username profilePicture bio expertiseLevel')
@@ -220,10 +221,11 @@ export class CommunityController {
         .populate('category', 'name description color');
 
       if (!post) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Forum post not found'
         });
+        return;
       }
 
       // Increment view count (only once per user session)
@@ -258,7 +260,7 @@ export class CommunityController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve forum post',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -266,27 +268,29 @@ export class CommunityController {
   /**
    * Update a forum post
    */
-  static async updatePost(req: Request, res: Response) {
+  static async updatePost(req: Request, res: Response): Promise<void> {
     try {
       const { postId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const updateData = req.body;
 
       // Find the post
       const post = await Post.findById(postId);
       if (!post) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Forum post not found'
         });
+        return;
       }
 
       // Check ownership
-      if (post.author.toString() !== userId) {
-        return res.status(403).json({
+      if (post.author.toString() !== userId.toString()) {
+        res.status(403).json({
           success: false,
           message: 'Not authorized to update this post'
         });
+        return;
       }
 
       // Update allowed fields
@@ -329,7 +333,7 @@ export class CommunityController {
       res.status(500).json({
         success: false,
         message: 'Failed to update forum post',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -337,27 +341,29 @@ export class CommunityController {
   /**
    * Delete a forum post
    */
-  static async deletePost(req: Request, res: Response) {
+  static async deletePost(req: Request, res: Response): Promise<void> {
     try {
       const { postId } = req.params;
-      const userId = req.user?.id;
-      const userRole = req.user?.role;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+      const userRole = (req.user as any).role;
 
       // Find the post
       const post = await Post.findById(postId);
       if (!post) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Forum post not found'
         });
+        return;
       }
 
       // Check authorization (owner or admin/moderator)
-      if (post.author.toString() !== userId && !['admin', 'moderator'].includes(userRole)) {
-        return res.status(403).json({
+      if (post.author.toString() !== userId.toString() && !['admin', 'moderator'].includes(userRole)) {
+        res.status(403).json({
           success: false,
           message: 'Not authorized to delete this post'
         });
+        return;
       }
 
       // Soft delete - update status instead of removing
@@ -401,7 +407,7 @@ export class CommunityController {
       res.status(500).json({
         success: false,
         message: 'Failed to delete forum post',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -411,26 +417,28 @@ export class CommunityController {
   /**
    * Add a comment to a post
    */
-  static async addComment(req: Request, res: Response) {
+  static async addComment(req: Request, res: Response): Promise<void> {
     try {
       const { postId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { content, parentCommentId, isAnonymous = false } = req.body;
 
       // Check if post exists and allows comments
       const post = await Post.findById(postId);
       if (!post) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Forum post not found'
         });
+        return;
       }
 
       if (!post.allowComments) {
-        return res.status(403).json({
+        res.status(403).json({
           success: false,
           message: 'Comments are not allowed on this post'
         });
+        return;
       }
 
       // Create comment
@@ -496,7 +504,7 @@ export class CommunityController {
       res.status(500).json({
         success: false,
         message: 'Failed to add comment',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -504,7 +512,7 @@ export class CommunityController {
   /**
    * Get comments for a post
    */
-  static async getComments(req: Request, res: Response) {
+  static async getComments(req: Request, res: Response): Promise<void> {
     try {
       const { postId } = req.params;
       const {
@@ -517,10 +525,11 @@ export class CommunityController {
       // Check if post exists
       const post = await Post.findById(postId);
       if (!post) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Forum post not found'
         });
+        return;
       }
 
       // Build sort object
@@ -594,7 +603,7 @@ export class CommunityController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve comments',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -602,27 +611,29 @@ export class CommunityController {
   /**
    * Update a comment
    */
-  static async updateComment(req: Request, res: Response) {
+  static async updateComment(req: Request, res: Response): Promise<void> {
     try {
       const { commentId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { content } = req.body;
 
       // Find the comment
       const comment = await Comment.findById(commentId);
       if (!comment) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Comment not found'
         });
+        return;
       }
 
       // Check ownership
-      if (comment.author.toString() !== userId) {
-        return res.status(403).json({
+      if (comment.author.toString() !== userId.toString()) {
+        res.status(403).json({
           success: false,
           message: 'Not authorized to update this comment'
         });
+        return;
       }
 
       // Update comment
@@ -651,7 +662,7 @@ export class CommunityController {
       res.status(500).json({
         success: false,
         message: 'Failed to update comment',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -659,27 +670,29 @@ export class CommunityController {
   /**
    * Delete a comment
    */
-  static async deleteComment(req: Request, res: Response) {
+  static async deleteComment(req: Request, res: Response): Promise<void> {
     try {
       const { commentId } = req.params;
-      const userId = req.user?.id;
-      const userRole = req.user?.role;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+      const userRole = (req.user as any).role;
 
       // Find the comment
       const comment = await Comment.findById(commentId);
       if (!comment) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Comment not found'
         });
+        return;
       }
 
       // Check authorization
-      if (comment.author.toString() !== userId && !['admin', 'moderator'].includes(userRole)) {
-        return res.status(403).json({
+      if (comment.author.toString() !== userId.toString() && !['admin', 'moderator'].includes(userRole)) {
+        res.status(403).json({
           success: false,
           message: 'Not authorized to delete this comment'
         });
+        return;
       }
 
       // Soft delete
@@ -690,13 +703,13 @@ export class CommunityController {
       });
 
       // Update post comment count
-      await Post.findByIdAndUpdate(comment.postId, {
+      await Post.findByIdAndUpdate(comment.post, {
         $inc: { 'engagement.comments': -1 }
       });
 
       // Update parent comment reply count if this is a reply
-      if (comment.parentCommentId) {
-        await Comment.findByIdAndUpdate(comment.parentCommentId, {
+      if (comment.parentComment) {
+        await Comment.findByIdAndUpdate(comment.parentComment, {
           $inc: { 'engagement.replies': -1 }
         });
       }
@@ -724,7 +737,7 @@ export class CommunityController {
       res.status(500).json({
         success: false,
         message: 'Failed to delete comment',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -734,26 +747,28 @@ export class CommunityController {
   /**
    * Toggle like on a post or comment
    */
-  static async toggleLike(req: Request, res: Response) {
+  static async toggleLike(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { targetId, targetType } = req.body;
 
       if (!['post', 'comment'].includes(targetType)) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Invalid target type. Must be post or comment'
         });
+        return;
       }
 
       // Check if target exists
       const Model = targetType === 'post' ? Post : Comment;
-      const target = await Model.findById(targetId);
+      const target = await (Model as any).findById(targetId);
       if (!target) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: `${targetType} not found`
         });
+        return;
       }
 
       // Check if user already liked this target
@@ -824,7 +839,7 @@ export class CommunityController {
       }
 
       // Update target likes count
-      await Model.findByIdAndUpdate(targetId, {
+      await (Model as any).findByIdAndUpdate(targetId, {
         'engagement.likes': likesCount
       });
 
@@ -844,7 +859,7 @@ export class CommunityController {
       res.status(500).json({
         success: false,
         message: 'Failed to toggle like',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -854,26 +869,28 @@ export class CommunityController {
   /**
    * Flag a post or comment for moderation
    */
-  static async flagContent(req: Request, res: Response) {
+  static async flagContent(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { targetId, targetType, reason, description } = req.body;
 
       if (!['post', 'comment'].includes(targetType)) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Invalid target type. Must be post or comment'
         });
+        return;
       }
 
       // Check if target exists
       const Model = targetType === 'post' ? Post : Comment;
-      const target = await Model.findById(targetId);
+      const target = await (Model as any).findById(targetId);
       if (!target) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: `${targetType} not found`
         });
+        return;
       }
 
       // Check if user already flagged this content
@@ -882,10 +899,11 @@ export class CommunityController {
       );
 
       if (existingFlag) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'You have already flagged this content'
         });
+        return;
       }
 
       // Add flag to content
@@ -896,7 +914,7 @@ export class CommunityController {
         reportedAt: new Date()
       };
 
-      await Model.findByIdAndUpdate(targetId, {
+      await (Model as any).findByIdAndUpdate(targetId, {
         $push: { 'moderation.flags': flagData },
         $inc: { 'moderation.flagCount': 1 },
         $set: { 'moderation.flagged': true }
@@ -914,7 +932,7 @@ export class CommunityController {
       res.status(500).json({
         success: false,
         message: 'Failed to flag content',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -924,7 +942,7 @@ export class CommunityController {
   /**
    * Get community statistics
    */
-  static async getCommunityStats(req: Request, res: Response) {
+  static async getCommunityStats(req: Request, res: Response): Promise<void> {
     try {
       const {
         timeframe = '30d', // 7d, 30d, 90d, 1y, all
@@ -1053,7 +1071,7 @@ export class CommunityController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve community statistics',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -1061,7 +1079,7 @@ export class CommunityController {
   /**
    * Get trending posts
    */
-  static async getTrendingPosts(req: Request, res: Response) {
+  static async getTrendingPosts(req: Request, res: Response): Promise<void> {
     try {
       const {
         timeframe = '24h', // 24h, 7d, 30d
@@ -1157,7 +1175,7 @@ export class CommunityController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve trending posts',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }

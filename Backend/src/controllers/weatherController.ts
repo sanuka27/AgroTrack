@@ -104,15 +104,16 @@ export class WeatherController {
   /**
    * Get current weather for a location
    */
-  static async getCurrentWeather(req: Request, res: Response) {
+  static async getCurrentWeather(req: Request, res: Response): Promise<void> {
     try {
       const { latitude, longitude, city } = req.query;
 
       if (!latitude || !longitude) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Latitude and longitude are required'
         });
+        return;
       }
 
       // Check cache first
@@ -124,7 +125,7 @@ export class WeatherController {
       );
 
       if (cachedWeather) {
-        return res.status(200).json({
+        res.status(200).json({
           success: true,
           message: 'Weather data retrieved from cache',
           data: {
@@ -132,6 +133,7 @@ export class WeatherController {
             cached: true
           }
         });
+        return;
       }
 
       // Fetch from weather API (mock implementation)
@@ -163,7 +165,7 @@ export class WeatherController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve weather data',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -171,15 +173,16 @@ export class WeatherController {
   /**
    * Get weather forecast for a location
    */
-  static async getWeatherForecast(req: Request, res: Response) {
+  static async getWeatherForecast(req: Request, res: Response): Promise<void> {
     try {
       const { latitude, longitude, days = 7 } = req.query;
 
       if (!latitude || !longitude) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Latitude and longitude are required'
         });
+        return;
       }
 
       const forecastDays = Math.min(Number(days), 14); // Limit to 14 days
@@ -214,7 +217,7 @@ export class WeatherController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve weather forecast',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -222,16 +225,17 @@ export class WeatherController {
   /**
    * Generate weather-based plant care recommendations
    */
-  static async getWeatherRecommendations(req: Request, res: Response) {
+  static async getWeatherRecommendations(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { plantId, latitude, longitude } = req.query;
 
       if (!latitude || !longitude) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Location coordinates are required'
         });
+        return;
       }
 
       // Get weather data
@@ -243,10 +247,11 @@ export class WeatherController {
         // Get specific plant
         const plant = await Plant.findOne({ _id: plantId, userId });
         if (!plant) {
-          return res.status(404).json({
+          res.status(404).json({
             success: false,
             message: 'Plant not found'
           });
+          return;
         }
         plantsToAnalyze = [plant];
       } else {
@@ -281,7 +286,7 @@ export class WeatherController {
 
           // Remove old recommendations for this plant
           const existingIndex = WeatherRecommendations.findIndex(wr => 
-            wr.userId.toString() === userId && wr.plantId.toString() === plant._id.toString()
+            wr.userId.toString() === userId.toString() && wr.plantId.toString() === plant._id.toString()
           );
 
           if (existingIndex >= 0) {
@@ -335,7 +340,7 @@ export class WeatherController {
       res.status(500).json({
         success: false,
         message: 'Failed to generate weather recommendations',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -343,22 +348,23 @@ export class WeatherController {
   /**
    * Get weather alerts for user's location
    */
-  static async getWeatherAlerts(req: Request, res: Response) {
+  static async getWeatherAlerts(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { latitude, longitude, activeOnly = 'true' } = req.query;
 
       if (!latitude || !longitude) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Location coordinates are required'
         });
+        return;
       }
 
       // Generate weather alerts based on current conditions
       const weatherData = await this.fetchWeatherFromAPI(Number(latitude), Number(longitude));
       const alerts = await this.generateWeatherAlerts(
-        userId,
+        userId.toString(),
         weatherData,
         Number(latitude),
         Number(longitude)
@@ -384,7 +390,7 @@ export class WeatherController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve weather alerts',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -392,20 +398,21 @@ export class WeatherController {
   /**
    * Acknowledge weather alert
    */
-  static async acknowledgeAlert(req: Request, res: Response) {
+  static async acknowledgeAlert(req: Request, res: Response): Promise<void> {
     try {
       const { alertId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       const alert = WeatherAlerts.find(a => 
-        a._id?.toString() === alertId && a.userId.toString() === userId
+        a._id?.toString() === alertId && a.userId.toString() === userId.toString()
       );
 
       if (!alert) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Weather alert not found'
         });
+        return;
       }
 
       alert.acknowledged = true;
@@ -425,7 +432,7 @@ export class WeatherController {
       res.status(500).json({
         success: false,
         message: 'Failed to acknowledge weather alert',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -433,16 +440,17 @@ export class WeatherController {
   /**
    * Update plant care schedules based on weather
    */
-  static async updateSchedulesWithWeather(req: Request, res: Response) {
+  static async updateSchedulesWithWeather(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { latitude, longitude, plantIds } = req.body;
 
       if (!latitude || !longitude) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Location coordinates are required'
         });
+        return;
       }
 
       // Get weather forecast
@@ -492,7 +500,7 @@ export class WeatherController {
       res.status(500).json({
         success: false,
         message: 'Failed to update schedules with weather',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -500,15 +508,16 @@ export class WeatherController {
   /**
    * Get weather statistics for user's location
    */
-  static async getWeatherStats(req: Request, res: Response) {
+  static async getWeatherStats(req: Request, res: Response): Promise<void> {
     try {
       const { latitude, longitude, timeframe = '30d' } = req.query;
 
       if (!latitude || !longitude) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           message: 'Location coordinates are required'
         });
+        return;
       }
 
       // Calculate date range
@@ -557,7 +566,7 @@ export class WeatherController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve weather statistics',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }
   }
@@ -601,7 +610,7 @@ export class WeatherController {
         chanceOfRain: Math.round(Math.random() * 100),
         rainfall: Math.random() * 20, // 0-20mm
         windSpeed: currentWeather.windSpeed + Math.round(Math.random() * 10 - 5),
-        condition: ['Sunny', 'Cloudy', 'Partly Cloudy', 'Rainy', 'Overcast'][Math.floor(Math.random() * 5)],
+        condition: ['Sunny', 'Cloudy', 'Partly Cloudy', 'Rainy', 'Overcast'][Math.floor(Math.random() * 5)] || 'Sunny',
         conditionCode: 'variable',
         uvIndex: Math.round(Math.random() * 11)
       });
@@ -844,11 +853,11 @@ export class WeatherController {
       }
 
       // Update reminder if adjustment was made
-      if (adjustmentMade) {
+      if (adjustmentMade && reminder._id && adjustments.length > 0) {
         await Reminder.findByIdAndUpdate(reminder._id, {
           scheduledDate: newDate,
           weatherAdjusted: true,
-          weatherAdjustmentReason: adjustments[adjustments.length - 1].reason
+          weatherAdjustmentReason: adjustments[adjustments.length - 1]?.reason || 'Weather adjustment'
         });
       }
     }

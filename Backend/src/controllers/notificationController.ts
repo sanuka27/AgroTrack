@@ -7,7 +7,7 @@ import { User } from '../models/User';
 import { Plant } from '../models/Plant';
 import { Reminder } from '../models/Reminder';
 import { UserAnalytics } from '../models/UserAnalytics';
-import { generateNotificationContent } from '../../ai/gemini';
+import { generateNotificationContent } from '../ai/gemini';
 import logger from '../config/logger';
 
 // Interfaces for request types
@@ -64,7 +64,7 @@ export const createNotification = async (req: AuthenticatedRequest, res: Respons
     }
 
     const { type, title, message, channels, priority, scheduledFor, relatedEntity, metadata } = req.body;
-    const userId = new mongoose.Types.ObjectId(req.user!.id);
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
     // Get user's notification preferences
     const preferences = await NotificationPreference.getOrCreateForUser(userId);
@@ -133,8 +133,9 @@ export const createNotification = async (req: AuthenticatedRequest, res: Respons
     res.status(500).json({
       success: false,
       message: 'Failed to create notification',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
+    return;
   }
 };
 
@@ -151,7 +152,7 @@ export const createAINotification = async (req: AuthenticatedRequest, res: Respo
     }
 
     const { type, context, channels, priority, scheduledFor } = req.body;
-    const userId = new mongoose.Types.ObjectId(req.user!.id);
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
     // Check if AI features are enabled
     if (process.env.ENABLE_AI_FEATURES !== 'true') {
@@ -180,7 +181,7 @@ export const createAINotification = async (req: AuthenticatedRequest, res: Respo
     const aiContent = await generateNotificationContent(type, context);
     
     // Extract title and message from AI content
-    const lines = aiContent.split('\n').filter(line => line.trim());
+    const lines = aiContent.split('\n').filter((line: string) => line.trim());
     const title = lines[0] || `Plant Care ${type.charAt(0).toUpperCase() + type.slice(1)}`;
     const message = lines.slice(1).join(' ') || aiContent;
 
@@ -240,8 +241,9 @@ export const createAINotification = async (req: AuthenticatedRequest, res: Respo
     res.status(500).json({
       success: false,
       message: 'Failed to create AI notification',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
+    return;
   }
 };
 
@@ -257,7 +259,7 @@ export const getUserNotifications = async (req: AuthenticatedRequest, res: Respo
       });
     }
 
-    const userId = new mongoose.Types.ObjectId(req.user!.id);
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
     const page = parseInt(req.query.page as string) || 1;
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
     const type = req.query.type as string;
@@ -296,8 +298,9 @@ export const getUserNotifications = async (req: AuthenticatedRequest, res: Respo
     res.status(500).json({
       success: false,
       message: 'Failed to fetch notifications',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
+    return;
   }
 };
 
@@ -314,7 +317,7 @@ export const markNotificationAsRead = async (req: AuthenticatedRequest, res: Res
     }
 
     const { notificationId } = req.params;
-    const userId = new mongoose.Types.ObjectId(req.user!.id);
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
     const notification = await Notification.findOne({
       _id: notificationId,
@@ -361,15 +364,16 @@ export const markNotificationAsRead = async (req: AuthenticatedRequest, res: Res
     res.status(500).json({
       success: false,
       message: 'Failed to mark notification as read',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
+    return;
   }
 };
 
 // Mark all notifications as read
 export const markAllNotificationsAsRead = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = new mongoose.Types.ObjectId(req.user!.id);
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
     const result = await Notification.updateMany(
       { 
@@ -405,8 +409,9 @@ export const markAllNotificationsAsRead = async (req: AuthenticatedRequest, res:
     res.status(500).json({
       success: false,
       message: 'Failed to mark all notifications as read',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
+    return;
   }
 };
 
@@ -423,7 +428,7 @@ export const deleteNotification = async (req: AuthenticatedRequest, res: Respons
     }
 
     const { notificationId } = req.params;
-    const userId = new mongoose.Types.ObjectId(req.user!.id);
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
     const notification = await Notification.findOneAndDelete({
       _id: notificationId,
@@ -447,15 +452,16 @@ export const deleteNotification = async (req: AuthenticatedRequest, res: Respons
     res.status(500).json({
       success: false,
       message: 'Failed to delete notification',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
+    return;
   }
 };
 
 // Get notification preferences
 export const getNotificationPreferences = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = new mongoose.Types.ObjectId(req.user!.id);
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
     const preferences = await NotificationPreference.getOrCreateForUser(userId);
 
     return res.json({
@@ -468,8 +474,9 @@ export const getNotificationPreferences = async (req: AuthenticatedRequest, res:
     res.status(500).json({
       success: false,
       message: 'Failed to fetch notification preferences',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
+    return;
   }
 };
 
@@ -485,7 +492,7 @@ export const updateNotificationPreferences = async (req: AuthenticatedRequest, r
       });
     }
 
-    const userId = new mongoose.Types.ObjectId(req.user!.id);
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
     const updateData = req.body;
 
     const preferences = await NotificationPreference.findOneAndUpdate(
@@ -505,8 +512,9 @@ export const updateNotificationPreferences = async (req: AuthenticatedRequest, r
     res.status(500).json({
       success: false,
       message: 'Failed to update notification preferences',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
+    return;
   }
 };
 
@@ -523,7 +531,7 @@ export const addPushToken = async (req: AuthenticatedRequest, res: Response) => 
     }
 
     const { token } = req.body;
-    const userId = new mongoose.Types.ObjectId(req.user!.id);
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
     const preferences = await NotificationPreference.getOrCreateForUser(userId);
     await preferences.addPushToken(token);
@@ -538,8 +546,9 @@ export const addPushToken = async (req: AuthenticatedRequest, res: Response) => 
     res.status(500).json({
       success: false,
       message: 'Failed to add push token',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
+    return;
   }
 };
 
@@ -556,7 +565,7 @@ export const removePushToken = async (req: AuthenticatedRequest, res: Response) 
     }
 
     const { token } = req.body;
-    const userId = new mongoose.Types.ObjectId(req.user!.id);
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
     const preferences = await NotificationPreference.findOne({ userId });
     if (preferences) {
@@ -573,8 +582,9 @@ export const removePushToken = async (req: AuthenticatedRequest, res: Response) 
     res.status(500).json({
       success: false,
       message: 'Failed to remove push token',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
     });
+    return;
   }
 };
 

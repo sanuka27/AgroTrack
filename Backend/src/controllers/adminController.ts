@@ -146,7 +146,7 @@ export class AdminController {
     try {
       const { userId } = req.params;
 
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
+      if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
         res.status(400).json({
           success: false,
           message: 'Invalid user ID'
@@ -202,7 +202,7 @@ export class AdminController {
       const { userId } = req.params;
       const { role, isActive, reason } = req.body;
 
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
+      if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
         res.status(400).json({
           success: false,
           message: 'Invalid user ID'
@@ -264,7 +264,7 @@ export class AdminController {
       const { userId } = req.params;
       const { reason, hardDelete = false } = req.body;
 
-      if (!mongoose.Types.ObjectId.isValid(userId)) {
+      if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
         res.status(400).json({
           success: false,
           message: 'Invalid user ID'
@@ -396,7 +396,7 @@ export class AdminController {
       const { contentId } = req.params;
       const { action, reason, type = 'post' } = req.body;
 
-      if (!mongoose.Types.ObjectId.isValid(contentId)) {
+      if (!contentId || !mongoose.Types.ObjectId.isValid(contentId)) {
         res.status(400).json({
           success: false,
           message: 'Invalid content ID'

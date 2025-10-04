@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { Reminder } from '../models/Reminder';
 import { Plant } from '../models/Plant';
 import { CareLog } from '../models/CareLog';
-import { UserAnalytics } from '../models/UserAnalytics';
+import { UserAnalytics, AnalyticsEventType } from '../models/UserAnalytics';
 import { logger } from '../config/logger';
 
 // Extended Request interfaces for type safety
@@ -83,7 +83,7 @@ export class ReminderController {
    */
   static async createReminder(req: CreateReminderRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const reminderData = req.body;
 
       // Verify plant exists and belongs to user
@@ -149,7 +149,7 @@ export class ReminderController {
       try {
         await UserAnalytics.trackEvent(
           userId,
-          'reminder_created',
+          AnalyticsEventType.REMINDER_CREATED,
           {
             plantId: plant._id,
             plantName: plant.name,
@@ -179,7 +179,7 @@ export class ReminderController {
    */
   static async getReminders(req: SearchRemindersRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const {
         plantId,
         careType,
@@ -268,9 +268,9 @@ export class ReminderController {
   static async getReminderById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { reminderId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
-      if (!mongoose.Types.ObjectId.isValid(reminderId)) {
+      if (!reminderId || !mongoose.Types.ObjectId.isValid(reminderId!)) {
         res.status(400).json({
           success: false,
           message: 'Invalid reminder ID format'
@@ -305,10 +305,10 @@ export class ReminderController {
   static async updateReminder(req: UpdateReminderRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { reminderId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const updateData = { ...req.body, updatedAt: new Date() };
 
-      if (!mongoose.Types.ObjectId.isValid(reminderId)) {
+      if (!reminderId || !mongoose.Types.ObjectId.isValid(reminderId!)) {
         res.status(400).json({
           success: false,
           message: 'Invalid reminder ID format'
@@ -334,7 +334,7 @@ export class ReminderController {
       try {
         await UserAnalytics.trackEvent(
           userId,
-          'reminder_updated',
+          AnalyticsEventType.REMINDER_UPDATED,
           {
             reminderId: reminder._id,
             plantId: reminder.plantId,
@@ -364,9 +364,9 @@ export class ReminderController {
   static async deleteReminder(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { reminderId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
-      if (!mongoose.Types.ObjectId.isValid(reminderId)) {
+      if (!reminderId || !mongoose.Types.ObjectId.isValid(reminderId!)) {
         res.status(400).json({
           success: false,
           message: 'Invalid reminder ID format'
@@ -393,7 +393,7 @@ export class ReminderController {
       try {
         await UserAnalytics.trackEvent(
           userId,
-          'reminder_deleted',
+          AnalyticsEventType.REMINDER_DELETED,
           {
             reminderId: reminder._id,
             plantId: reminder.plantId,
@@ -422,9 +422,9 @@ export class ReminderController {
     try {
       const { reminderId } = req.params;
       const { notes, createCareLog = false } = req.body;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
-      if (!mongoose.Types.ObjectId.isValid(reminderId)) {
+      if (!reminderId || !mongoose.Types.ObjectId.isValid(reminderId!)) {
         res.status(400).json({
           success: false,
           message: 'Invalid reminder ID format'
@@ -476,7 +476,7 @@ export class ReminderController {
       try {
         await UserAnalytics.trackEvent(
           userId,
-          'reminder_completed',
+          AnalyticsEventType.REMINDER_COMPLETED,
           {
             reminderId: reminder._id,
             plantId: reminder.plantId?._id,
@@ -510,9 +510,9 @@ export class ReminderController {
     try {
       const { reminderId } = req.params;
       const { hours = 24, reason } = req.body;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
-      if (!mongoose.Types.ObjectId.isValid(reminderId)) {
+      if (!reminderId || !mongoose.Types.ObjectId.isValid(reminderId!)) {
         res.status(400).json({
           success: false,
           message: 'Invalid reminder ID format'
@@ -553,7 +553,7 @@ export class ReminderController {
       try {
         await UserAnalytics.trackEvent(
           userId,
-          'reminder_snoozed',
+          AnalyticsEventType.REMINDER_SNOOZED,
           {
             reminderId: reminder._id,
             plantId: reminder.plantId,
@@ -582,7 +582,7 @@ export class ReminderController {
    */
   static async getUpcomingReminders(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { days = '7' } = req.query;
 
       const daysAhead = parseInt(days as string);
@@ -630,7 +630,7 @@ export class ReminderController {
    */
   static async generateSmartSchedule(req: SmartScheduleRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { plantId, careTypes, analysisDepth = 'basic', considerWeather = false, considerSeason = true, optimizeForUser = true } = req.body;
 
       // Verify plant exists and belongs to user
@@ -768,7 +768,7 @@ export class ReminderController {
       try {
         await UserAnalytics.trackEvent(
           userId,
-          'smart_schedule_generated',
+          AnalyticsEventType.SMART_SCHEDULE_GENERATED,
           {
             plantId,
             plantName: plant.name,
@@ -814,7 +814,7 @@ export class ReminderController {
   static async bulkOperation(req: BulkReminderRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { reminderIds, operation, data } = req.body;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       // Validate reminder IDs
       const validReminderIds = reminderIds.filter(id => mongoose.Types.ObjectId.isValid(id));
@@ -904,11 +904,11 @@ export class ReminderController {
       try {
         await UserAnalytics.trackEvent(
           userId,
-          'reminders_bulk_operation',
+          AnalyticsEventType.REMINDERS_BULK_OPERATION,
           {
             operation,
             remindersCount: validReminderIds.length,
-            affectedCount: result?.modifiedCount || result?.deletedCount || 0,
+            affectedCount: 'deletedCount' in result ? result.deletedCount : ('modifiedCount' in result ? result.modifiedCount : 0),
             sessionId: req.sessionID
           }
         );
@@ -922,7 +922,7 @@ export class ReminderController {
         data: {
           operation,
           requestedCount: validReminderIds.length,
-          affectedCount: result?.modifiedCount || result?.deletedCount || 0
+          affectedCount: 'deletedCount' in result ? result.deletedCount : ('modifiedCount' in result ? result.modifiedCount : 0)
         }
       });
     } catch (error) {

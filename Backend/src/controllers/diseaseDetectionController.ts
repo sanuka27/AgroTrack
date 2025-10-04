@@ -202,19 +202,20 @@ export class DiseaseDetectionController {
   /**
    * AI-powered plant disease detection from image
    */
-  static async detectDisease(req: Request, res: Response) {
+  static async detectDisease(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { imageUrl, plantId, originalFileName } = req.body;
 
       // Validate plant if provided
       if (plantId) {
         const plant = await Plant.findOne({ _id: plantId, userId });
         if (!plant) {
-          return res.status(404).json({
+          res.status(404).json({
             success: false,
             message: 'Plant not found or not owned by user'
           });
+          return;
         }
       }
 
@@ -320,17 +321,18 @@ export class DiseaseDetectionController {
       res.status(500).json({
         success: false,
         message: 'Failed to detect disease',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
+      return;
     }
   }
 
   /**
    * Get disease detection history
    */
-  static async getDetectionHistory(req: Request, res: Response) {
+  static async getDetectionHistory(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const {
         plantId,
         diseaseDetected,
@@ -345,7 +347,7 @@ export class DiseaseDetectionController {
 
       // Build filter
       let filteredDetections = DiseaseDetections.filter(detection => {
-        if (detection.userId.toString() !== userId) return false;
+        if (detection.userId.toString() !== userId.toString()) return false;
         if (plantId && detection.plantId?.toString() !== plantId) return false;
         if (status && detection.status !== status) return false;
         
@@ -439,28 +441,30 @@ export class DiseaseDetectionController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve detection history',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
+      return;
     }
   }
 
   /**
    * Get detection details by ID
    */
-  static async getDetectionById(req: Request, res: Response) {
+  static async getDetectionById(req: Request, res: Response): Promise<void> {
     try {
       const { detectionId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       const detection = DiseaseDetections.find(d => 
-        d._id?.toString() === detectionId && d.userId.toString() === userId
+        d._id?.toString() === detectionId && d.userId.toString() === userId.toString()
       );
 
       if (!detection) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Disease detection not found'
         });
+        return;
       }
 
       // Get plant data if exists
@@ -495,18 +499,19 @@ export class DiseaseDetectionController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve detection details',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
+      return;
     }
   }
 
   /**
    * Submit user feedback on detection accuracy
    */
-  static async submitFeedback(req: Request, res: Response) {
+  static async submitFeedback(req: Request, res: Response): Promise<void> {
     try {
       const { detectionId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const {
         helpful,
         accuracyRating,
@@ -515,14 +520,15 @@ export class DiseaseDetectionController {
       } = req.body;
 
       const detection = DiseaseDetections.find(d => 
-        d._id?.toString() === detectionId && d.userId.toString() === userId
+        d._id?.toString() === detectionId && d.userId.toString() === userId.toString()
       );
 
       if (!detection) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Disease detection not found'
         });
+        return;
       }
 
       // Update feedback
@@ -551,15 +557,16 @@ export class DiseaseDetectionController {
       res.status(500).json({
         success: false,
         message: 'Failed to submit feedback',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
+      return;
     }
   }
 
   /**
    * Get disease knowledge base
    */
-  static async getDiseaseKnowledge(req: Request, res: Response) {
+  static async getDiseaseKnowledge(req: Request, res: Response): Promise<void> {
     try {
       const {
         category,
@@ -642,15 +649,16 @@ export class DiseaseDetectionController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve disease knowledge',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
+      return;
     }
   }
 
   /**
    * Get disease by ID from knowledge base
    */
-  static async getDiseaseById(req: Request, res: Response) {
+  static async getDiseaseById(req: Request, res: Response): Promise<void> {
     try {
       const { diseaseId } = req.params;
 
@@ -659,10 +667,11 @@ export class DiseaseDetectionController {
       );
 
       if (!disease) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           message: 'Disease information not found'
         });
+        return;
       }
 
       res.status(200).json({
@@ -678,17 +687,18 @@ export class DiseaseDetectionController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve disease information',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
+      return;
     }
   }
 
   /**
    * Get detection statistics for user
    */
-  static async getDetectionStats(req: Request, res: Response) {
+  static async getDetectionStats(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { timeframe = '30d' } = req.query;
 
       // Calculate date range
@@ -701,7 +711,7 @@ export class DiseaseDetectionController {
 
       // Filter user's detections
       const userDetections = DiseaseDetections.filter(detection => {
-        if (detection.userId.toString() !== userId) return false;
+        if (detection.userId.toString() !== userId.toString()) return false;
         if (dateFilter && detection.createdAt < dateFilter) return false;
         return true;
       });
@@ -761,8 +771,9 @@ export class DiseaseDetectionController {
       res.status(500).json({
         success: false,
         message: 'Failed to retrieve detection statistics',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
+      return;
     }
   }
 

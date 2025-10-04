@@ -2,18 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import mongoose, { Document } from 'mongoose';
 import { User, IUser } from '../models/User';
 import { UserAnalytics, AnalyticsEventType } from '../models/UserAnalytics';
 import { logger } from '../config/logger';
-
-// Extend Request interface to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: IUser;
-    }
-  }
-}
 
 // Interface for registration request
 interface RegisterRequest extends Request {
@@ -135,7 +127,7 @@ export class AuthController {
       await user.save();
 
       // Generate tokens
-      const accessToken = user.generateAccessToken();
+      const accessToken = user.generateAuthToken();
       const refreshToken = user.generateRefreshToken();
 
       // Save refresh token
@@ -192,7 +184,7 @@ export class AuthController {
 
     } catch (error) {
       logger.error('Registration error', { error });
-      next(error);
+      return next(error);
     }
   }
 
@@ -226,7 +218,7 @@ export class AuthController {
       }
 
       // Check if account is locked
-      if (user.isAccountLocked()) {
+      if (user.isLocked) {
         return res.status(423).json({
           success: false,
           message: `Account is locked due to too many failed login attempts. Please try again after ${user.lockUntil}`,
@@ -240,7 +232,14 @@ export class AuthController {
       const isPasswordValid = await user.comparePassword(password);
       if (!isPasswordValid) {
         // Increment failed login attempts
-        await user.incLoginAttempts();
+        user.loginAttempts += 1;
+        
+        // Lock account after 5 failed attempts for 2 hours
+        if (user.loginAttempts >= 5) {
+          user.lockUntil = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
+        }
+        
+        await user.save();
 
         return res.status(401).json({
           success: false,
@@ -260,10 +259,9 @@ export class AuthController {
 
       // Update last login
       user.lastLogin = new Date();
-      user.loginCount += 1;
 
       // Generate tokens
-      const accessToken = user.generateAccessToken();
+      const accessToken = user.generateAuthToken();
       const refreshToken = user.generateRefreshToken();
 
       // Save user with new refresh token
@@ -290,8 +288,7 @@ export class AuthController {
       // Log successful login
       logger.info('User logged in successfully', {
         userId: user._id,
-        email: user.email,
-        loginCount: user.loginCount
+        email: user.email
       });
 
       res.json({
@@ -318,7 +315,7 @@ export class AuthController {
 
     } catch (error) {
       logger.error('Login error', { error });
-      next(error);
+      return next(error);
     }
   }
 
@@ -356,7 +353,7 @@ export class AuthController {
       user.refreshTokens = user.refreshTokens.filter(token => token !== refreshToken);
 
       // Generate new tokens
-      const newAccessToken = user.generateAccessToken();
+      const newAccessToken = user.generateAuthToken();
       const newRefreshToken = user.generateRefreshToken();
 
       await user.save();
@@ -387,7 +384,7 @@ export class AuthController {
       }
 
       logger.error('Token refresh error', { error });
-      next(error);
+      return next(error);
     }
   }
 
@@ -398,13 +395,14 @@ export class AuthController {
       
       if (req.user && refreshToken) {
         // Remove refresh token from user's token list
-        req.user.refreshTokens = req.user.refreshTokens.filter(token => token !== refreshToken);
-        await req.user.save();
+        const user = req.user as IUser & Document;
+        user.refreshTokens = user.refreshTokens.filter((token: string) => token !== refreshToken);
+        await user.save();
 
         // Track logout event
         try {
-          await UserAnalytics.trackEvent(
-            req.user._id,
+          await (UserAnalytics as any).trackEvent(
+            user._id,
             AnalyticsEventType.USER_LOGOUT,
             { method: 'manual' },
             {
@@ -415,7 +413,7 @@ export class AuthController {
           logger.warn('Failed to track logout event', { error: analyticsError });
         }
 
-        logger.info('User logged out', { userId: req.user._id });
+        logger.info('User logged out', { userId: user._id });
       }
 
       res.json({
@@ -434,13 +432,14 @@ export class AuthController {
     try {
       if (req.user) {
         // Clear all refresh tokens
-        req.user.refreshTokens = [];
-        await req.user.save();
+        const user = req.user as IUser & Document;
+        user.refreshTokens = [];
+        await user.save();
 
         // Track logout all event
         try {
-          await UserAnalytics.trackEvent(
-            req.user._id,
+          await (UserAnalytics as any).trackEvent(
+            (req.user as IUser & Document)._id,
             AnalyticsEventType.USER_LOGOUT,
             { method: 'all_devices' },
             {
@@ -451,7 +450,7 @@ export class AuthController {
           logger.warn('Failed to track logout all event', { error: analyticsError });
         }
 
-        logger.info('User logged out from all devices', { userId: req.user._id });
+        logger.info('User logged out from all devices', { userId: (req.user as IUser & Document)._id });
       }
 
       res.json({
@@ -508,7 +507,7 @@ export class AuthController {
 
     } catch (error) {
       logger.error('Password reset request error', { error });
-      next(error);
+      return next(error);
     }
   }
 
@@ -591,7 +590,7 @@ export class AuthController {
 
     } catch (error) {
       logger.error('Password reset error', { error });
-      next(error);
+      return next(error);
     }
   }
 
@@ -624,7 +623,7 @@ export class AuthController {
       user.isEmailVerified = true;
       user.emailVerificationToken = undefined;
       user.emailVerificationExpires = undefined;
-      user.emailVerifiedAt = new Date();
+      user.isEmailVerified = true;
 
       await user.save();
 
@@ -637,7 +636,7 @@ export class AuthController {
 
     } catch (error) {
       logger.error('Email verification error', { error });
-      next(error);
+      return next(error);
     }
   }
 
@@ -689,7 +688,7 @@ export class AuthController {
 
     } catch (error) {
       logger.error('Resend verification email error', { error });
-      next(error);
+      return next(error);
     }
   }
 
@@ -703,29 +702,30 @@ export class AuthController {
         });
       }
 
+      const user = req.user as IUser & Document;
       res.json({
         success: true,
         data: {
           user: {
-            id: req.user._id,
-            name: req.user.name,
-            email: req.user.email,
-            role: req.user.role,
-            isEmailVerified: req.user.isEmailVerified,
-            avatar: req.user.avatar,
-            bio: req.user.bio,
-            location: req.user.location,
-            preferences: req.user.preferences,
-            stats: req.user.stats,
-            createdAt: req.user.createdAt,
-            lastLogin: req.user.lastLogin
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            isEmailVerified: user.isEmailVerified,
+            avatar: user.avatar,
+            bio: user.bio,
+            location: user.location,
+            preferences: user.preferences,
+            stats: user.stats,
+            createdAt: user.createdAt,
+            lastLogin: user.lastLogin
           }
         }
       });
 
     } catch (error) {
       logger.error('Get profile error', { error });
-      next(error);
+      return next(error);
     }
   }
 }

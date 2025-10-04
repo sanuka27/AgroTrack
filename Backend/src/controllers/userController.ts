@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/User';
-import { UserAnalytics } from '../models/UserAnalytics';
+import { UserAnalytics, AnalyticsEventType } from '../models/UserAnalytics';
 import { logger } from '../config/logger';
 
 // Extended Request interfaces for type safety
@@ -85,7 +86,7 @@ export class UserController {
    */
   static async getProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const user = await User.findById(req.user?.id)
+      const user = await User.findById(new mongoose.Types.ObjectId((req.user as any)._id!.toString()))
         .select('-password -refreshToken -emailVerificationToken -passwordResetToken')
         .populate('stats');
 
@@ -101,7 +102,7 @@ export class UserController {
       try {
         await UserAnalytics.trackEvent(
           user._id,
-          'profile_viewed',
+          AnalyticsEventType.PROFILE_VIEWED,
           {
             source: 'user_action',
             sessionId: req.sessionID
@@ -145,7 +146,7 @@ export class UserController {
   static async updateProfile(req: UpdateProfileRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { name, email, avatar, bio, location, timezone, language, theme } = req.body;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       // Check if email is being changed and if it's already in use
       if (email) {
@@ -194,7 +195,7 @@ export class UserController {
       try {
         await UserAnalytics.trackEvent(
           user._id,
-          'profile_updated',
+          AnalyticsEventType.PROFILE_UPDATED,
           {
             fieldsUpdated: Object.keys(updateData),
             sessionId: req.sessionID
@@ -220,7 +221,7 @@ export class UserController {
    */
   static async updatePreferences(req: UpdatePreferencesRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { notifications, privacy, plantCare, dashboard } = req.body;
 
       const updateData: any = {};
@@ -247,7 +248,7 @@ export class UserController {
       try {
         await UserAnalytics.trackEvent(
           user._id,
-          'preferences_updated',
+          AnalyticsEventType.PREFERENCES_UPDATED,
           {
             sections: Object.keys(req.body),
             sessionId: req.sessionID
@@ -274,7 +275,7 @@ export class UserController {
   static async changePassword(req: ChangePasswordRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { currentPassword, newPassword, confirmPassword } = req.body;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       // Validate password confirmation
       if (newPassword !== confirmPassword) {
@@ -295,7 +296,7 @@ export class UserController {
       }
 
       // Verify current password
-      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password!);
       if (!isCurrentPasswordValid) {
         res.status(400).json({
           success: false,
@@ -311,7 +312,7 @@ export class UserController {
       // Update password and security fields
       user.password = hashedNewPassword;
       user.passwordChangedAt = new Date();
-      user.refreshToken = []; // Invalidate all refresh tokens
+      user.refreshTokens = []; // Invalidate all refresh tokens
 
       await user.save();
 
@@ -319,7 +320,7 @@ export class UserController {
       try {
         await UserAnalytics.trackEvent(
           user._id,
-          'password_changed',
+          AnalyticsEventType.PASSWORD_CHANGED,
           {
             sessionId: req.sessionID,
             timestamp: new Date()
@@ -344,7 +345,7 @@ export class UserController {
    */
   static async deleteAccount(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       // Find and delete user
       const user = await User.findByIdAndDelete(userId);
@@ -360,7 +361,7 @@ export class UserController {
       try {
         await UserAnalytics.trackEvent(
           user._id,
-          'account_deleted',
+          AnalyticsEventType.ACCOUNT_DELETED,
           {
             sessionId: req.sessionID,
             deletionTimestamp: new Date()
@@ -385,7 +386,7 @@ export class UserController {
    */
   static async getUserStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       const analytics = await UserAnalytics.findOne({ userId })
         .select('totalPlants totalCareLogs streakDays achievements activityScore');
@@ -488,7 +489,7 @@ export class UserController {
   static async updateUserRole(req: UpdateRoleRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { userId, role, reason } = req.body;
-      const adminId = req.user?.id;
+      const adminId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       const user = await User.findByIdAndUpdate(
         userId,
@@ -510,8 +511,8 @@ export class UserController {
       // Track role change
       try {
         await UserAnalytics.trackEvent(
-          userId,
-          'role_updated',
+          new mongoose.Types.ObjectId(userId),
+          AnalyticsEventType.ROLE_UPDATED,
           {
             newRole: role,
             updatedBy: adminId,
@@ -540,10 +541,10 @@ export class UserController {
   static async deleteUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { userId } = req.params;
-      const adminId = req.user?.id;
+      const adminId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       // Prevent admin from deleting themselves
-      if (userId === adminId) {
+      if (userId === adminId.toString()) {
         res.status(400).json({
           success: false,
           message: 'You cannot delete your own account'
@@ -563,8 +564,8 @@ export class UserController {
       // Track user deletion by admin
       try {
         await UserAnalytics.trackEvent(
-          userId,
-          'user_deleted_by_admin',
+          new mongoose.Types.ObjectId(userId),
+          AnalyticsEventType.USER_DELETED_BY_ADMIN,
           {
             deletedBy: adminId,
             sessionId: req.sessionID,

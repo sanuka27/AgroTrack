@@ -77,7 +77,7 @@ export class SearchController {
         sortOrder = 'desc'
       } = req.query;
 
-      const userId = req.user!.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const filters: SearchFilters = {
         category: category as string,
         health: health as string,
@@ -94,22 +94,22 @@ export class SearchController {
       
       // Search across different content types
       if (!type || type === 'plant') {
-        const plantResults = await this.searchPlantsPrivate(userId, query as string, filters);
+        const plantResults = await this.searchPlantsPrivate(userId.toString(), query as string, filters);
         allResults.push(...plantResults);
       }
       
       if (!type || type === 'care-log') {
-        const careLogResults = await this.searchCareLogs(userId, query as string, filters);
+        const careLogResults = await this.searchCareLogs(userId.toString(), query as string, filters);
         allResults.push(...careLogResults);
       }
       
       if (!type || type === 'reminder') {
-        const reminderResults = await this.searchReminders(userId, query as string, filters);
+        const reminderResults = await this.searchReminders(userId.toString(), query as string, filters);
         allResults.push(...reminderResults);
       }
       
       if (!type || type === 'post') {
-        const postResults = await this.searchPosts(userId, query as string, filters);
+        const postResults = await this.searchPosts(userId.toString(), query as string, filters);
         allResults.push(...postResults);
       }
 
@@ -117,17 +117,17 @@ export class SearchController {
       this.sortResults(allResults, sortBy as string, sortOrder as string);
 
       // Apply pagination
-      const paginatedResults = allResults.slice(filters.offset, filters.offset + filters.limit);
+      const paginatedResults = allResults.slice(filters.offset ?? 0, (filters.offset ?? 0) + (filters.limit ?? 20));
 
       // Generate suggestions and facets
-      const suggestions = await this.generateSuggestions(query as string, userId);
-      const facets = await this.calculateFacets(userId, filters);
+      const suggestions = await this.generateSuggestions(query as string, userId.toString());
+      const facets = await this.calculateFacets(userId.toString(), filters);
 
       const executionTime = Date.now() - startTime;
 
       // Track search analytics
       await this.trackSearchAnalytics(
-        userId,
+        userId.toString(),
         query as string,
         type as string || 'universal',
         allResults.length,
@@ -472,9 +472,9 @@ export class SearchController {
   async getSearchSuggestions(req: Request, res: Response): Promise<void> {
     try {
       const { q: query = '' } = req.query;
-      const userId = req.user!.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       
-      const suggestions = await this.generateSuggestions(query as string, userId);
+      const suggestions = await this.generateSuggestions(query as string, userId.toString());
       
       res.json({
         success: true,
@@ -502,7 +502,7 @@ export class SearchController {
         offset = 0 
       } = req.query;
       
-      const userId = req.user!.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const filters: SearchFilters = {
         category: category as string,
         health: health as string,
@@ -511,7 +511,7 @@ export class SearchController {
         offset: parseInt(offset as string) || 0
       };
       
-      const results = await this.searchPlantsPrivate(userId, query as string, filters);
+      const results = await this.searchPlantsPrivate(userId.toString(), query as string, filters);
       
       res.json({
         success: true,
@@ -533,8 +533,8 @@ export class SearchController {
   // Get search facets endpoint
   async getSearchFacets(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.id;
-      const facets = await this.calculateFacets(userId, {});
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+      const facets = await this.calculateFacets(userId.toString(), {});
       
       res.json({
         success: true,
@@ -553,7 +553,7 @@ export class SearchController {
   // Get search history
   async getSearchHistory(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { limit = 10 } = req.query;
       
       const history = await SearchAnalytics.find({ 
@@ -607,7 +607,7 @@ export class SearchController {
   // Get search analytics
   async getSearchAnalytics(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { days = 30 } = req.query;
       
       const startDate = new Date();
@@ -652,7 +652,7 @@ export class SearchController {
   async trackSearchClick(req: Request, res: Response): Promise<void> {
     try {
       const { searchId, resultId, resultType, position } = req.body;
-      const userId = req.user!.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       
       // Find the search record and update it with click information
       const searchRecord = await SearchAnalytics.findOne({

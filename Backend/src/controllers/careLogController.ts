@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { CareLog } from '../models/CareLog';
 import { Plant } from '../models/Plant';
 import { PlantCareAnalytics } from '../models/PlantCareAnalytics';
-import { UserAnalytics } from '../models/UserAnalytics';
+import { UserAnalytics, AnalyticsEventType } from '../models/UserAnalytics';
 import { Reminder } from '../models/Reminder';
 import { logger } from '../config/logger';
 
@@ -97,7 +97,7 @@ export class CareLogController {
    */
   static async createCareLog(req: CreateCareLogRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { plantId, reminderCompleted, ...careLogData } = req.body;
 
       // Verify plant exists and belongs to user
@@ -177,8 +177,8 @@ export class CareLogController {
 
         // Track care log creation event
         await UserAnalytics.trackEvent(
-          userId,
-          'care_log_created',
+          new mongoose.Types.ObjectId(userId),
+          AnalyticsEventType.CARE_LOG_CREATED,
           {
             plantId,
             plantName: plant.name,
@@ -223,7 +223,7 @@ export class CareLogController {
    */
   static async getCareLogs(req: SearchCareLogsRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const {
         plantId,
         careType,
@@ -306,9 +306,9 @@ export class CareLogController {
   static async getCareLogById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { careLogId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
-      if (!mongoose.Types.ObjectId.isValid(careLogId)) {
+      if (!mongoose.Types.ObjectId.isValid(careLogId!)) {
         res.status(400).json({
           success: false,
           message: 'Invalid care log ID format'
@@ -316,7 +316,7 @@ export class CareLogController {
         return;
       }
 
-      const careLog = await CareLog.findOne({ _id: careLogId, userId })
+      const careLog = await CareLog.findOne({ _id: new mongoose.Types.ObjectId(careLogId), userId })
         .populate('plantId', 'name species category location images');
 
       if (!careLog) {
@@ -343,10 +343,10 @@ export class CareLogController {
   static async updateCareLog(req: UpdateCareLogRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { careLogId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const updateData = { ...req.body, updatedAt: new Date() };
 
-      if (!mongoose.Types.ObjectId.isValid(careLogId)) {
+      if (!mongoose.Types.ObjectId.isValid(careLogId!)) {
         res.status(400).json({
           success: false,
           message: 'Invalid care log ID format'
@@ -355,7 +355,7 @@ export class CareLogController {
       }
 
       const careLog = await CareLog.findOneAndUpdate(
-        { _id: careLogId, userId },
+        { _id: new mongoose.Types.ObjectId(careLogId), userId },
         { $set: updateData },
         { new: true, runValidators: true }
       ).populate('plantId', 'name species category location');
@@ -371,8 +371,8 @@ export class CareLogController {
       // Track care log update
       try {
         await UserAnalytics.trackEvent(
-          userId,
-          'care_log_updated',
+          new mongoose.Types.ObjectId(userId),
+          AnalyticsEventType.CARE_LOG_UPDATED,
           {
             careLogId: careLog._id,
             plantId: careLog.plantId,
@@ -402,9 +402,9 @@ export class CareLogController {
   static async deleteCareLog(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { careLogId } = req.params;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
-      if (!mongoose.Types.ObjectId.isValid(careLogId)) {
+      if (!mongoose.Types.ObjectId.isValid(careLogId!)) {
         res.status(400).json({
           success: false,
           message: 'Invalid care log ID format'
@@ -412,7 +412,7 @@ export class CareLogController {
         return;
       }
 
-      const careLog = await CareLog.findOneAndDelete({ _id: careLogId, userId });
+      const careLog = await CareLog.findOneAndDelete({ _id: new mongoose.Types.ObjectId(careLogId), userId });
 
       if (!careLog) {
         res.status(404).json({
@@ -441,8 +441,8 @@ export class CareLogController {
 
         // Track care log deletion
         await UserAnalytics.trackEvent(
-          userId,
-          'care_log_deleted',
+          new mongoose.Types.ObjectId(userId),
+          AnalyticsEventType.CARE_LOG_DELETED,
           {
             careLogId: careLog._id,
             plantId: careLog.plantId,
@@ -469,7 +469,7 @@ export class CareLogController {
    */
   static async getCareLogStats(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { plantId, period = '30' } = req.query;
 
       const periodDays = parseInt(period as string);
@@ -478,7 +478,7 @@ export class CareLogController {
 
       // Build match query
       const matchQuery: any = { 
-        userId: new mongoose.Types.ObjectId(userId),
+        userId,
         createdAt: { $gte: startDate }
       };
 
@@ -569,7 +569,7 @@ export class CareLogController {
   static async bulkOperation(req: BulkCareLogRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { careLogIds, operation, data } = req.body;
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       // Validate care log IDs
       const validCareLogIds = careLogIds.filter(id => mongoose.Types.ObjectId.isValid(id));
@@ -581,13 +581,14 @@ export class CareLogController {
         return;
       }
 
-      let result;
+      let result: any;
       let message = '';
+      let affectedCount = 0;
 
       switch (operation) {
         case 'delete':
           result = await CareLog.deleteMany({
-            _id: { $in: validCareLogIds },
+            _id: { $in: validCareLogIds.map(id => new mongoose.Types.ObjectId(id)) },
             userId
           });
 
@@ -600,6 +601,7 @@ export class CareLogController {
             }
           );
 
+          affectedCount = result.deletedCount;
           message = `${result.deletedCount} care logs deleted successfully`;
           break;
 
@@ -613,7 +615,7 @@ export class CareLogController {
           }
 
           result = await CareLog.updateMany(
-            { _id: { $in: validCareLogIds }, userId },
+            { _id: { $in: validCareLogIds.map(id => new mongoose.Types.ObjectId(id)) }, userId },
             {
               $set: {
                 notes: data.notes,
@@ -621,6 +623,7 @@ export class CareLogController {
               }
             }
           );
+          affectedCount = result.modifiedCount;
           message = `${result.modifiedCount} care logs notes updated successfully`;
           break;
 
@@ -635,12 +638,12 @@ export class CareLogController {
       // Track bulk operation
       try {
         await UserAnalytics.trackEvent(
-          userId,
-          'care_logs_bulk_operation',
+          new mongoose.Types.ObjectId(userId),
+          AnalyticsEventType.CARE_LOGS_BULK_OPERATION,
           {
             operation,
             careLogsCount: validCareLogIds.length,
-            affectedCount: result?.modifiedCount || result?.deletedCount || 0,
+            affectedCount,
             sessionId: req.sessionID
           }
         );
@@ -654,7 +657,7 @@ export class CareLogController {
         data: {
           operation,
           requestedCount: validCareLogIds.length,
-          affectedCount: result?.modifiedCount || result?.deletedCount || 0
+          affectedCount
         }
       });
     } catch (error) {
@@ -668,10 +671,10 @@ export class CareLogController {
    */
   static async getCareRecommendations(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { plantId } = req.query;
 
-      const matchQuery: any = { userId: new mongoose.Types.ObjectId(userId) };
+      const matchQuery: any = { userId };
       if (plantId) {
         matchQuery._id = new mongoose.Types.ObjectId(plantId as string);
       }
@@ -697,19 +700,19 @@ export class CareLogController {
         const now = new Date();
 
         // Watering recommendation
-        if (careInstructions?.watering?.frequency) {
+        if (plant.wateringEveryDays) {
           const lastWatering = lastCareLogs.find(log => log.careType === 'watering');
           if (lastWatering) {
             const daysSinceWatering = Math.floor(
               (now.getTime() - lastWatering.createdAt.getTime()) / (1000 * 60 * 60 * 24)
             );
             
-            if (daysSinceWatering >= careInstructions.watering.frequency) {
+            if (daysSinceWatering >= plant.wateringEveryDays) {
               recommendations.push({
                 plantId: plant._id,
                 plantName: plant.name,
                 careType: 'watering',
-                priority: daysSinceWatering > careInstructions.watering.frequency + 2 ? 'high' : 'medium',
+                priority: daysSinceWatering > plant.wateringEveryDays + 2 ? 'high' : 'medium',
                 reason: `Last watered ${daysSinceWatering} days ago`,
                 daysSinceLastCare: daysSinceWatering
               });
@@ -718,19 +721,19 @@ export class CareLogController {
         }
 
         // Fertilizing recommendation
-        if (careInstructions?.fertilizing?.frequency) {
+        if (plant.fertilizerEveryWeeks) {
           const lastFertilizing = lastCareLogs.find(log => log.careType === 'fertilizing');
           if (lastFertilizing) {
             const daysSinceFertilizing = Math.floor(
               (now.getTime() - lastFertilizing.createdAt.getTime()) / (1000 * 60 * 60 * 24)
             );
             
-            if (daysSinceFertilizing >= careInstructions.fertilizing.frequency) {
+            if (daysSinceFertilizing >= plant.fertilizerEveryWeeks * 7) {
               recommendations.push({
                 plantId: plant._id,
                 plantName: plant.name,
                 careType: 'fertilizing',
-                priority: daysSinceFertilizing > careInstructions.fertilizing.frequency + 7 ? 'high' : 'medium',
+                priority: daysSinceFertilizing > (plant.fertilizerEveryWeeks * 7) + 7 ? 'high' : 'medium',
                 reason: `Last fertilized ${daysSinceFertilizing} days ago`,
                 daysSinceLastCare: daysSinceFertilizing
               });
@@ -762,8 +765,8 @@ export class CareLogController {
       // Sort by priority and days since last care
       recommendations.sort((a, b) => {
         const priorityOrder = { high: 3, medium: 2, low: 1 };
-        if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-          return priorityOrder[b.priority] - priorityOrder[a.priority];
+        if (priorityOrder[a.priority as keyof typeof priorityOrder] !== priorityOrder[b.priority as keyof typeof priorityOrder]) {
+          return priorityOrder[b.priority as keyof typeof priorityOrder] - priorityOrder[a.priority as keyof typeof priorityOrder];
         }
         return b.daysSinceLastCare - a.daysSinceLastCare;
       });
