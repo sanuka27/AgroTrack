@@ -36,7 +36,7 @@ passport.use(new GoogleStrategy({
 
     if (!googleData.email) {
       logger.error('Google OAuth: No email provided', { googleId: profile.id });
-      return done(new Error('Email is required from Google account'), null);
+      return done(new Error('Email is required from Google account'), false);
     }
 
     // Check if user already exists
@@ -133,7 +133,7 @@ passport.use(new GoogleStrategy({
     return done(null, user);
   } catch (error) {
     logger.error('Google OAuth strategy error', { error, profileId: profile.id });
-    return done(error, null);
+    return done(error, false);
   }
 }));
 
