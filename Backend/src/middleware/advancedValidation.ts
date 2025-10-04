@@ -508,6 +508,7 @@ export function createValidationMiddleware(validations: {
       // Replace with sanitized data
       req[source] = sanitizedData;
       next();
+      return;
     } catch (error) {
       logger.error('Validation middleware error:', error);
       return res.status(500).json({

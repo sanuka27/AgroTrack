@@ -20,12 +20,12 @@ export const roleGuard = (allowedRoles: UserRole[]) => {
         return;
       }
 
-      const userRole = req.user.role as UserRole;
+      const userRole = (req.user as any).role as UserRole;
 
       // Check if user's role is in the allowed roles
       if (!allowedRoles.includes(userRole)) {
-        logger.warn(`Access denied for user ${req.user.id} with role ${userRole} to endpoint ${req.path}`, {
-          userId: req.user.id,
+        logger.warn(`Access denied for user ${(req.user as any).id} with role ${userRole} to endpoint ${req.path}`, {
+          userId: (req.user as any).id,
           userRole,
           requiredRoles: allowedRoles,
           endpoint: req.path,
@@ -45,8 +45,8 @@ export const roleGuard = (allowedRoles: UserRole[]) => {
       }
 
       // User has required role, proceed to next middleware
-      logger.info(`Access granted for user ${req.user.id} with role ${userRole} to endpoint ${req.path}`, {
-        userId: req.user.id,
+      logger.info(`Access granted for user ${(req.user as any).id} with role ${userRole} to endpoint ${req.path}`, {
+        userId: (req.user as any).id,
         userRole,
         endpoint: req.path,
         method: req.method

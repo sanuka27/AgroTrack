@@ -633,6 +633,7 @@ export function validateRequest(schema: Joi.ObjectSchema, options: {
     // Replace the original data with validated/sanitized data
     req[source] = value;
     next();
+    return;
   };
 }
 
@@ -662,6 +663,7 @@ export function validateCustom(validator: (data: any) => ValidationResult, sourc
     }
 
     next();
+    return;
   };
 }
 

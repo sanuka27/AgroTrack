@@ -76,7 +76,7 @@ class AdvancedRateLimiter {
   constructor() {
     try {
       // Try to use Redis if available
-      if (redis.isOpen) {
+      if (redis.isHealthy()) {
         this.redisLimiter = new RateLimiterRedis({
           storeClient: redis,
           keyPrefix: 'agrotrack_rl',
@@ -161,9 +161,9 @@ class BruteForceProtection {
 
   constructor() {
     try {
-      if (redis.isOpen) {
+      if (redis.isHealthy()) {
         this.store = new ExpressBruteRedis({
-          client: redis,
+          client: redis.redis as any, // Cast to satisfy ExpressBruteRedis type requirements
           prefix: 'agrotrack_bf:'
         });
       }
@@ -217,18 +217,23 @@ class BruteForceProtection {
   }
 
   // Middleware for general brute force protection
-  general = this.bruteforce.prevent;
+  get general() {
+    return this.bruteforce.prevent;
+  }
 
   // Middleware for authentication brute force protection
-  auth = this.bruteforceAuth.prevent;
+  get auth() {
+    return this.bruteforceAuth.prevent;
+  }
 
   // Reset brute force counter (call on successful operations)
   reset(req: Request) {
+    const ip = req.ip || 'unknown';
     if (this.bruteforce.reset) {
-      this.bruteforce.reset(req.ip);
+      this.bruteforce.reset(ip, '', () => {}); // Provide empty key and no-op callback
     }
     if (this.bruteforceAuth.reset) {
-      this.bruteforceAuth.reset(req.ip);
+      this.bruteforceAuth.reset(ip, '', () => {}); // Provide empty key and no-op callback
     }
   }
 }
@@ -502,9 +507,9 @@ export class JWTSecurity {
     };
 
     return jwt.sign(enhancedPayload, jwtSecret, {
-      algorithm: this.ALGORITHM,
-      expiresIn
-    });
+      expiresIn,
+      algorithm: this.ALGORITHM as jwt.Algorithm
+    } as jwt.SignOptions);
   }
 
   /**
