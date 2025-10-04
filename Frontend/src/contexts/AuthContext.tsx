@@ -1,4 +1,21 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
 
 export type UserRole = 'guest' | 'user' | 'admin';
 
@@ -15,11 +32,69 @@ interface AuthContextType {
   user: User | null;
   role: UserRole;
   isAuthenticated: boolean;
+  loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  loginWithGoogle: () => Promise<boolean>;
+  logout: () => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<boolean>;
   hasPermission: (permission: string) => boolean;
+  refreshToken: () => Promise<boolean>;
 }
+
+// API configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+// Axios instance for API calls
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true,
+});
+
+// Add token to requests
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('agrotrack_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Add response interceptor to handle token refresh
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401 && !error.config._retry) {
+      error.config._retry = true;
+      
+      const refreshTokenValue = localStorage.getItem('agrotrack_refresh_token');
+      if (refreshTokenValue) {
+        try {
+          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+            refreshToken: refreshTokenValue
+          });
+          
+          if (response.data.success) {
+            const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+            localStorage.setItem('agrotrack_token', accessToken);
+            localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
+            
+            // Retry the original request
+            error.config.headers.Authorization = `Bearer ${accessToken}`;
+            return api.request(error.config);
+          }
+        } catch (refreshError) {
+          // Refresh failed, clear tokens and redirect to login
+          localStorage.removeItem('agrotrack_token');
+          localStorage.removeItem('agrotrack_refresh_token');
+          window.location.href = '/login';
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -70,110 +145,163 @@ const PERMISSIONS = {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole>('guest');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check for existing auth on mount
     checkExistingAuth();
+    
+    // Listen to Firebase auth changes
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Get Firebase ID token and authenticate with backend
+        const idToken = await firebaseUser.getIdToken();
+        await authenticateWithFirebase(idToken);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const checkExistingAuth = () => {
-    const authData = localStorage.getItem('agrotrack_auth');
-    if (authData) {
+  const checkExistingAuth = async () => {
+    const token = localStorage.getItem('agrotrack_token');
+    if (token) {
       try {
-        const userData = JSON.parse(authData);
-        setUser(userData);
-        setRole(userData.role || 'user');
+        const response = await api.get('/auth/me');
+        if (response.data.success) {
+          setUser(response.data.user);
+          setRole(response.data.user.role || 'user');
+        }
       } catch (error) {
-        localStorage.removeItem('agrotrack_auth');
+        // Token invalid, clear storage
+        localStorage.removeItem('agrotrack_token');
+        localStorage.removeItem('agrotrack_refresh_token');
       }
     }
+    setLoading(false);
+  };
+
+  const authenticateWithFirebase = async (idToken: string) => {
+    try {
+      const response = await api.post('/auth/firebase', { idToken });
+      if (response.data.success) {
+        const { user: userData, accessToken, refreshToken: newRefreshToken } = response.data.data;
+        
+        setUser(userData);
+        setRole(userData.role || 'user');
+        localStorage.setItem('agrotrack_token', accessToken);
+        localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
+        return true;
+      }
+    } catch (error) {
+      console.error('Firebase auth error:', error);
+    }
+    return false;
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Simulate API call - replace with real authentication
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setLoading(true);
+      const response = await api.post('/auth/login', { email, password });
       
-      // Demo users for testing
-      const demoUsers: Record<string, User> = {
-        'admin@demo.com': {
-          id: '1',
-          email: 'admin@demo.com',
-          name: 'Admin User',
-          role: 'admin',
-          createdAt: '2024-01-01',
-          lastLogin: new Date().toISOString()
-        },
-        'demo@user.com': {
-          id: '2', 
-          email: 'demo@user.com',
-          name: 'Demo User',
-          role: 'user',
-          createdAt: '2024-01-15',
-          lastLogin: new Date().toISOString()
-        },
-        // Keep the old ones for compatibility
-        'admin@agrotrack.com': {
-          id: '3',
-          email: 'admin@agrotrack.com',
-          name: 'Admin User',
-          role: 'admin',
-          createdAt: '2024-01-01',
-          lastLogin: new Date().toISOString()
-        },
-        'user@agrotrack.com': {
-          id: '4', 
-          email: 'user@agrotrack.com',
-          name: 'Regular User',
-          role: 'user',
-          createdAt: '2024-01-15',
-          lastLogin: new Date().toISOString()
-        }
-      };
-
-      const foundUser = demoUsers[email];
-      if (foundUser && password === 'password') {
-        setUser(foundUser);
-        setRole(foundUser.role);
-        localStorage.setItem('agrotrack_auth', JSON.stringify(foundUser));
+      if (response.data.success) {
+        const { user: userData, accessToken, refreshToken: newRefreshToken } = response.data.data;
+        
+        setUser(userData);
+        setRole(userData.role || 'user');
+        localStorage.setItem('agrotrack_token', accessToken);
+        localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
         return true;
       }
-      
       return false;
     } catch (error) {
       console.error('Login error:', error);
       return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async (): Promise<boolean> => {
+    try {
+      setLoading(true);
+      const result = await signInWithPopup(auth, googleProvider);
+      const idToken = await result.user.getIdToken();
+      
+      return await authenticateWithFirebase(idToken);
+    } catch (error) {
+      console.error('Google login error:', error);
+      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
   const register = async (name: string, email: string, password: string): Promise<boolean> => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setLoading(true);
+      const response = await api.post('/auth/register', { name, email, password });
       
-      const newUser: User = {
-        id: Date.now().toString(),
-        email,
-        name,
-        role: 'user', // New users start as regular users
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString()
-      };
-
-      setUser(newUser);
-      setRole('user');
-      localStorage.setItem('agrotrack_auth', JSON.stringify(newUser));
-      return true;
+      if (response.data.success) {
+        const { user: userData, accessToken, refreshToken: newRefreshToken } = response.data.data;
+        
+        setUser(userData);
+        setRole(userData.role || 'user');
+        localStorage.setItem('agrotrack_token', accessToken);
+        localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Registration error:', error);
       return false;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setRole('guest');
-    localStorage.removeItem('agrotrack_auth');
+  const logout = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      
+      // Logout from backend
+      await api.post('/auth/logout');
+      
+      // Sign out from Firebase
+      await signOut(auth);
+      
+      // Clear local state
+      setUser(null);
+      setRole('guest');
+      localStorage.removeItem('agrotrack_token');
+      localStorage.removeItem('agrotrack_refresh_token');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshToken = async (): Promise<boolean> => {
+    try {
+      const refreshTokenValue = localStorage.getItem('agrotrack_refresh_token');
+      if (!refreshTokenValue) return false;
+
+      const response = await api.post('/auth/refresh', { 
+        refreshToken: refreshTokenValue 
+      });
+      
+      if (response.data.success) {
+        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+        localStorage.setItem('agrotrack_token', accessToken);
+        localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      return false;
+    }
   };
 
   const hasPermission = (permission: string): boolean => {
@@ -187,10 +315,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       role,
       isAuthenticated,
+      loading,
       login,
+      loginWithGoogle,
       logout,
       register,
-      hasPermission
+      hasPermission,
+      refreshToken
     }}>
       {children}
     </AuthContext.Provider>

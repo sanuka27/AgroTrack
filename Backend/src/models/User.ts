@@ -8,8 +8,9 @@ export type UserRole = 'guest' | 'user' | 'admin';
 // Interface for User document
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
+  id: string; // Virtual getter for _id
   email: string;
-  password: string;
+  password?: string; // Optional for OAuth users
   name: string;
   role: UserRole;
   isEmailVerified: boolean;
@@ -19,10 +20,20 @@ export interface IUser extends Document {
   bio?: string;
   location?: string;
   website?: string;
+  firstName?: string;
+  lastName?: string;
+  
+  // OAuth & Firebase integration
+  googleId?: string;
+  firebaseUid?: string;
+  authProvider: 'local' | 'google' | 'firebase';
   
   // Account status
   isActive: boolean;
+  status: 'active' | 'suspended' | 'deleted';
   lastLogin?: Date;
+  lastLoginAt?: Date;
+  lastActiveAt?: Date;
   loginAttempts: number;
   lockUntil?: Date;
   
@@ -43,6 +54,13 @@ export interface IUser extends Document {
     timezone: string;
     theme: 'light' | 'dark' | 'auto';
   };
+  
+  // Direct access fields for compatibility
+  timezone?: string;
+  language?: string;
+  theme?: 'light' | 'dark' | 'auto';
+  stats?: any; // For analytics
+  passwordChangedAt?: Date;
   
   // Authentication tokens
   emailVerificationToken?: string;
@@ -80,7 +98,7 @@ const userSchema = new Schema<IUser>({
   
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: false, // Optional for OAuth users
     minlength: [6, 'Password must be at least 6 characters long'],
     select: false // Don't include password in queries by default
   },
@@ -127,13 +145,60 @@ const userSchema = new Schema<IUser>({
     default: ''
   },
   
+  firstName: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'First name cannot exceed 50 characters']
+  },
+  
+  lastName: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'Last name cannot exceed 50 characters']
+  },
+  
+  // OAuth & Firebase integration
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true // Allow multiple null values
+  },
+  
+  firebaseUid: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  
+  authProvider: {
+    type: String,
+    enum: ['local', 'google', 'firebase'],
+    default: 'local'
+  },
+  
   // Account status
   isActive: {
     type: Boolean,
     default: true
   },
   
+  status: {
+    type: String,
+    enum: ['active', 'suspended', 'deleted'],
+    default: 'active'
+  },
+  
   lastLogin: {
+    type: Date,
+    default: null
+  },
+  
+  lastLoginAt: {
+    type: Date,
+    default: null
+  },
+  
+  lastActiveAt: {
     type: Date,
     default: null
   },
@@ -242,8 +307,8 @@ userSchema.virtual('isLocked').get(function(this: IUser) {
 
 // Pre-save middleware to hash password
 userSchema.pre('save', async function(next) {
-  // Only hash the password if it has been modified (or is new)
-  if (!this.isModified('password')) return next();
+  // Only hash the password if it has been modified (or is new) and exists
+  if (!this.isModified('password') || !this.password) return next();
   
   try {
     // Hash password with cost of 12
@@ -258,6 +323,8 @@ userSchema.pre('save', async function(next) {
 // Method to compare password
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   try {
+    // If no password is set (OAuth user), return false
+    if (!this.password) return false;
     return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {
     throw new Error('Password comparison failed');
@@ -331,21 +398,7 @@ userSchema.methods.generatePasswordResetToken = function(): string {
   return token;
 };
 
-// Override toJSON to exclude sensitive information
-userSchema.methods.toJSON = function() {
-  const userObject = this.toObject();
-  
-  // Remove sensitive fields
-  delete userObject.password;
-  delete userObject.refreshTokens;
-  delete userObject.emailVerificationToken;
-  delete userObject.passwordResetToken;
-  delete userObject.loginAttempts;
-  delete userObject.lockUntil;
-  delete userObject.__v;
-  
-  return userObject;
-};
+// toJSON method is handled by schema.set('toJSON') below
 
 // Static method to find user by credentials
 userSchema.statics.findByCredentials = async function(email: string, password: string) {
@@ -386,6 +439,27 @@ userSchema.statics.findByCredentials = async function(email: string, password: s
   
   return user;
 };
+
+// Virtual for id field (compatibility with frontend)
+userSchema.virtual('id').get(function() {
+  return this._id.toHexString();
+});
+
+// Ensure virtual fields are serialized
+userSchema.set('toJSON', {
+  virtuals: true,
+  transform: function(doc: any, ret: any) {
+    delete ret._id;
+    delete ret.__v;
+    delete ret.password;
+    delete ret.refreshTokens;
+    delete ret.emailVerificationToken;
+    delete ret.passwordResetToken;
+    delete ret.loginAttempts;
+    delete ret.lockUntil;
+    return ret;
+  }
+});
 
 // Create and export the model
 export const User = mongoose.model<IUser>('User', userSchema);

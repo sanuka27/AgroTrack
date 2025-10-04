@@ -4,6 +4,11 @@ import { AuthController } from '../controllers/authController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validate } from '../middleware/validate';
 import { authLimiter, loginLimiter, passwordResetLimiter } from '../middleware/rateLimiting';
+import passport from 'passport';
+import jwt from 'jsonwebtoken';
+import { User } from '../models/User';
+import { firebaseService } from '../config/firebase';
+import { logger } from '../config/logger';
 
 const router = Router();
 
@@ -441,6 +446,264 @@ router.get('/check', authMiddleware, (req, res) => {
         isEmailVerified: req.user?.isEmailVerified
       }
     }
+  });
+});
+
+// Helper function to generate JWT tokens
+const generateToken = (userId: string) => {
+  return jwt.sign({ userId }, process.env.JWT_SECRET || 'default-secret', { 
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
+  });
+};
+
+// Helper function to generate refresh token
+const generateRefreshToken = (userId: string) => {
+  return jwt.sign({ userId, type: 'refresh' }, process.env.JWT_REFRESH_SECRET || 'default-refresh-secret', { 
+    expiresIn: '30d' 
+  });
+};
+
+/**
+ * @swagger
+ * /auth/google:
+ *   get:
+ *     tags: [Authentication]
+ *     summary: Initiate Google OAuth authentication
+ *     description: Redirect to Google OAuth consent screen
+ *     security: []
+ *     responses:
+ *       302:
+ *         description: Redirect to Google OAuth
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
+router.get('/google', 
+  passport.authenticate('google', { 
+    scope: ['profile', 'email'],
+    session: false 
+  })
+);
+
+/**
+ * @swagger
+ * /auth/google/callback:
+ *   get:
+ *     tags: [Authentication]
+ *     summary: Google OAuth callback
+ *     description: Handle Google OAuth callback and authenticate user
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         schema:
+ *           type: string
+ *         description: OAuth authorization code
+ *       - in: query
+ *         name: state
+ *         schema:
+ *           type: string
+ *         description: OAuth state parameter
+ *     responses:
+ *       302:
+ *         description: Redirect to frontend with authentication tokens
+ *       400:
+ *         description: Authentication failed
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
+router.get('/google/callback',
+  passport.authenticate('google', { 
+    session: false,
+    failureRedirect: '/auth/failure'
+  }),
+  async (req, res) => {
+    try {
+      const user = req.user as any;
+      
+      if (!user) {
+        return res.redirect('/auth/failure');
+      }
+
+      // Generate tokens
+      const token = generateToken(user._id.toString());
+      const refreshToken = generateRefreshToken(user._id.toString());
+
+      // Update last login
+      await User.findByIdAndUpdate(user._id, {
+        lastLoginAt: new Date(),
+        lastActiveAt: new Date()
+      });
+
+      logger.info(`Google OAuth login: ${user.email}`);
+
+      // Redirect to frontend with tokens
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      res.redirect(`${frontendUrl}/auth/callback?token=${token}&refreshToken=${refreshToken}`);
+    } catch (error) {
+      logger.error('Google OAuth callback error:', error);
+      res.redirect('/auth/failure');
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /auth/firebase:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Authenticate with Firebase ID token
+ *     description: Authenticate user using Firebase ID token from client SDK
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 example: 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjE2NzAyN...'
+ *                 description: 'Firebase ID token from client SDK'
+ *     responses:
+ *       200:
+ *         description: Authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Authentication successful'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     user:
+ *                       $ref: '#/components/schemas/User'
+ *                     accessToken:
+ *                       type: string
+ *                       example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+ *                     refreshToken:
+ *                       type: string
+ *                       example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+ *       400:
+ *         description: Invalid Firebase token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: 'Invalid Firebase token'
+ *       500:
+ *         $ref: '#/components/responses/InternalServerError'
+ */
+router.post('/firebase', async (req, res) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Firebase ID token is required' 
+      });
+    }
+
+    // Verify Firebase ID token
+    const decodedToken = await firebaseService.verifyIdToken(idToken);
+    
+    if (!decodedToken) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid Firebase token' 
+      });
+    }
+
+    // Find or create user
+    let user = await User.findOne({ firebaseUid: decodedToken.uid });
+    
+    if (!user) {
+      // Check if user exists with same email
+      user = await User.findOne({ email: decodedToken.email });
+      
+      if (user) {
+        // Link Firebase account to existing user
+        user.firebaseUid = decodedToken.uid;
+        user.authProvider = 'firebase';
+        await user.save();
+      } else {
+        // Create new user
+        user = new User({
+          email: decodedToken.email,
+          name: decodedToken.name || decodedToken.email,
+          firebaseUid: decodedToken.uid,
+          authProvider: 'firebase',
+          status: 'active',
+          isEmailVerified: decodedToken.email_verified || false
+        });
+        await user.save();
+      }
+    }
+
+    // Update last login
+    user.lastLoginAt = new Date();
+    user.lastActiveAt = new Date();
+    await user.save();
+
+    // Generate tokens
+    const token = generateToken(user._id.toString());
+    const refreshToken = generateRefreshToken(user._id.toString());
+
+    logger.info(`Firebase authentication: ${user.email}`);
+
+    res.json({
+      success: true,
+      message: 'Authentication successful',
+      data: {
+        user: user.toJSON(),
+        accessToken: token,
+        refreshToken
+      }
+    });
+  } catch (error) {
+    logger.error('Firebase authentication error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Internal server error' 
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /auth/failure:
+ *   get:
+ *     tags: [Authentication]
+ *     summary: Authentication failure redirect
+ *     description: Endpoint for handling authentication failures
+ *     security: []
+ *     responses:
+ *       400:
+ *         description: Authentication failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               message: 'Authentication failed'
+ */
+router.get('/failure', (req, res) => {
+  res.status(400).json({ 
+    success: false,
+    message: 'Authentication failed',
+    error: 'Unable to authenticate with the provided credentials'
   });
 });
 

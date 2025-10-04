@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
 import dotenv from 'dotenv';
+import passport from 'passport';
+import session from 'express-session';
 
 import { connectDatabase } from './config/database';
 import { logger } from './config/logger';
@@ -12,6 +14,7 @@ import { errorHandler, notFound } from './middleware/errorMiddleware';
 import { globalRateLimit, burstLimiter } from './middleware/rateLimiting';
 import { setupSwagger } from './config/swagger';
 import { CacheWarmer } from './middleware/cacheMiddleware';
+import './config/passport'; // Initialize passport strategies
 
 // Import routes
 import authRoutes from './routes/authRoutes';
@@ -66,6 +69,21 @@ app.use(morgan('combined', {
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Session configuration for passport
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { User } from '../models/User';
 import { UserAnalytics } from '../models/UserAnalytics';
 import { logger } from '../config/logger';

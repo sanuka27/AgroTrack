@@ -1,16 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
-import { User } from '../models/User';
+import { User, IUser } from '../models/User';
 import { CustomError } from './errorMiddleware';
-
-// Extend Express Request interface to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: any;
-    }
-  }
-}
 
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   await protect(req, res, next);
@@ -34,10 +25,10 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
 
     try {
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret') as { userId: string };
       
       // Get user from database
-      const user = await User.findById(decoded.id).select('-password');
+      const user = await User.findById(decoded.userId).select('-password');
       
       if (!user) {
         const error = new Error('Not authorized, user not found') as CustomError;
@@ -66,9 +57,10 @@ export const authorize = (...roles: string[]) => {
       return next(error);
     }
 
-    if (!roles.includes(req.user.role)) {
+    const user = req.user as any as IUser;
+    if (!roles.includes(user.role)) {
       const error = new Error(
-        `User role ${req.user.role} is not authorized to access this route`
+        `User role ${user.role} is not authorized to access this route`
       ) as CustomError;
       error.statusCode = 403;
       return next(error);
