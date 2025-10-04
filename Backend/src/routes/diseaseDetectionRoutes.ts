@@ -80,7 +80,7 @@ const detectionHistoryValidation = [
     .isISO8601()
     .withMessage('Date to must be a valid date')
     .custom((value, { req }) => {
-      if (value && req.query.dateFrom) {
+      if (value && req.query?.dateFrom) {
         const fromDate = new Date(req.query.dateFrom as string);
         const toDate = new Date(value);
         if (toDate <= fromDate) {

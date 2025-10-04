@@ -74,6 +74,7 @@ router.post('/auth/register',
           user: { email, name }
         }
       });
+      return;
     } catch (error) {
       return res.status(500).json({
         success: false,
@@ -138,6 +139,7 @@ router.post('/auth/login',
           fingerprint
         }
       });
+      return;
     } catch (error) {
       return res.status(500).json({
         success: false,
@@ -196,6 +198,7 @@ router.post('/auth/change-password',
         success: true,
         message: 'Password changed successfully'
       });
+      return;
     } catch (error) {
       return res.status(500).json({
         success: false,
@@ -237,6 +240,7 @@ router.get('/plants',
         success: true,
         data: plants
       });
+      return;
     } catch (error) {
       return res.status(500).json({
         success: false,
@@ -331,6 +335,7 @@ router.get('/admin/users',
         data: users,
         audit: auditEntry
       });
+      return;
     } catch (error) {
       return res.status(500).json({
         success: false,
@@ -355,6 +360,7 @@ router.get('/health',
       timestamp: new Date(),
       version: '1.0.0'
     });
+    return;
   }
 );
 
@@ -383,6 +389,7 @@ router.get('/csrf-token',
       success: true,
       csrfToken
     });
+    return;
   }
 );
 
@@ -415,6 +422,7 @@ router.post('/security/check-password',
           feedback: strength.feedback
         }
       });
+      return;
     } catch (error) {
       return res.status(500).json({
         success: false,

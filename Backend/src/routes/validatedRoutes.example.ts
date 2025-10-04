@@ -40,7 +40,7 @@ router.post('/auth/reset-password',
 
 // Plant routes with validation
 router.post('/plants',
-  validateRequest('body', validationSchemas.plant.create),
+  // validateRequest('body', validationSchemas.plant.create), // Example validation
   // Your existing plantController.create
 );
 

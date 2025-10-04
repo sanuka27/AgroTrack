@@ -5,7 +5,7 @@ import { authMiddleware } from '../middleware/authMiddleware';
 import { validate } from '../middleware/validate';
 import { authLimiter, loginLimiter, passwordResetLimiter } from '../middleware/rateLimiting';
 import passport from 'passport';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { User } from '../models/User';
 import { firebaseService } from '../config/firebase';
 import { logger } from '../config/logger';
@@ -439,11 +439,11 @@ router.get('/check', authMiddleware, (req, res) => {
     message: 'User is authenticated',
     data: {
       user: {
-        id: req.user?._id,
-        name: req.user?.name,
-        email: req.user?.email,
-        role: req.user?.role,
-        isEmailVerified: req.user?.isEmailVerified
+        id: (req.user as any)?._id,
+        name: (req.user as any)?.name,
+        email: (req.user as any)?.email,
+        role: (req.user as any)?.role,
+        isEmailVerified: (req.user as any)?.isEmailVerified
       }
     }
   });
@@ -451,9 +451,8 @@ router.get('/check', authMiddleware, (req, res) => {
 
 // Helper function to generate JWT tokens
 const generateToken = (userId: string) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET || 'default-secret', { 
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
-  });
+  const secret = process.env.JWT_SECRET || 'default-secret';
+  return jwt.sign({ userId }, secret, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as any);
 };
 
 // Helper function to generate refresh token
@@ -604,7 +603,7 @@ router.get('/google/callback',
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.post('/firebase', async (req, res) => {
+router.post('/firebase', async (req, res): Promise<any> => {
   try {
     const { idToken } = req.body;
 
@@ -671,6 +670,7 @@ router.post('/firebase', async (req, res) => {
         refreshToken
       }
     });
+    return;
   } catch (error) {
     logger.error('Firebase authentication error:', error);
     res.status(500).json({ 

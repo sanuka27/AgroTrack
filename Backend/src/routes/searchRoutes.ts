@@ -40,7 +40,7 @@ const universalSearchValidation = [
     .isISO8601()
     .withMessage('End date must be a valid ISO date')
     .custom((endDate, { req }) => {
-      if (req.query.startDate && new Date(endDate) <= new Date(req.query.startDate as string)) {
+      if (req.query?.startDate && new Date(endDate) <= new Date(req.query.startDate as string)) {
         throw new Error('End date must be after start date');
       }
       return true;

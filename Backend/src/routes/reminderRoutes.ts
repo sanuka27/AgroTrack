@@ -81,7 +81,7 @@ const createReminderValidation = [
     .withMessage('isRecurring must be a boolean'),
   
   body('recurringPattern.frequency')
-    .if(body('isRecurring').equals(true))
+    .if((value, { req }) => req.body?.isRecurring === true)
     .notEmpty()
     .withMessage('Frequency is required for recurring reminders')
     .isInt({ min: 1, max: 365 })
