@@ -25,6 +25,7 @@ export interface IComment extends Document {
   
   // Moderation
   flagCount: number;
+  editCount: number;
   moderatedBy?: mongoose.Types.ObjectId;
   moderatedAt?: Date;
   moderationReason?: string;
@@ -112,6 +113,12 @@ const commentSchema = new Schema<IComment>({
   
   // Moderation fields
   flagCount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  
+  editCount: {
     type: Number,
     default: 0,
     min: 0

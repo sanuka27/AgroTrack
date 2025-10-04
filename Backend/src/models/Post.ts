@@ -46,7 +46,9 @@ export interface IPost extends Document {
   isFeatured: boolean;
   isPinned: boolean;
   isLocked: boolean;
+  allowComments: boolean;
   flagCount: number;
+  editCount: number;
   moderatedBy?: mongoose.Types.ObjectId;
   moderatedAt?: Date;
   moderationReason?: string;
@@ -184,7 +186,18 @@ const postSchema = new Schema<IPost>({
     default: false
   },
   
+  allowComments: {
+    type: Boolean,
+    default: true
+  },
+  
   flagCount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  
+  editCount: {
     type: Number,
     default: 0,
     min: 0

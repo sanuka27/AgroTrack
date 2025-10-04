@@ -18,6 +18,8 @@ export interface IPlant extends Document {
   category: Category;
   sunlight: Sunlight;
   health: Health;
+  healthStatus?: Health; // Alias for health for controller compatibility
+  healthScore?: number; // Numeric health score for analytics
   
   // Care schedule
   wateringEveryDays: number;
@@ -57,6 +59,7 @@ export interface IPlant extends Document {
   };
   
   // Plant information
+  species?: string; // Plant species for controllers compatibility
   scientificName?: string;
   commonNames: string[];
   difficulty: 'Easy' | 'Medium' | 'Hard';
@@ -78,6 +81,22 @@ export interface IPlant extends Document {
     pruning: {
       frequency?: 'monthly' | 'seasonal' | 'as-needed';
       type?: 'deadheading' | 'shaping' | 'maintenance' | 'propagation';
+    };
+  };
+  
+  // Care instructions for controller compatibility
+  careInstructions?: {
+    [careType: string]: {
+      frequency?: number;
+      amount?: string;
+      method?: string;
+      notes?: string;
+      type?: string;
+      hours?: number;
+      season?: string;
+      min?: number;
+      max?: number;
+      optimal?: number;
     };
   };
   
@@ -138,6 +157,20 @@ const plantSchema = new Schema<IPlant>({
     enum: ['Excellent', 'Good', 'Needs light', 'Needs water', 'Attention'],
     default: 'Good',
     index: true
+  },
+  
+  healthStatus: {
+    type: String,
+    enum: ['Excellent', 'Good', 'Needs light', 'Needs water', 'Attention'],
+    default: 'Good',
+    index: true
+  },
+  
+  healthScore: {
+    type: Number,
+    min: [0, 'Health score cannot be negative'],
+    max: [100, 'Health score cannot exceed 100'],
+    default: 75
   },
   
   // Care schedule
@@ -269,6 +302,12 @@ const plantSchema = new Schema<IPlant>({
   },
   
   // Plant information
+  species: {
+    type: String,
+    maxlength: [200, 'Species cannot exceed 200 characters'],
+    default: ''
+  },
+  
   scientificName: {
     type: String,
     maxlength: [200, 'Scientific name cannot exceed 200 characters'],
@@ -399,7 +438,13 @@ const plantSchema = new Schema<IPlant>({
   tags: [{
     type: String,
     maxlength: [50, 'Tag cannot exceed 50 characters']
-  }]
+  }],
+  
+  // Care instructions for controller compatibility
+  careInstructions: {
+    type: Schema.Types.Mixed,
+    default: {}
+  }
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

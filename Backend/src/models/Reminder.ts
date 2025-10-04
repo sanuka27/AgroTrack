@@ -16,11 +16,13 @@ export interface IReminder extends Document {
   plantId: mongoose.Types.ObjectId; // Plant this reminder is for
   plantName: string; // Denormalized for quick access
   type: ReminderType;
+  careType: ReminderType; // Alias for type for controller compatibility
   title: string;
   description: string;
   
   // Scheduling
   dueDate: Date;
+  scheduledDate: Date; // Alias for dueDate for controller compatibility
   originalDueDate: Date; // Store original for tracking adjustments
   frequency: {
     days: number;
@@ -105,6 +107,9 @@ export interface IReminder extends Document {
     importance: 'optional' | 'recommended' | 'critical';
   };
   
+  // Additional controller compatibility fields
+  isRecurring: boolean; // For controller compatibility
+  
   // System metadata
   isActive: boolean;
   createdAt: Date;
@@ -153,6 +158,13 @@ const reminderSchema = new Schema<IReminder>({
     index: true
   },
   
+  careType: {
+    type: String,
+    enum: ['watering', 'fertilizing', 'pruning', 'repotting', 'health-check', 'pest-treatment', 'soil-change', 'location-change'],
+    required: [true, 'Care type is required'],
+    index: true
+  },
+  
   title: {
     type: String,
     required: [true, 'Reminder title is required'],
@@ -171,6 +183,12 @@ const reminderSchema = new Schema<IReminder>({
   dueDate: {
     type: Date,
     required: [true, 'Due date is required'],
+    index: true
+  },
+  
+  scheduledDate: {
+    type: Date,
+    required: [true, 'Scheduled date is required'],
     index: true
   },
   
@@ -435,6 +453,13 @@ const reminderSchema = new Schema<IReminder>({
   isActive: {
     type: Boolean,
     default: true,
+    index: true
+  },
+  
+  // Controller compatibility
+  isRecurring: {
+    type: Boolean,
+    default: false,
     index: true
   }
 }, {

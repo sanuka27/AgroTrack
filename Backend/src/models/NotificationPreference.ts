@@ -52,6 +52,10 @@ export interface INotificationPreference extends Document {
   };
   createdAt: Date;
   updatedAt: Date;
+  isNotificationEnabled(type: string, channel: string): boolean;
+  getOrCreateForUser(userId: mongoose.Types.ObjectId): Promise<INotificationPreference>;
+  addPushToken(token: string): Promise<INotificationPreference>;
+  removePushToken(token: string): Promise<INotificationPreference>;
 }
 
 const notificationPreferenceSchema = new Schema<INotificationPreference>({
