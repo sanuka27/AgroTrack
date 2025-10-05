@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,44 +6,75 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { RoleGuard, PermissionCheck, GuestPrompt } from "@/components/RoleGuard";
 import { useAuth } from "@/contexts/AuthContext";
-import { Users, MessageCircle, Heart, TrendingUp, Shield, Flag, Trash2, Edit, Sparkles } from "lucide-react";
+import { mockApi } from "@/lib/mockApi";
+import type { CommunityPost, CommunityStats, TrendingTopic } from "@/types/api";
+import { Users, MessageCircle, Heart, TrendingUp, Shield, Flag, Trash2, Edit, Sparkles, ArrowUp, ArrowDown, Minus, MessageSquare } from "lucide-react";
 
 const Community = () => {
   const { user } = useAuth();
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [stats, setStats] = useState<CommunityStats | null>(null);
+  const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const mockPosts = [
-    {
-      id: 1,
-      author: "GreenThumb_2024",
-      role: "user",
-      title: "My tomato plants are thriving this season!",
-      content: "Just wanted to share my success with cherry tomatoes. Using the AgroTrack recommendations really helped optimize my watering schedule.",
-      likes: 23,
-      comments: 7,
-      timestamp: "2 hours ago",
-    },
-    {
-      id: 2,
-      author: "PlantWhisperer",
-      role: "user", 
-      title: "Need help with yellowing leaves",
-      content: "My basil plants have been developing yellow leaves. I've been following the AI recommendations but wondering if anyone has similar experience?",
-      likes: 12,
-      comments: 15,
-      timestamp: "5 hours ago",
-    },
-    {
-      id: 3,
-      author: "CommunityModerator",
-      role: "admin",
-      title: "Weekly Plant Challenge: Herb Gardens",
-      content: "This week's challenge is all about herb gardens! Share your best herb growing tips and photos. Winner gets featured on our main page!",
-      likes: 45,
-      comments: 23,
-      timestamp: "1 day ago",
-      isPinned: true,
-    },
-  ];
+  useEffect(() => {
+    const loadCommunityData = async () => {
+      try {
+        setLoading(true);
+        const [postsResponse, statsData, topicsData] = await Promise.all([
+          mockApi.community.getPosts({ limit: 10 }),
+          mockApi.community.getStats(),
+          mockApi.community.getTrendingTopics(),
+        ]);
+
+        setPosts(postsResponse.posts);
+        setStats(statsData);
+        setTrendingTopics(topicsData);
+      } catch (error) {
+        console.error('Error loading community data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCommunityData();
+  }, []);
+
+  const handleLikePost = async (postId: string) => {
+    try {
+      await mockApi.community.likePost(postId);
+      // Update local state
+      setPosts(prevPosts =>
+        prevPosts.map(post =>
+          post._id === postId ? { ...post, likes: post.likes + 1 } : post
+        )
+      );
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
+  };
+
+  const formatTimestamp = (date: Date) => {
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays === 1) return '1 day ago';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+
+    return date.toLocaleDateString();
+  };
+
+  const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
+    switch (trend) {
+      case 'up': return <ArrowUp className="w-3 h-3 text-green-500" />;
+      case 'down': return <ArrowDown className="w-3 h-3 text-red-500" />;
+      case 'stable': return <Minus className="w-3 h-3 text-gray-500" />;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -134,7 +166,7 @@ const Community = () => {
                 <Users className="w-5 h-5 text-green-600" />
                 <div>
                   <p className="text-sm text-muted-foreground">Members</p>
-                  <p className="text-xl font-bold text-green-800">2,847</p>
+                  <p className="text-xl font-bold text-green-800">{stats?.totalMembers || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -146,7 +178,7 @@ const Community = () => {
                 <MessageCircle className="w-5 h-5 text-blue-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Posts Today</p>
-                  <p className="text-xl font-bold text-blue-600">42</p>
+                  <p className="text-xl font-bold text-blue-600">{stats?.postsToday || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -158,7 +190,7 @@ const Community = () => {
                 <Heart className="w-5 h-5 text-red-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Likes</p>
-                  <p className="text-xl font-bold text-red-600">1,234</p>
+                  <p className="text-xl font-bold text-red-600">{stats?.totalLikes || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -170,7 +202,7 @@ const Community = () => {
                 <TrendingUp className="w-5 h-5 text-purple-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Active Now</p>
-                  <p className="text-xl font-bold text-purple-600">156</p>
+                  <p className="text-xl font-bold text-purple-600">{stats?.activeUsers || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -197,65 +229,82 @@ const Community = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {mockPosts.map((post) => (
-                  <Card key={post.id} className={`${post.isPinned ? 'border-yellow-300 bg-yellow-50' : ''}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <div className="flex items-center space-x-1">
-                            {post.role === 'admin' && <Shield className="w-3 h-3 text-orange-500" />}
-                            <span className="font-medium text-sm">{post.author}</span>
-                          </div>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            post.role === 'admin' 
-                              ? 'bg-orange-100 text-orange-700'
-                              : 'bg-green-100 text-green-700'
-                          }`}>
-                            {post.role === 'admin' ? 'Moderator' : 'Member'}
-                          </span>
-                          {post.isPinned && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
-                              Pinned
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading community posts...</p>
+                  </div>
+                ) : posts.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-muted-foreground">No posts yet. Be the first to share!</p>
+                  </div>
+                ) : (
+                  posts.map((post) => (
+                    <Card key={post._id} className={`${post.isPinned ? 'border-yellow-300 bg-yellow-50' : ''}`}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-1">
+                              {post.author.role === 'admin' && <Shield className="w-3 h-3 text-orange-500" />}
+                              <span className="font-medium text-sm">{post.author.name}</span>
+                            </div>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              post.author.role === 'admin' 
+                                ? 'bg-orange-100 text-orange-700'
+                                : 'bg-green-100 text-green-700'
+                            }`}>
+                              {post.author.role === 'admin' ? 'Moderator' : 'Member'}
                             </span>
-                          )}
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <RoleGuard roles={['admin']}>
-                            <Button variant="ghost" size="sm">
-                              <Flag className="w-3 h-3" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </RoleGuard>
-                          <span className="text-xs text-muted-foreground">{post.timestamp}</span>
-                        </div>
-                      </div>
-                      
-                      <h3 className="font-semibold mb-2">{post.title}</h3>
-                      <p className="text-sm text-muted-foreground mb-3">{post.content}</p>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600">
-                            <Heart className="w-4 h-4 mr-1" />
-                            {post.likes}
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-blue-500 hover:text-blue-600">
-                            <MessageCircle className="w-4 h-4 mr-1" />
-                            {post.comments}
-                          </Button>
+                            {post.isPinned && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+                                Pinned
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <RoleGuard roles={['admin']}>
+                              <Button variant="ghost" size="sm">
+                                <Flag className="w-3 h-3" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </RoleGuard>
+                            <span className="text-xs text-muted-foreground">{formatTimestamp(post.createdAt)}</span>
+                          </div>
                         </div>
                         
-                        <RoleGuard roles={['user', 'admin']}>
-                          <Button variant="ghost" size="sm">
-                            Reply
-                          </Button>
-                        </RoleGuard>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        <h3 className="font-semibold mb-2">{post.title}</h3>
+                        <p className="text-sm text-muted-foreground mb-3">{post.content}</p>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-red-500 hover:text-red-600"
+                              onClick={() => handleLikePost(post._id)}
+                            >
+                              <Heart className="w-4 h-4 mr-1" />
+                              {post.likes}
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-blue-500 hover:text-blue-600">
+                              <MessageCircle className="w-4 h-4 mr-1" />
+                              {post.comments}
+                            </Button>
+                          </div>
+                          
+                          <RoleGuard roles={['user', 'admin']}>
+                            <Button variant="ghost" size="sm">
+                              Reply
+                            </Button>
+                          </RoleGuard>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </CardContent>
             </Card>
           </div>
@@ -270,22 +319,15 @@ const Community = () => {
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="text-sm space-y-1">
-                  <div className="flex justify-between">
-                    <span>#TomatoTips</span>
-                    <span className="text-muted-foreground">234 posts</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>#HerbGarden</span>
-                    <span className="text-muted-foreground">187 posts</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>#PlantCare</span>
-                    <span className="text-muted-foreground">156 posts</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>#GrowingTips</span>
-                    <span className="text-muted-foreground">98 posts</span>
-                  </div>
+                  {trendingTopics.map((topic, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <span>#{topic.tag}</span>
+                        {getTrendIcon(topic.trend)}
+                      </div>
+                      <span className="text-muted-foreground">{topic.postCount} posts</span>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

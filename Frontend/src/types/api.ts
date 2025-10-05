@@ -189,3 +189,59 @@ export interface AnalyticsData {
   careTypeDistribution: CareTypeDistribution[];
   recentActivity: RecentActivity[];
 }
+
+export interface CommunityPost {
+  _id: string;
+  author: {
+    _id: string;
+    name: string;
+    role: 'user' | 'admin';
+    profilePicture?: string;
+  };
+  title: string;
+  content: string;
+  likes: number;
+  comments: number;
+  isPinned: boolean;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Comment {
+  _id: string;
+  postId: string;
+  author: {
+    _id: string;
+    name: string;
+    role: 'user' | 'admin';
+    profilePicture?: string;
+  };
+  content: string;
+  likes: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreatePostData {
+  title: string;
+  content: string;
+  tags?: string[];
+}
+
+export interface CreateCommentData {
+  content: string;
+}
+
+export interface CommunityStats {
+  totalMembers: number;
+  postsToday: number;
+  totalLikes: number;
+  activeUsers: number;
+}
+
+export interface TrendingTopic {
+  tag: string;
+  postCount: number;
+  trend: 'up' | 'down' | 'stable';
+}

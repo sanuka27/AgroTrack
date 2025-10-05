@@ -5,6 +5,10 @@ import {
   mockReminders,
   mockWeather,
   mockAnalytics,
+  mockCommunityPosts,
+  mockComments,
+  mockCommunityStats,
+  mockTrendingTopics,
 } from './mockData';
 import type {
   LoginCredentials,
@@ -23,6 +27,12 @@ import type {
   UpdateReminderData,
   WeatherData,
   AnalyticsData,
+  CommunityPost,
+  Comment,
+  CreatePostData,
+  CreateCommentData,
+  CommunityStats,
+  TrendingTopic,
 } from '../types/api';
 
 // Simulate API delay
@@ -240,6 +250,117 @@ export const mockApi = {
     getDashboard: async (): Promise<AnalyticsData> => {
       await delay(400);
       return mockAnalytics;
+    },
+  },
+
+  // Community endpoints
+  community: {
+    getPosts: async (params?: { page?: number; limit?: number; tag?: string }) => {
+      await delay(300);
+      let posts = [...mockCommunityPosts];
+
+      if (params?.tag) {
+        posts = posts.filter(post => post.tags.includes(params.tag));
+      }
+
+      // Sort by pinned first, then by creation date
+      posts.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+
+      const page = params?.page || 1;
+      const limit = params?.limit || 10;
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+
+      return {
+        posts: posts.slice(startIndex, endIndex),
+        total: posts.length,
+        page,
+        limit,
+      };
+    },
+
+    getPostById: async (id: string): Promise<CommunityPost> => {
+      await delay(200);
+      const post = mockCommunityPosts.find(p => p._id === id);
+      if (!post) throw new Error('Post not found');
+      return post;
+    },
+
+    createPost: async (postData: CreatePostData): Promise<CommunityPost> => {
+      await delay(400);
+      const newPost: CommunityPost = {
+        _id: `post${Date.now()}`,
+        author: {
+          _id: 'user1', // Mock current user
+          name: 'Current User',
+          role: 'user',
+          profilePicture: '/placeholder.svg'
+        },
+        title: postData.title,
+        content: postData.content,
+        likes: 0,
+        comments: 0,
+        isPinned: false,
+        tags: postData.tags || [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockCommunityPosts.unshift(newPost); // Add to beginning for immediate visibility
+      return newPost;
+    },
+
+    getComments: async (postId: string) => {
+      await delay(200);
+      return mockComments.filter(comment => comment.postId === postId);
+    },
+
+    createComment: async (postId: string, commentData: CreateCommentData): Promise<Comment> => {
+      await delay(300);
+      const newComment: Comment = {
+        _id: `comment${Date.now()}`,
+        postId,
+        author: {
+          _id: 'user1', // Mock current user
+          name: 'Current User',
+          role: 'user',
+          profilePicture: '/placeholder.svg'
+        },
+        content: commentData.content,
+        likes: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockComments.push(newComment);
+
+      // Update post comment count
+      const post = mockCommunityPosts.find(p => p._id === postId);
+      if (post) {
+        post.comments += 1;
+      }
+
+      return newComment;
+    },
+
+    likePost: async (postId: string) => {
+      await delay(200);
+      const post = mockCommunityPosts.find(p => p._id === postId);
+      if (!post) throw new Error('Post not found');
+      post.likes += 1;
+      return post;
+    },
+
+    getStats: async (): Promise<CommunityStats> => {
+      await delay(200);
+      return mockCommunityStats;
+    },
+
+    getTrendingTopics: async (): Promise<TrendingTopic[]> => {
+      await delay(200);
+      return mockTrendingTopics;
     },
   },
 };

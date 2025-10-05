@@ -1,5 +1,5 @@
 // Mock data for development without backend
-import type { Plant, User, CareLog, Reminder, WeatherData } from '../types/api';
+import type { Plant, User, CareLog, Reminder, WeatherData, CommunityPost, Comment, CommunityStats, TrendingTopic } from '../types/api';
 
 export const mockPlants: Plant[] = [
   {
@@ -206,3 +206,137 @@ export const mockAnalytics = {
     }
   ]
 };
+
+export const mockCommunityPosts: CommunityPost[] = [
+  {
+    _id: 'post1',
+    author: {
+      _id: 'user1',
+      name: 'GreenThumb_2024',
+      role: 'user',
+      profilePicture: '/placeholder.svg'
+    },
+    title: 'My tomato plants are thriving this season!',
+    content: 'Just wanted to share my success with cherry tomatoes. Using the AgroTrack recommendations really helped optimize my watering schedule. The AI suggestions for soil moisture levels were spot on!',
+    likes: 23,
+    comments: 7,
+    isPinned: false,
+    tags: ['tomatoes', 'success', 'watering'],
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+    updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000)
+  },
+  {
+    _id: 'post2',
+    author: {
+      _id: 'user2',
+      name: 'PlantWhisperer',
+      role: 'user',
+      profilePicture: '/placeholder.svg'
+    },
+    title: 'Need help with yellowing leaves on basil',
+    content: 'My basil plants have been developing yellow leaves for the past week. I\'ve been following the AI recommendations but wondering if anyone has similar experience? Should I adjust the watering frequency?',
+    likes: 12,
+    comments: 15,
+    isPinned: false,
+    tags: ['basil', 'help', 'yellow-leaves', 'watering'],
+    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
+    updatedAt: new Date(Date.now() - 5 * 60 * 60 * 1000)
+  },
+  {
+    _id: 'post3',
+    author: {
+      _id: 'admin1',
+      name: 'CommunityModerator',
+      role: 'admin',
+      profilePicture: '/placeholder.svg'
+    },
+    title: 'Weekly Plant Challenge: Herb Gardens',
+    content: 'This week\'s challenge is all about herb gardens! Share your best herb growing tips and photos. Winner gets featured on our main page! Don\'t forget to use #HerbGardenChallenge in your posts.',
+    likes: 45,
+    comments: 23,
+    isPinned: true,
+    tags: ['challenge', 'herbs', 'featured'],
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+    updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000)
+  },
+  {
+    _id: 'post4',
+    author: {
+      _id: 'user3',
+      name: 'UrbanGardener',
+      role: 'user',
+      profilePicture: '/placeholder.svg'
+    },
+    title: 'Vertical gardening in small spaces',
+    content: 'Living in a small apartment but want to grow vegetables? Check out my vertical garden setup! Using recycled materials and the AgroTrack app to monitor everything.',
+    likes: 31,
+    comments: 9,
+    isPinned: false,
+    tags: ['vertical-gardening', 'urban', 'small-spaces'],
+    createdAt: new Date(Date.now() - 36 * 60 * 60 * 1000), // 1.5 days ago
+    updatedAt: new Date(Date.now() - 36 * 60 * 60 * 1000)
+  },
+  {
+    _id: 'post5',
+    author: {
+      _id: 'user4',
+      name: 'SeedSaver',
+      role: 'user',
+      profilePicture: '/placeholder.svg'
+    },
+    title: 'Saving seeds from this season\'s harvest',
+    content: 'Just finished harvesting my pepper plants and saved seeds for next year. Anyone else doing seed saving? What are your favorite varieties to save?',
+    likes: 18,
+    comments: 12,
+    isPinned: false,
+    tags: ['seeds', 'harvest', 'peppers'],
+    createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000), // 2 days ago
+    updatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000)
+  }
+];
+
+export const mockComments: Comment[] = [
+  {
+    _id: 'comment1',
+    postId: 'post2',
+    author: {
+      _id: 'user5',
+      name: 'HerbExpert',
+      role: 'user',
+      profilePicture: '/placeholder.svg'
+    },
+    content: 'Yellow leaves on basil are often caused by overwatering. Try letting the soil dry out more between waterings. Also check if they\'re getting enough sunlight.',
+    likes: 8,
+    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
+    updatedAt: new Date(Date.now() - 4 * 60 * 60 * 1000)
+  },
+  {
+    _id: 'comment2',
+    postId: 'post2',
+    author: {
+      _id: 'user6',
+      name: 'BasilLover',
+      role: 'user',
+      profilePicture: '/placeholder.svg'
+    },
+    content: 'I had the same issue! It was definitely overwatering. Now I only water when the top inch of soil is dry. Much better results!',
+    likes: 5,
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+    updatedAt: new Date(Date.now() - 3 * 60 * 60 * 1000)
+  }
+];
+
+export const mockCommunityStats: CommunityStats = {
+  totalMembers: 2847,
+  postsToday: 42,
+  totalLikes: 1234,
+  activeUsers: 156
+};
+
+export const mockTrendingTopics: TrendingTopic[] = [
+  { tag: 'TomatoTips', postCount: 234, trend: 'up' },
+  { tag: 'HerbGarden', postCount: 187, trend: 'up' },
+  { tag: 'PlantCare', postCount: 156, trend: 'stable' },
+  { tag: 'GrowingTips', postCount: 98, trend: 'down' },
+  { tag: 'PestControl', postCount: 76, trend: 'up' }
+];
