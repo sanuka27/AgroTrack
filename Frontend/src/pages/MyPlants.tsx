@@ -8,13 +8,28 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AddPlantModal } from "@/components/AddPlantModal";
 import { PlantCard } from "@/components/PlantCard";
 import { PlantFiltersComponent, PlantFilters } from "@/components/PlantFilters";
-import { Plant } from "@/types/plant";
+import { Plant, Category } from "@/types/plant";
 import { filterAndSortPlants } from "@/utils/plantFiltering";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { exportPlantsToCSV, exportPlantsToJSON } from "@/utils/exportUtils";
 import { BulkOperationsBar } from "@/components/BulkOperationsBar";
 import { useSearchDebounce } from "@/hooks/use-search";
 import { Leaf, Plus, Calendar, Droplets, Sun, Bell, TrendingUp, MessageSquare, CheckSquare, Square } from "lucide-react";
+import mockApi from "@/lib/mockApi";
+
+// Helper function to map API category to frontend Category type
+const mapCategory = (apiCategory: string): Category => {
+  const categoryMap: Record<string, Category> = {
+    'Vegetable': 'Outdoor',
+    'Herb': 'Herb',
+    'Flower': 'Flower',
+    'Tree': 'Tree',
+    'Indoor': 'Indoor',
+    'Outdoor': 'Outdoor',
+    'Succulent': 'Succulent',
+  };
+  return categoryMap[apiCategory] || 'Outdoor';
+};
 
 const MyPlants = () => {
   const { user } = useAuth();
@@ -22,6 +37,8 @@ const MyPlants = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlant, setEditingPlant] = useState<Plant | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Filters state
   const [filters, setFilters] = useState<PlantFilters>({
@@ -48,37 +65,129 @@ const MyPlants = () => {
   // Filtered and sorted plants
   const filteredPlants = filterAndSortPlants(plants, filters);
 
-  // Load plants from localStorage on mount
+  // Load plants from mock API on mount
   useEffect(() => {
-    const storedPlants = localStorage.getItem('agrotrack:plants');
-    if (storedPlants) {
+    const loadPlants = async () => {
       try {
-        const parsedPlants = JSON.parse(storedPlants);
-        setPlants(parsedPlants);
-      } catch (error) {
-        console.error('Error loading plants from localStorage:', error);
+        setLoading(true);
+        setError(null);
+        const response = await mockApi.plants.getAll();
+        // Convert API plant format to frontend Plant format
+        const convertedPlants: Plant[] = response.plants.map(apiPlant => ({
+          id: apiPlant._id,
+          name: apiPlant.name,
+          category: mapCategory(apiPlant.category),
+          sunlight: apiPlant.sunlightHours >= 8 ? "Full Sun" : apiPlant.sunlightHours >= 6 ? "Partial Sun" : "Low Light",
+          ageYears: undefined, // Not provided in API
+          wateringEveryDays: apiPlant.wateringFrequency,
+          fertilizerEveryWeeks: undefined, // Not provided in API
+          soil: apiPlant.soilType,
+          notes: apiPlant.careInstructions,
+          imageUrl: apiPlant.imageUrl,
+          lastWatered: undefined, // Not provided in API
+          health: "Good" as const, // Default health
+          growthRatePctThisMonth: undefined, // Not provided in API
+        }));
+        setPlants(convertedPlants);
+      } catch (err) {
+        console.error('Error loading plants:', err);
+        setError('Failed to load plants. Please try again.');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    loadPlants();
   }, []);
 
-  // Save plants to localStorage whenever plants change
-  useEffect(() => {
-    localStorage.setItem('agrotrack:plants', JSON.stringify(plants));
-  }, [plants]);
-
   // CRUD operations
-  const handleCreatePlant = (newPlant: Plant) => {
-    setPlants(prev => [newPlant, ...prev]);
+  const handleCreatePlant = async (newPlant: Plant) => {
+    try {
+      // Convert frontend Plant to API format
+      const apiPlantData = {
+        name: newPlant.name,
+        scientificName: newPlant.name, // Use name as scientific name for now
+        description: newPlant.notes || '',
+        category: newPlant.category,
+        wateringFrequency: newPlant.wateringEveryDays,
+        sunlightHours: newPlant.sunlight === "Full Sun" ? 8 : newPlant.sunlight === "Partial Sun" ? 6 : 4,
+        temperature: { min: 15, max: 30 }, // Default values
+        humidity: 50, // Default value
+        soilType: newPlant.soil || 'Well-draining soil',
+        fertilizer: 'Balanced fertilizer',
+        commonIssues: [],
+        careInstructions: newPlant.notes || '',
+        imageUrl: newPlant.imageUrl || '/placeholder.svg',
+      };
+
+      const createdPlant = await mockApi.plants.create(apiPlantData);
+
+      // Convert back to frontend format and add to state
+      const frontendPlant: Plant = {
+        id: createdPlant._id,
+        name: createdPlant.name,
+        category: mapCategory(createdPlant.category),
+        sunlight: createdPlant.sunlightHours >= 8 ? "Full Sun" : createdPlant.sunlightHours >= 6 ? "Partial Sun" : "Low Light",
+        ageYears: undefined,
+        wateringEveryDays: createdPlant.wateringFrequency,
+        fertilizerEveryWeeks: undefined,
+        soil: createdPlant.soilType,
+        notes: createdPlant.careInstructions,
+        imageUrl: createdPlant.imageUrl,
+        lastWatered: undefined,
+        health: "Good" as const,
+        growthRatePctThisMonth: undefined,
+      };
+
+      setPlants(prev => [frontendPlant, ...prev]);
+    } catch (error) {
+      console.error('Error creating plant:', error);
+      // For now, just add to local state as fallback
+      setPlants(prev => [newPlant, ...prev]);
+    }
   };
 
-  const handleUpdatePlant = (updatedPlant: Plant) => {
-    setPlants(prev => prev.map(plant => 
-      plant.id === updatedPlant.id ? updatedPlant : plant
-    ));
+  const handleUpdatePlant = async (updatedPlant: Plant) => {
+    try {
+      // Convert frontend Plant to API format
+      const apiPlantData = {
+        name: updatedPlant.name,
+        scientificName: updatedPlant.name,
+        description: updatedPlant.notes || '',
+        category: updatedPlant.category,
+        wateringFrequency: updatedPlant.wateringEveryDays,
+        sunlightHours: updatedPlant.sunlight === "Full Sun" ? 8 : updatedPlant.sunlight === "Partial Sun" ? 6 : 4,
+        temperature: { min: 15, max: 30 },
+        humidity: 50,
+        soilType: updatedPlant.soil || 'Well-draining soil',
+        fertilizer: 'Balanced fertilizer',
+        commonIssues: [],
+        careInstructions: updatedPlant.notes || '',
+        imageUrl: updatedPlant.imageUrl || '/placeholder.svg',
+      };
+
+      await mockApi.plants.update(updatedPlant.id, apiPlantData);
+      setPlants(prev => prev.map(plant =>
+        plant.id === updatedPlant.id ? updatedPlant : plant
+      ));
+    } catch (error) {
+      console.error('Error updating plant:', error);
+      // Fallback to local state update
+      setPlants(prev => prev.map(plant =>
+        plant.id === updatedPlant.id ? updatedPlant : plant
+      ));
+    }
   };
 
-  const handleDeletePlant = (plantId: string) => {
-    setPlants(prev => prev.filter(plant => plant.id !== plantId));
+  const handleDeletePlant = async (plantId: string) => {
+    try {
+      await mockApi.plants.delete(plantId);
+      setPlants(prev => prev.filter(plant => plant.id !== plantId));
+    } catch (error) {
+      console.error('Error deleting plant:', error);
+      // Fallback to local state update
+      setPlants(prev => prev.filter(plant => plant.id !== plantId));
+    }
   };
 
   const handleWateredPlant = (plantId: string) => {
@@ -90,11 +199,25 @@ const MyPlants = () => {
   };
 
   // Bulk operation handlers
-  const handleBulkDelete = () => {
+  const handleBulkDelete = async () => {
     if (selectedItems.length === 0) return;
-    
+
     const confirmMessage = `Are you sure you want to delete ${selectedItems.length} plant${selectedItems.length > 1 ? 's' : ''}?`;
-    if (confirm(confirmMessage)) {
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      // Delete each plant from API
+      const deletePromises = selectedItems.map(plant => mockApi.plants.delete(plant.id));
+      await Promise.all(deletePromises);
+
+      // Remove from local state
+      const selectedIds = selectedItems.map(plant => plant.id);
+      setPlants(prev => prev.filter(plant => !selectedIds.includes(plant.id)));
+      clearSelection();
+      setSelectionMode(false);
+    } catch (error) {
+      console.error('Error deleting plants:', error);
+      // Fallback to local state update
       const selectedIds = selectedItems.map(plant => plant.id);
       setPlants(prev => prev.filter(plant => !selectedIds.includes(plant.id)));
       clearSelection();
@@ -185,6 +308,30 @@ const MyPlants = () => {
           </h1>
           <p className="text-muted-foreground">Your personalized plant care dashboard</p>
         </div>
+
+        {/* Loading and Error States */}
+        {loading && (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="mt-2 text-muted-foreground">Loading your plants...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-8">
+            <p className="text-destructive">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.reload()}
+              className="mt-2"
+            >
+              Try Again
+            </Button>
+          </div>
+        )}
+
+        {/* Quick Actions */}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
