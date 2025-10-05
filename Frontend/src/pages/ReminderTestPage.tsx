@@ -6,11 +6,39 @@ import { ReminderSettings } from '@/components/ReminderSettings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plant } from '@/types/plant';
-import { CareLog } from '@/types/care';
+import { Plant, Category, Sunlight, Health } from '@/types/plant';
+import { CareLog, CareType } from '@/types/care';
 import { ReminderPreferences } from '@/types/reminders';
 import { Bell, Settings, TestTube, Zap, Clock, CheckCircle, Loader2 } from 'lucide-react';
 import mockApi from '@/lib/mockApi';
+import type { Plant as APIPlant, CareLog as APICareLog } from '@/types/api';
+
+// Helper function to convert API Plant to component Plant
+const convertAPIPlantToPlant = (apiPlant: APIPlant): Plant => {
+  return {
+    id: apiPlant._id,
+    name: apiPlant.name,
+    category: (apiPlant.category || 'Indoor') as Category,
+    sunlight: 'Full Sun' as Sunlight,
+    wateringEveryDays: apiPlant.wateringFrequency || 7,
+    ageYears: 0,
+    health: 'Good' as Health,
+    imageUrl: apiPlant.imageUrl,
+    notes: apiPlant.description,
+  };
+};
+
+// Helper function to convert API CareLog to component CareLog
+const convertAPICareLogToCareLog = (apiLog: APICareLog): CareLog => {
+  return {
+    id: apiLog._id,
+    plantId: apiLog.plantId,
+    careType: 'watering' as CareType,
+    date: new Date(apiLog.createdAt).toISOString(),
+    notes: apiLog.notes,
+    createdAt: new Date(apiLog.createdAt).toISOString(),
+  };
+};
 
 const ReminderTestPage = () => {
   const [showSettings, setShowSettings] = useState(false);
@@ -24,12 +52,17 @@ const ReminderTestPage = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [plantsData, careLogsData] = await Promise.all([
+        const [plantsResponse, careLogsData] = await Promise.all([
           mockApi.plants.getAll(),
           mockApi.careLogs.getAll()
         ]);
-        setPlants(plantsData);
-        setCareLogs(careLogsData);
+        
+        // Convert API data to component data types
+        const convertedPlants = plantsResponse.plants.map(convertAPIPlantToPlant);
+        const convertedCareLogs = careLogsData.map(convertAPICareLogToCareLog);
+        
+        setPlants(convertedPlants);
+        setCareLogs(convertedCareLogs);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {

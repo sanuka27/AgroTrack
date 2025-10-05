@@ -17,6 +17,17 @@ import {
 } from '@/utils/careUtils';
 import { Plus, Calendar, BarChart3, Bell, History } from 'lucide-react';
 import mockApi from '@/lib/mockApi';
+import type { CareLog as APICareLog } from '@/types/api';
+
+// Type converter to transform API CareLog to component CareLog
+const convertAPICareLogToCareLog = (apiLog: APICareLog): CareLog => ({
+  id: apiLog._id,
+  plantId: apiLog.plantId,
+  careType: apiLog.action as CareType,
+  date: typeof apiLog.date === 'string' ? apiLog.date : apiLog.date.toISOString(),
+  notes: apiLog.notes,
+  createdAt: typeof apiLog.createdAt === 'string' ? apiLog.createdAt : apiLog.createdAt.toISOString()
+});
 
 interface CareDashboardProps {
   plants: Plant[];
@@ -48,7 +59,8 @@ export const CareDashboard: React.FC<CareDashboardProps> = ({
         for (const plant of plants) {
           try {
             const plantLogs = await mockApi.careLogs.getByPlant(plant.id);
-            allLogs.push(...plantLogs);
+            const convertedLogs = plantLogs.map(convertAPICareLogToCareLog);
+            allLogs.push(...convertedLogs);
           } catch (error) {
             console.error(`Error loading care logs for plant ${plant.id}:`, error);
           }
@@ -87,7 +99,7 @@ export const CareDashboard: React.FC<CareDashboardProps> = ({
         plantId: newLog.plantId,
         action: newLog.careType, // Map careType to action
         notes: newLog.notes || '',
-        date: newLog.date,
+        date: new Date(newLog.date), // Convert to Date object
       };
 
       const createdLog = await mockApi.careLogs.create(apiLogData);
@@ -97,11 +109,10 @@ export const CareDashboard: React.FC<CareDashboardProps> = ({
         id: createdLog._id,
         plantId: createdLog.plantId,
         careType: createdLog.action as CareType, // Map back
-        date: createdLog.date,
+        date: typeof createdLog.date === 'string' ? createdLog.date : createdLog.date.toISOString(),
         notes: createdLog.notes,
         metadata: newLog.metadata, // Keep original metadata
-        createdAt: createdLog.createdAt,
-        updatedAt: createdLog.createdAt,
+        createdAt: typeof createdLog.createdAt === 'string' ? createdLog.createdAt : createdLog.createdAt.toISOString()
       };
 
       setCareLogs(prev => [...prev, frontendLog]);

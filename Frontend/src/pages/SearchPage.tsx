@@ -6,9 +6,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plant } from '@/types/plant';
+import { Plant, Category, Sunlight, Health } from '@/types/plant';
 import { Search, Filter, Leaf, Sun, Droplets, Thermometer, Loader2, X } from 'lucide-react';
 import mockApi from '@/lib/mockApi';
+import type { Plant as APIPlant } from '@/types/api';
+
+// Helper function to convert API Plant to component Plant
+const convertAPIPlantToPlant = (apiPlant: APIPlant): Plant => {
+  return {
+    id: apiPlant._id,
+    name: apiPlant.name,
+    category: (apiPlant.category || 'Indoor') as Category,
+    sunlight: 'Full Sun' as Sunlight,
+    wateringEveryDays: apiPlant.wateringFrequency || 7,
+    ageYears: 0,
+    health: 'Good' as Health,
+    imageUrl: apiPlant.imageUrl,
+    notes: apiPlant.description,
+    soil: apiPlant.soilType || 'Standard potting mix',
+  };
+};
 
 const SearchPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,7 +51,8 @@ const SearchPage = () => {
         setLoading(true);
         setError(null);
         const results = await mockApi.search.plants(searchQuery);
-        setSearchResults(results);
+        const convertedResults = results.map(convertAPIPlantToPlant);
+        setSearchResults(convertedResults);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Search failed');
         setSearchResults([]);

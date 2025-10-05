@@ -15,6 +15,9 @@ import { generateSmartReminders, getTodaysReminders, getOverdueReminders } from 
 import { getPlantCareLogs } from '@/utils/careUtils';
 import { mockApi } from '@/lib/mockApi';
 import type { DashboardStats, RecentActivity, AnalyticsData } from '@/types/api';
+import type { Plant as APIPlant, CareLog as APICareLog } from '@/types/api';
+import type { Category, Sunlight, Health } from '@/types/plant';
+import type { CareType } from '@/types/care';
 import {
   Leaf,
   Plus,
@@ -32,6 +35,27 @@ import {
   User,
   Activity
 } from 'lucide-react';
+
+// Type converters to transform API types to component types
+const convertAPIPlantToPlant = (apiPlant: APIPlant): Plant => ({
+  id: apiPlant._id,
+  name: apiPlant.name,
+  category: apiPlant.category as Category,
+  sunlight: apiPlant.sunlightHours >= 6 ? 'Full Sun' : apiPlant.sunlightHours >= 4 ? 'Partial Sun' : 'Low Light',
+  wateringEveryDays: apiPlant.wateringFrequency,
+  health: 'Good' as Health,
+  soil: apiPlant.soilType,
+  imageUrl: apiPlant.imageUrl
+});
+
+const convertAPICareLogToCareLog = (apiLog: APICareLog): CareLog => ({
+  id: apiLog._id,
+  plantId: apiLog.plantId,
+  careType: apiLog.action as CareType,
+  date: typeof apiLog.date === 'string' ? apiLog.date : apiLog.date.toISOString(),
+  notes: apiLog.notes,
+  createdAt: typeof apiLog.createdAt === 'string' ? apiLog.createdAt : apiLog.createdAt.toISOString()
+});
 
 const UserDashboard = () => {
   const { user } = useAuth();
@@ -59,13 +83,15 @@ const UserDashboard = () => {
 
       // Load plants from API
       const plantsResponse = await mockApi.plants.getAll();
-      setPlants(plantsResponse.plants);
+      const convertedPlants = plantsResponse.plants.map(convertAPIPlantToPlant);
+      setPlants(convertedPlants);
 
       // Load care logs (we'll need to get them for each plant)
       const allCareLogs: CareLog[] = [];
       for (const plant of plantsResponse.plants) {
         const plantCareLogs = await mockApi.careLogs.getByPlant(plant._id);
-        allCareLogs.push(...plantCareLogs);
+        const convertedLogs = plantCareLogs.map(convertAPICareLogToCareLog);
+        allCareLogs.push(...convertedLogs);
       }
       setCareLogs(allCareLogs);
 
@@ -75,7 +101,7 @@ const UserDashboard = () => {
       setPreferences(prefs);
 
       // Generate smart reminders based on plants and care logs
-      const smartReminders = generateSmartReminders(plantsResponse.plants, allCareLogs, prefs);
+      const smartReminders = generateSmartReminders(convertedPlants, allCareLogs, prefs);
       setReminders(smartReminders);
 
     } catch (error) {
