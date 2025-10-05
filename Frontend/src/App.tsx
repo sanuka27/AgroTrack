@@ -45,6 +45,7 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const CareTestPage = lazy(() => import("./pages/CareTestPage"));
 const ReminderTestPage = lazy(() => import("./pages/ReminderTestPage"));
+const WeatherPage = lazy(() => import("./pages/WeatherPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 const queryClient = new QueryClient();
@@ -121,6 +122,7 @@ const App = () => {
               <Route path="/assistant" element={<AssistantPage />} />
               <Route path="/care-test" element={<CareTestPage />} />
               <Route path="/reminder-test" element={<ReminderTestPage />} />
+              <Route path="/weather" element={<WeatherPage />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFoundPage />} />
