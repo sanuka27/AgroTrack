@@ -47,6 +47,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 // Axios instance for API calls
 import axios from 'axios';
+import mockApi from '../lib/mockApi';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -203,18 +204,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
-      const response = await api.post('/auth/login', { email, password });
-      
-      if (response.data.success) {
-        const { user: userData, accessToken, refreshToken: newRefreshToken } = response.data.data;
-        
-        setUser(userData);
-        setRole(userData.role || 'user');
-        localStorage.setItem('agrotrack_token', accessToken);
-        localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
-        return true;
-      }
-      return false;
+      const response = await mockApi.auth.login({ email, password });
+
+      // Mock successful login response structure
+      const userData = {
+        id: response.user._id,
+        email: response.user.email,
+        name: response.user.name,
+        role: response.user.role as UserRole,
+        createdAt: response.user.createdAt.toISOString(),
+        lastLogin: new Date().toISOString(),
+      };
+
+      setUser(userData);
+      setRole(userData.role);
+      return true;
     } catch (error) {
       console.error('Login error:', error);
       return false;
@@ -241,18 +245,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
-      const response = await api.post('/auth/register', { name, email, password });
-      
-      if (response.data.success) {
-        const { user: userData, accessToken, refreshToken: newRefreshToken } = response.data.data;
-        
-        setUser(userData);
-        setRole(userData.role || 'user');
-        localStorage.setItem('agrotrack_token', accessToken);
-        localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
-        return true;
-      }
-      return false;
+      const response = await mockApi.auth.register({ name, email, password });
+
+      // Mock successful registration response structure
+      const userData = {
+        id: response.user._id,
+        email: response.user.email,
+        name: response.user.name,
+        role: response.user.role as UserRole,
+        createdAt: response.user.createdAt.toISOString(),
+        lastLogin: new Date().toISOString(),
+      };
+
+      setUser(userData);
+      setRole(userData.role);
+      return true;
     } catch (error) {
       console.error('Registration error:', error);
       return false;
@@ -264,13 +271,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async (): Promise<void> => {
     try {
       setLoading(true);
-      
-      // Logout from backend
-      await api.post('/auth/logout');
-      
+
+      // Logout from mock API
+      await mockApi.auth.logout();
+
       // Sign out from Firebase
       await signOut(auth);
-      
+
       // Clear local state
       setUser(null);
       setRole('guest');
