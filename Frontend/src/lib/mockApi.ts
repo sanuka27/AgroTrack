@@ -4,6 +4,7 @@ import {
   mockCareLogs,
   mockReminders,
   mockWeather,
+  mockAnalytics,
 } from './mockData';
 import type {
   LoginCredentials,
@@ -21,6 +22,7 @@ import type {
   CreateReminderData,
   UpdateReminderData,
   WeatherData,
+  AnalyticsData,
 } from '../types/api';
 
 // Simulate API delay
@@ -230,6 +232,14 @@ export const mockApi = {
         p.description.toLowerCase().includes(query.toLowerCase())
       );
       return results;
+    },
+  },
+
+  // Analytics endpoint
+  analytics: {
+    getDashboard: async (): Promise<AnalyticsData> => {
+      await delay(400);
+      return mockAnalytics;
     },
   },
 };

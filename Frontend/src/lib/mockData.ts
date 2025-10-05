@@ -139,3 +139,70 @@ export const mockWeather: WeatherData = {
     { date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), temp: 20, conditions: 'Rainy' },
   ],
 };
+
+export const mockAnalytics = {
+  dashboard: {
+    totalPlants: 12,
+    activeReminders: 8,
+    overdueReminders: 2,
+    recentCareLogs: 24,
+    healthScore: 85,
+    growthRate: 12,
+    careActions: 84,
+    streakDays: 15
+  },
+  careTrends: [
+    { month: 'Jan', watering: 45, fertilizing: 12, pruning: 8, healthCheck: 15 },
+    { month: 'Feb', watering: 52, fertilizing: 15, pruning: 6, healthCheck: 18 },
+    { month: 'Mar', watering: 48, fertilizing: 18, pruning: 10, healthCheck: 20 },
+    { month: 'Apr', watering: 55, fertilizing: 20, pruning: 12, healthCheck: 22 },
+    { month: 'May', watering: 62, fertilizing: 25, pruning: 15, healthCheck: 25 },
+    { month: 'Jun', watering: 58, fertilizing: 22, pruning: 18, healthCheck: 28 }
+  ],
+  plantHealth: [
+    { category: 'Excellent', count: 5, percentage: 42 },
+    { category: 'Good', count: 4, percentage: 33 },
+    { category: 'Fair', count: 2, percentage: 17 },
+    { category: 'Needs Attention', count: 1, percentage: 8 }
+  ],
+  careTypeDistribution: [
+    { type: 'Watering', count: 156, percentage: 45 },
+    { type: 'Fertilizing', count: 89, percentage: 26 },
+    { type: 'Pruning', count: 67, percentage: 19 },
+    { type: 'Health Check', count: 38, percentage: 10 }
+  ],
+  recentActivity: [
+    {
+      id: 'act1',
+      type: 'care_logged' as const,
+      title: 'Watered Monstera Deliciosa',
+      description: '500ml of water applied',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      plantName: 'Monstera Deliciosa'
+    },
+    {
+      id: 'act2',
+      type: 'reminder_completed' as const,
+      title: 'Completed watering reminder',
+      description: 'Snake Plant watering reminder marked complete',
+      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+      plantName: 'Snake Plant'
+    },
+    {
+      id: 'act3',
+      type: 'plant_added' as const,
+      title: 'Added new plant',
+      description: 'Peace Lily added to your collection',
+      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      plantName: 'Peace Lily'
+    },
+    {
+      id: 'act4',
+      type: 'care_logged' as const,
+      title: 'Fertilized Tomato Plant',
+      description: 'Applied balanced fertilizer',
+      timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+      plantName: 'Tomato Plant'
+    }
+  ]
+};

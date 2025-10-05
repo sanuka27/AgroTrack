@@ -13,6 +13,8 @@ import { CareLog } from '@/types/care';
 import { Reminder, ReminderStatus, ReminderPreferences, SmartReminderConfig } from '@/types/reminders';
 import { generateSmartReminders, getTodaysReminders, getOverdueReminders } from '@/utils/reminderUtils';
 import { getPlantCareLogs } from '@/utils/careUtils';
+import { mockApi } from '@/lib/mockApi';
+import type { DashboardStats, RecentActivity, AnalyticsData } from '@/types/api';
 import {
   Leaf,
   Plus,
@@ -31,23 +33,6 @@ import {
   Activity
 } from 'lucide-react';
 
-interface DashboardStats {
-  totalPlants: number;
-  activeReminders: number;
-  overdueReminders: number;
-  recentCareLogs: number;
-  healthScore: number;
-}
-
-interface RecentActivity {
-  id: string;
-  type: 'plant_added' | 'care_logged' | 'reminder_completed' | 'reminder_overdue';
-  title: string;
-  description: string;
-  timestamp: string;
-  plantName?: string;
-}
-
 const UserDashboard = () => {
   const { user } = useAuth();
   const [plants, setPlants] = useState<Plant[]>([]);
@@ -61,42 +46,37 @@ const UserDashboard = () => {
     quietHours: { enabled: true, start: '22:00', end: '08:00' },
     plantSpecificSettings: {}
   });
-  const [stats, setStats] = useState<DashboardStats>({
-    totalPlants: 0,
-    activeReminders: 0,
-    overdueReminders: 0,
-    recentCareLogs: 0,
-    healthScore: 0
-  });
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadDashboardData = useCallback(() => {
+  const loadDashboardData = useCallback(async () => {
     try {
-      // Load plants
-      const storedPlants = localStorage.getItem('agrotrack:plants');
-      const plantsData = storedPlants ? JSON.parse(storedPlants) : [];
-      setPlants(plantsData);
+      setLoading(true);
 
-      // Load care logs
-      const storedCareLogs = localStorage.getItem('agrotrack:careLogs');
-      const careLogsData = storedCareLogs ? JSON.parse(storedCareLogs) : [];
-      setCareLogs(careLogsData);
+      // Load analytics data from API
+      const analytics = await mockApi.analytics.getDashboard();
+      setAnalyticsData(analytics);
 
-      // Load reminder preferences
+      // Load plants from API
+      const plantsResponse = await mockApi.plants.getAll();
+      setPlants(plantsResponse.plants);
+
+      // Load care logs (we'll need to get them for each plant)
+      const allCareLogs: CareLog[] = [];
+      for (const plant of plantsResponse.plants) {
+        const plantCareLogs = await mockApi.careLogs.getByPlant(plant._id);
+        allCareLogs.push(...plantCareLogs);
+      }
+      setCareLogs(allCareLogs);
+
+      // Load reminder preferences from localStorage (keeping this for now as it's user-specific)
       const storedPreferences = localStorage.getItem('agrotrack:reminderPreferences');
       const prefs: ReminderPreferences = storedPreferences ? JSON.parse(storedPreferences) : preferences;
       setPreferences(prefs);
 
-      // Generate smart reminders
-      const smartReminders = generateSmartReminders(plantsData, careLogsData, prefs);
+      // Generate smart reminders based on plants and care logs
+      const smartReminders = generateSmartReminders(plantsResponse.plants, allCareLogs, prefs);
       setReminders(smartReminders);
-
-      // Calculate stats
-      calculateStats(plantsData, smartReminders, careLogsData);
-
-      // Generate recent activity
-      generateRecentActivity(plantsData, careLogsData, smartReminders);
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -109,73 +89,6 @@ const UserDashboard = () => {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
-
-  const calculateStats = (plantsData: Plant[], remindersData: Reminder[], careLogsData: CareLog[]) => {
-    const now = new Date();
-    const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-    const activeReminders = remindersData.filter(r => r.status === 'pending').length;
-    const overdueReminders = remindersData.filter(r => r.status === 'overdue').length;
-    const recentCareLogs = careLogsData.filter(log =>
-      new Date(log.date) >= last7Days
-    ).length;
-
-    // Calculate health score (simplified - map Plant.health to our scale)
-    const healthyPlants = plantsData.filter(p =>
-      p.health === 'Excellent' || p.health === 'Good'
-    ).length;
-    const healthScore = plantsData.length > 0 ? Math.round((healthyPlants / plantsData.length) * 100) : 0;
-
-    setStats({
-      totalPlants: plantsData.length,
-      activeReminders,
-      overdueReminders,
-      recentCareLogs,
-      healthScore
-    });
-  };
-
-  const generateRecentActivity = (plantsData: Plant[], careLogsData: CareLog[], remindersData: Reminder[]) => {
-    const activities: RecentActivity[] = [];
-
-    // Recent care logs (last 7 days) - since Plant doesn't have date fields, we'll use care logs as primary activity
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    careLogsData
-      .filter(log => new Date(log.date) >= sevenDaysAgo)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 5)
-      .forEach(log => {
-        const plant = plantsData.find(p => p.id === log.plantId);
-        activities.push({
-          id: `care-${log.id}`,
-          type: 'care_logged',
-          title: 'Care Activity',
-          description: `${log.careType} performed on ${plant?.name || 'Unknown Plant'}`,
-          timestamp: log.createdAt,
-          plantName: plant?.name
-        });
-      });
-
-    // Overdue reminders
-    remindersData
-      .filter(r => r.status === 'overdue')
-      .slice(0, 3)
-      .forEach(reminder => {
-        const plant = plantsData.find(p => p.id === reminder.plantId);
-        activities.push({
-          id: `reminder-${reminder.id}`,
-          type: 'reminder_overdue',
-          title: 'Overdue Reminder',
-          description: `${reminder.type} reminder for ${plant?.name || 'Unknown Plant'}`,
-          timestamp: reminder.dueDate.toISOString(),
-          plantName: plant?.name
-        });
-      });
-
-    // Sort by timestamp (most recent first)
-    activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    setRecentActivity(activities.slice(0, 10));
-  };
 
   const getActivityIcon = (type: RecentActivity['type']) => {
     switch (type) {
@@ -253,11 +166,11 @@ const UserDashboard = () => {
               <Leaf className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalPlants}</div>
+              <div className="text-2xl font-bold">{analyticsData?.dashboard.totalPlants || 0}</div>
               <p className="text-xs text-muted-foreground">
-                {stats.healthScore}% healthy
+                {analyticsData?.dashboard.healthScore || 0}% healthy
               </p>
-              <Progress value={stats.healthScore} className="mt-2" />
+              <Progress value={analyticsData?.dashboard.healthScore || 0} className="mt-2" />
             </CardContent>
           </Card>
 
@@ -267,11 +180,11 @@ const UserDashboard = () => {
               <Bell className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.activeReminders}</div>
+              <div className="text-2xl font-bold">{analyticsData?.dashboard.activeReminders || 0}</div>
               <p className="text-xs text-muted-foreground">
-                {stats.overdueReminders} overdue
+                {analyticsData?.dashboard.overdueReminders || 0} overdue
               </p>
-              {stats.overdueReminders > 0 && (
+              {analyticsData?.dashboard.overdueReminders > 0 && (
                 <Badge variant="destructive" className="mt-2">
                   <AlertTriangle className="w-3 h-3 mr-1" />
                   Action needed
@@ -286,7 +199,7 @@ const UserDashboard = () => {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.recentCareLogs}</div>
+              <div className="text-2xl font-bold">{analyticsData?.dashboard.recentCareLogs || 0}</div>
               <p className="text-xs text-muted-foreground">
                 Care actions this week
               </p>
@@ -299,11 +212,11 @@ const UserDashboard = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.healthScore}%</div>
+              <div className="text-2xl font-bold">{analyticsData?.dashboard.healthScore || 0}%</div>
               <p className="text-xs text-muted-foreground">
                 Plant health average
               </p>
-              <Progress value={stats.healthScore} className="mt-2" />
+              <Progress value={analyticsData?.dashboard.healthScore || 0} className="mt-2" />
             </CardContent>
           </Card>
         </div>
@@ -418,14 +331,14 @@ const UserDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                {recentActivity.length === 0 ? (
+                {analyticsData?.recentActivity.length === 0 ? (
                   <div className="text-center py-8">
                     <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-muted-foreground">No recent activity</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {recentActivity.map((activity) => (
+                    {analyticsData?.recentActivity.map((activity) => (
                       <div
                         key={activity.id}
                         className={`flex gap-3 p-3 rounded-lg border ${getActivityColor(activity.type)}`}

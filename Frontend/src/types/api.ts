@@ -141,3 +141,51 @@ export interface WeatherData {
     conditions: string;
   }>;
 }
+
+export interface DashboardStats {
+  totalPlants: number;
+  activeReminders: number;
+  overdueReminders: number;
+  recentCareLogs: number;
+  healthScore: number;
+  growthRate: number;
+  careActions: number;
+  streakDays: number;
+}
+
+export interface CareTrend {
+  month: string;
+  watering: number;
+  fertilizing: number;
+  pruning: number;
+  healthCheck: number;
+}
+
+export interface PlantHealthData {
+  category: string;
+  count: number;
+  percentage: number;
+}
+
+export interface CareTypeDistribution {
+  type: string;
+  count: number;
+  percentage: number;
+}
+
+export interface RecentActivity {
+  id: string;
+  type: 'plant_added' | 'care_logged' | 'reminder_completed' | 'reminder_overdue';
+  title: string;
+  description: string;
+  timestamp: string;
+  plantName?: string;
+}
+
+export interface AnalyticsData {
+  dashboard: DashboardStats;
+  careTrends: CareTrend[];
+  plantHealth: PlantHealthData[];
+  careTypeDistribution: CareTypeDistribution[];
+  recentActivity: RecentActivity[];
+}

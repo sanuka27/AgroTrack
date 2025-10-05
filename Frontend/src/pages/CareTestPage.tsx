@@ -49,46 +49,6 @@ const CareTestPage = () => {
     };
 
     loadPlants();
-const CareTestPage = () => {
-  const [plants, setPlants] = useState<Plant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadPlants = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await mockApi.plants.getAll();
-        // Convert API plant format to frontend Plant format
-        const convertedPlants: Plant[] = response.plants.map(apiPlant => ({
-          id: apiPlant._id,
-          name: apiPlant.name,
-          category: apiPlant.category === 'Vegetable' ? 'Outdoor' :
-                   apiPlant.category === 'Herb' ? 'Herb' :
-                   apiPlant.category === 'Flower' ? 'Flower' : 'Indoor',
-          sunlight: apiPlant.sunlightHours >= 8 ? "Full Sun" :
-                   apiPlant.sunlightHours >= 6 ? "Partial Sun" : "Low Light",
-          ageYears: undefined,
-          wateringEveryDays: apiPlant.wateringFrequency,
-          fertilizerEveryWeeks: undefined,
-          soil: apiPlant.soilType,
-          notes: apiPlant.careInstructions,
-          imageUrl: apiPlant.imageUrl,
-          lastWatered: undefined,
-          health: "Good" as const,
-          growthRatePctThisMonth: undefined,
-        }));
-        setPlants(convertedPlants);
-      } catch (err) {
-        console.error('Error loading plants:', err);
-        setError('Failed to load plants. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPlants();
   }, []);
 
   if (loading) {
