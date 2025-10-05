@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { SmartReminderDashboard } from '@/components/SmartReminderDashboard';
@@ -9,87 +9,36 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plant } from '@/types/plant';
 import { CareLog } from '@/types/care';
 import { ReminderPreferences } from '@/types/reminders';
-import { Bell, Settings, TestTube, Zap, Clock, CheckCircle } from 'lucide-react';
-
-// Sample plants for testing
-const samplePlants: Plant[] = [
-  {
-    id: 'plant-1',
-    name: 'Monstera Deliciosa',
-    category: 'Indoor',
-    sunlight: 'Partial Sun',
-    wateringEveryDays: 7,
-    lastWatered: '2025-09-25',
-    health: 'Good',
-    notes: 'Beautiful split leaves, growing well',
-    soil: 'Well-draining potting mix',
-    imageUrl: '/placeholder.svg',
-    ageYears: 2,
-    fertilizerEveryWeeks: 2
-  },
-  {
-    id: 'plant-2',
-    name: 'Snake Plant',
-    category: 'Succulent',
-    sunlight: 'Low Light',
-    wateringEveryDays: 14,
-    lastWatered: '2025-09-20',
-    health: 'Excellent',
-    notes: 'Very low maintenance',
-    soil: 'Succulent mix',
-    imageUrl: '/placeholder.svg',
-    ageYears: 1,
-    fertilizerEveryWeeks: 4
-  },
-  {
-    id: 'plant-3',
-    name: 'Peace Lily',
-    category: 'Flower',
-    sunlight: 'Partial Sun',
-    wateringEveryDays: 5,
-    lastWatered: '2025-09-26',
-    health: 'Needs water',
-    notes: 'Leaves drooping, needs water',
-    soil: 'Regular potting mix',
-    imageUrl: '/placeholder.svg',
-    ageYears: 3,
-    fertilizerEveryWeeks: 3
-  }
-];
-
-// Sample care logs for testing
-const sampleCareLogs: CareLog[] = [
-  {
-    id: 'care-1',
-    plantId: 'plant-1',
-    careType: 'watering',
-    date: '2025-09-25T10:00:00Z',
-    notes: 'Watered thoroughly',
-    metadata: { waterAmount: 500, wateringMethod: 'top-watering' },
-    createdAt: '2025-09-25T10:00:00Z'
-  },
-  {
-    id: 'care-2',
-    plantId: 'plant-2',
-    careType: 'watering',
-    date: '2025-09-20T14:30:00Z',
-    notes: 'Light watering',
-    metadata: { waterAmount: 200, wateringMethod: 'bottom-watering' },
-    createdAt: '2025-09-20T14:30:00Z'
-  },
-  {
-    id: 'care-3',
-    plantId: 'plant-3',
-    careType: 'watering',
-    date: '2025-09-26T09:15:00Z',
-    notes: 'Emergency watering',
-    metadata: { waterAmount: 300, wateringMethod: 'top-watering' },
-    createdAt: '2025-09-26T09:15:00Z'
-  }
-];
+import { Bell, Settings, TestTube, Zap, Clock, CheckCircle, Loader2 } from 'lucide-react';
+import mockApi from '@/lib/mockApi';
 
 const ReminderTestPage = () => {
   const [showSettings, setShowSettings] = useState(false);
+  const [plants, setPlants] = useState<Plant[]>([]);
+  const [careLogs, setCareLogs] = useState<CareLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch plants and care logs from mock API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [plantsData, careLogsData] = await Promise.all([
+          mockApi.plants.getAll(),
+          mockApi.careLogs.getAll()
+        ]);
+        setPlants(plantsData);
+        setCareLogs(careLogsData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleSaveSettings = (preferences: ReminderPreferences) => {
     console.log('Saving reminder preferences:', preferences);
@@ -103,12 +52,34 @@ const ReminderTestPage = () => {
         <Header />
         <main className="container mx-auto px-4 py-8">
           <ReminderSettings
-            plants={samplePlants}
+            plants={plants}
             onSave={handleSaveSettings}
             onClose={() => setShowSettings(false)}
           />
         </main>
         <Footer />
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Loading reminder system...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error: {error}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
       </div>
     );
   }
@@ -154,8 +125,8 @@ const ReminderTestPage = () => {
                   Intelligent reminder system that learns from your care patterns and adapts to seasonal changes
                 </p>
                 <SmartReminderDashboard
-                  plants={samplePlants}
-                  careLogs={sampleCareLogs}
+                  plants={plants}
+                  careLogs={careLogs}
                   onSettingsClick={() => setShowSettings(true)}
                 />
               </CardContent>
