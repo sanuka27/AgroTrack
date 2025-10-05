@@ -231,13 +231,14 @@ const blogSeriesSchema = new Schema<IBlogSeries>({
 });
 
 // Indexes
-blogSeriesSchema.index({ slug: 1 });
 blogSeriesSchema.index({ author: 1, createdAt: -1 });
 blogSeriesSchema.index({ status: 1, isPublic: 1 });
 blogSeriesSchema.index({ isFeatured: 1, status: 1 });
 blogSeriesSchema.index({ views: -1 });
 blogSeriesSchema.index({ 'posts.post': 1 });
 blogSeriesSchema.index({ title: 'text', description: 'text' });
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Virtual for populated author details
 blogSeriesSchema.virtual('authorDetails', {

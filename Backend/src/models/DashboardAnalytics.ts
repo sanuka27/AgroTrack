@@ -84,15 +84,13 @@ const dashboardAnalyticsSchema = new Schema<IDashboardAnalytics>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'User ID is required'],
-    index: true
+    required: [true, 'User ID is required']
   },
   
   widgetType: {
     type: String,
     enum: Object.values(DashboardWidgetType),
-    required: [true, 'Widget type is required'],
-    index: true
+    required: [true, 'Widget type is required']
   },
   
   data: {
@@ -149,8 +147,7 @@ const dashboardAnalyticsSchema = new Schema<IDashboardAnalytics>({
     },
     nextUpdate: {
       type: Date,
-      required: true,
-      index: true
+      required: true
     },
     dataSource: {
       type: String,
@@ -159,8 +156,7 @@ const dashboardAnalyticsSchema = new Schema<IDashboardAnalytics>({
     },
     isStale: {
       type: Boolean,
-      default: false,
-      index: true
+      default: false
     },
     errorCount: {
       type: Number,
@@ -204,6 +200,8 @@ dashboardAnalyticsSchema.index({ userId: 1, widgetType: 1 }, { unique: true });
 dashboardAnalyticsSchema.index({ userId: 1, 'config.isEnabled': 1 });
 dashboardAnalyticsSchema.index({ 'dataMetadata.nextUpdate': 1, 'config.isEnabled': 1 });
 dashboardAnalyticsSchema.index({ 'dataMetadata.isStale': 1 });
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Virtual for user details
 dashboardAnalyticsSchema.virtual('userDetails', {

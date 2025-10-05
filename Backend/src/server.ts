@@ -6,6 +6,17 @@ import compression from 'compression';
 import dotenv from 'dotenv';
 import passport from 'passport';
 import session from 'express-session';
+import path from 'path';
+
+// Load environment variables FIRST
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+console.log('Environment variables loaded:');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('PORT:', process.env.PORT);
+console.log('SKIP_MONGODB:', process.env.SKIP_MONGODB);
+console.log('DISABLE_REDIS:', process.env.DISABLE_REDIS);
+console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
 
 import { connectDatabase } from './config/database';
 import { logger } from './config/logger';
@@ -32,9 +43,6 @@ import exportImportRoutes from './routes/exportImportRoutes';
 import searchRoutes from './routes/searchRoutes';
 import adminRoutes from './routes/adminRoutes';
 import cacheRoutes from './routes/cacheRoutes';
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -172,35 +180,67 @@ app.use(errorHandler);
 // Database connection and server start
 const startServer = async () => {
   try {
-    // Connect to MongoDB
-    await connectDatabase();
+    // Connect to MongoDB (optional for development)
+    const skipMongoDB = process.env.SKIP_MONGODB === 'true';
+    if (!skipMongoDB) {
+      try {
+        await connectDatabase();
+        logger.info('✅ MongoDB connected successfully');
+      } catch (dbError) {
+        logger.warn('⚠️ MongoDB connection failed, continuing without database:', dbError);
+        logger.info('💡 Set SKIP_MONGODB=true to skip MongoDB connection');
+        throw dbError; // Re-throw to prevent server start if DB is required but fails
+      }
+    } else {
+      logger.info('⏭️ Skipping MongoDB connection as requested (SKIP_MONGODB=true)');
+    }
     
-    // Initialize Redis cache
+    // Initialize Redis cache (optional for development)
     try {
       await cache.connect();
-      logger.info('✅ Redis cache connected successfully');
-      
-      // Start cache warming in background
-      if (process.env.NODE_ENV === 'production') {
-        CacheWarmer.startPeriodicWarmup();
-        logger.info('🔥 Cache warming started');
+      if (cache.isHealthy()) {
+        logger.info('✅ Redis cache connected successfully');
+        
+        // Start cache warming in background
+        if (process.env.NODE_ENV === 'production') {
+          CacheWarmer.startPeriodicWarmup();
+          logger.info('🔥 Cache warming started');
+        }
+      } else {
+        logger.info('⏭️ Redis cache disabled or not available');
       }
     } catch (cacheError) {
       logger.warn('⚠️ Redis cache connection failed, continuing without cache:', cacheError);
     }
     
-    // Start server
+    // Start server - always start regardless of DB/Redis status
     app.listen(PORT, () => {
       logger.info(`🌱 AgroTrack API server running on port ${PORT}`);
       logger.info(`🚀 Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`📚 API docs available at http://localhost:${PORT}/api/docs`);
       logger.info(`📚 Swagger UI available at http://localhost:${PORT}/api-docs`);
       logger.info(`💚 Health check at http://localhost:${PORT}/health`);
-      logger.info(`🗄️ Cache management at http://localhost:${PORT}/api/cache/health`);
+      if (!skipMongoDB) {
+        logger.info(`🗄️ Cache management at http://localhost:${PORT}/api/cache/health`);
+      }
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
-    process.exit(1);
+    // Don't exit in development mode - allow server to start even with connection issues
+    if (process.env.NODE_ENV !== 'development') {
+      process.exit(1);
+    }
+    // In development, try to start server anyway
+    try {
+      app.listen(PORT, () => {
+        logger.warn(`🌱 AgroTrack API server running on port ${PORT} (with connection issues)`);
+        logger.info(`🚀 Environment: ${process.env.NODE_ENV || 'development'}`);
+        logger.info(`💚 Health check at http://localhost:${PORT}/health`);
+      });
+    } catch (serverError) {
+      logger.error('Failed to start server even in development mode:', serverError);
+      process.exit(1);
+    }
   }
 };
 

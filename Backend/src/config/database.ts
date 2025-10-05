@@ -2,9 +2,17 @@ import mongoose from 'mongoose';
 import { logger } from './logger';
 
 export const connectDatabase = async (): Promise<void> => {
+  if (process.env.SKIP_MONGODB === 'true') {
+    logger.info('MongoDB connection skipped (SKIP_MONGODB=true)');
+    return;
+  }
+
+  const mongoURI = process.env.MONGODB_URI;
+  if (!mongoURI) {
+    throw new Error('MONGODB_URI environment variable is required when SKIP_MONGODB is not set to true');
+  }
+
   try {
-    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/agrotrack';
-    
     const options = {
       maxPoolSize: 10, // Maintain up to 10 socket connections
       serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
@@ -32,11 +40,19 @@ export const connectDatabase = async (): Promise<void> => {
 
   } catch (error) {
     logger.error('Database connection failed:', error);
-    process.exit(1);
+    // Don't exit in development mode
+    if (process.env.NODE_ENV !== 'development') {
+      process.exit(1);
+    }
   }
 };
 
 export const disconnectDatabase = async (): Promise<void> => {
+  if (process.env.SKIP_MONGODB === 'true') {
+    logger.info('MongoDB disconnect skipped (SKIP_MONGODB=true)');
+    return;
+  }
+
   try {
     await mongoose.connection.close();
     logger.info('Database connection closed');

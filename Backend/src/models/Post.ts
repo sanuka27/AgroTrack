@@ -250,12 +250,13 @@ const postSchema = new Schema<IPost>({
 postSchema.index({ author: 1, createdAt: -1 });
 postSchema.index({ category: 1, status: 1, createdAt: -1 });
 postSchema.index({ tags: 1 });
-postSchema.index({ slug: 1 });
 postSchema.index({ status: 1, publishedAt: -1 });
 postSchema.index({ title: 'text', content: 'text', tags: 'text' });
 postSchema.index({ views: -1 });
 postSchema.index({ likes: -1 });
 postSchema.index({ 'createdAt': -1 });
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Virtual for populated comments
 postSchema.virtual('commentsList', {

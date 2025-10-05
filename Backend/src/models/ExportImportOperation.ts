@@ -58,8 +58,7 @@ const exportImportOperationSchema = new Schema<IExportImportOperation>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   operationType: {
     type: String,
@@ -69,13 +68,10 @@ const exportImportOperationSchema = new Schema<IExportImportOperation>({
   status: {
     type: String,
     enum: ['pending', 'in-progress', 'completed', 'failed'],
-    default: 'pending',
-    index: true
+    default: 'pending'
   },
   exportId: {
-    type: String,
-    sparse: true,
-    index: true
+    type: String
   },
   format: {
     type: String,
@@ -132,8 +128,7 @@ const exportImportOperationSchema = new Schema<IExportImportOperation>({
   },
   startedAt: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   },
   completedAt: Date,
   duration: Number,
@@ -161,8 +156,8 @@ const exportImportOperationSchema = new Schema<IExportImportOperation>({
 // Indexes for performance
 exportImportOperationSchema.index({ userId: 1, createdAt: -1 });
 exportImportOperationSchema.index({ userId: 1, operationType: 1, status: 1 });
-exportImportOperationSchema.index({ exportId: 1 }, { sparse: true });
-exportImportOperationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Instance Methods
 exportImportOperationSchema.methods.markAsStarted = function(): void {

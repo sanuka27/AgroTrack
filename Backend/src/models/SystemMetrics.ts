@@ -89,15 +89,13 @@ const systemMetricsSchema = new Schema<ISystemMetrics>({
   metricType: {
     type: String,
     enum: Object.values(SystemMetricType),
-    required: [true, 'Metric type is required'],
-    index: true
+    required: [true, 'Metric type is required']
   },
   
   period: {
     type: String,
     enum: Object.values(MetricPeriod),
-    required: [true, 'Period is required'],
-    index: true
+    required: [true, 'Period is required']
   },
   
   value: {
@@ -133,20 +131,17 @@ const systemMetricsSchema = new Schema<ISystemMetrics>({
   
   timestamp: {
     type: Date,
-    required: [true, 'Timestamp is required'],
-    index: true
+    required: [true, 'Timestamp is required']
   },
   
   periodStart: {
     type: Date,
-    required: [true, 'Period start is required'],
-    index: true
+    required: [true, 'Period start is required']
   },
   
   periodEnd: {
     type: Date,
-    required: [true, 'Period end is required'],
-    index: true
+    required: [true, 'Period end is required']
   },
   
   previousPeriodValue: {
@@ -191,6 +186,8 @@ systemMetricsSchema.index({ metricType: 1, periodStart: 1, periodEnd: 1 });
 
 // TTL index to automatically delete old metrics after 2 years
 systemMetricsSchema.index({ timestamp: 1 }, { expireAfterSeconds: 63072000 }); // 2 years
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Method to calculate change from previous period
 systemMetricsSchema.methods.calculateChange = function(): void {

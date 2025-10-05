@@ -10,12 +10,17 @@ import logger from './logger';
  * Handles Google OAuth and JWT strategies
  */
 
-// Google OAuth Strategy
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID!,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-  callbackURL: process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback'
-}, async (accessToken, refreshToken, profile, done) => {
+// Google OAuth Strategy (optional)
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const googleCallbackUrl = process.env.GOOGLE_CALLBACK_URL || '/auth/google/callback';
+
+if (googleClientId && googleClientSecret) {
+  passport.use(new GoogleStrategy({
+    clientID: googleClientId,
+    clientSecret: googleClientSecret,
+    callbackURL: googleCallbackUrl
+  }, async (accessToken, refreshToken, profile, done) => {
   try {
     logger.info('Google OAuth authentication attempt', {
       googleId: profile.id,
@@ -139,59 +144,65 @@ passport.use(new GoogleStrategy({
     logger.error('Google OAuth strategy error', { error, profileId: profile.id });
     return done(error, false);
   }
-}));
+  }));
+} else {
+  logger.info('Google OAuth strategy disabled: missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET');
+}
 
-// JWT Strategy
-passport.use(new JwtStrategy({
-  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: process.env.JWT_SECRET!,
-  algorithms: ['HS256']
-}, async (payload, done) => {
-  try {
-    // Extract user ID from JWT payload
-    const userId = payload.sub || payload.userId;
-    
-    if (!userId) {
-      logger.warn('JWT strategy: No user ID in payload', { payload });
-      return done(null, false);
+// JWT Strategy (conditional)
+const jwtSecret = process.env.JWT_SECRET;
+if (jwtSecret) {
+  passport.use(new JwtStrategy({
+    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    secretOrKey: jwtSecret,
+    algorithms: ['HS256']
+  }, async (payload, done) => {
+    try {
+      // Extract user ID from JWT payload
+      const userId = payload.sub || payload.userId;
+      
+      if (!userId) {
+        logger.warn('JWT strategy: No user ID in payload', { payload });
+        return done(null, false);
+      }
+
+      // Find user in database
+      const user = await User.findById(userId).select('-password');
+      
+      if (!user) {
+        logger.warn('JWT strategy: User not found', { userId });
+        return done(null, false);
+      }
+
+      // Check if user is active
+      if (user.status === 'suspended' || user.status === 'deleted') {
+        logger.warn('JWT strategy: User account is inactive', {
+          userId,
+          status: user.status
+        });
+        return done(null, false);
+      }
+
+      // Verify token hasn't expired (additional check)
+      const now = Math.floor(Date.now() / 1000);
+      if (payload.exp && payload.exp < now) {
+        logger.warn('JWT strategy: Token expired', { userId, exp: payload.exp });
+        return done(null, false);
+      }
+
+      // Update last active timestamp
+      user.lastActiveAt = new Date();
+      await user.save();
+
+      return done(null, user);
+    } catch (error) {
+      logger.error('JWT strategy error', { error, payload });
+      return done(error, false);
     }
-
-    // Find user in database
-    const user = await User.findById(userId).select('-password');
-    
-    if (!user) {
-      logger.warn('JWT strategy: User not found', { userId });
-      return done(null, false);
-    }
-
-    // Check if user is active
-    if (user.status === 'suspended' || user.status === 'deleted') {
-      logger.warn('JWT strategy: User account is inactive', {
-        userId,
-        status: user.status
-      });
-      return done(null, false);
-    }
-
-    // Verify token hasn't expired (additional check)
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) {
-      logger.warn('JWT strategy: Token expired', { userId, exp: payload.exp });
-      return done(null, false);
-    }
-
-    // Update last active timestamp
-    user.lastActiveAt = new Date();
-    await user.save();
-
-    return done(null, user);
-  } catch (error) {
-    logger.error('JWT strategy error', { error, payload });
-    return done(error, false);
-  }
-}));
-
-// Firebase ID Token Strategy
+  }));
+} else {
+  logger.info('JWT strategy disabled: missing JWT_SECRET');
+}// Firebase ID Token Strategy
 passport.use('firebase-jwt', new JwtStrategy({
   jwtFromRequest: ExtractJwt.fromAuthHeaderWithScheme('Firebase'),
   secretOrKey: process.env.JWT_SECRET!, // This won't be used for Firebase tokens
@@ -279,7 +290,7 @@ passport.deserializeUser(async (id: string, done) => {
     done(null, user);
   } catch (error) {
     logger.error('Passport deserialize user error', { error, userId: id });
-    done(error, null);
+    done(error);
   }
 });
 

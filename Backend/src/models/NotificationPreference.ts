@@ -63,8 +63,7 @@ const notificationPreferenceSchema = new Schema<INotificationPreference>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   emailEnabled: {
     type: Boolean,

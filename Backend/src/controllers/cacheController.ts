@@ -387,7 +387,7 @@ export class CacheController {
       }
 
       const value = await cache.get(key);
-      const ttl = await cache.redis.ttl(key);
+      const ttl = await cache.ttl(key);
 
       return res.json({
         success: true,

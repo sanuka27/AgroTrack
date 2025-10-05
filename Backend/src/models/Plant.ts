@@ -127,8 +127,7 @@ const plantSchema = new Schema<IPlant>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'Plant must belong to a user'],
-    index: true
+    required: [true, 'Plant must belong to a user']
   },
   
   name: {
@@ -141,8 +140,7 @@ const plantSchema = new Schema<IPlant>({
   category: {
     type: String,
     enum: ['Indoor', 'Outdoor', 'Succulent', 'Herb', 'Flower', 'Tree'],
-    required: [true, 'Plant category is required'],
-    index: true
+    required: [true, 'Plant category is required']
   },
   
   sunlight: {
@@ -155,8 +153,7 @@ const plantSchema = new Schema<IPlant>({
   health: {
     type: String,
     enum: ['Excellent', 'Good', 'Needs light', 'Needs water', 'Attention'],
-    default: 'Good',
-    index: true
+    default: 'Good'
   },
   
   healthStatus: {
@@ -390,8 +387,7 @@ const plantSchema = new Schema<IPlant>({
   // Status and tracking
   isActive: {
     type: Boolean,
-    default: true,
-    index: true
+    default: true
   },
   
   acquiredDate: {
@@ -431,8 +427,7 @@ const plantSchema = new Schema<IPlant>({
   // Social features
   isPublic: {
     type: Boolean,
-    default: false,
-    index: true
+    default: false
   },
   
   tags: [{
@@ -459,6 +454,8 @@ plantSchema.index({ userId: 1, isActive: 1 });
 plantSchema.index({ name: 'text', scientificName: 'text', commonNames: 'text' });
 plantSchema.index({ tags: 1 });
 plantSchema.index({ isPublic: 1, createdAt: -1 });
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Virtual for days since last watered
 plantSchema.virtual('daysSinceLastWatered').get(function(this: IPlant) {

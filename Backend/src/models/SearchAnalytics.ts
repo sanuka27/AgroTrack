@@ -58,15 +58,13 @@ const searchAnalyticsSchema = new Schema<ISearchAnalytics>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   searchQuery: {
     type: String,
     required: true,
     trim: true,
-    maxlength: 200,
-    index: true
+    maxlength: 200
   },
   contentTypes: [{
     type: String,
@@ -125,8 +123,7 @@ const searchAnalyticsSchema = new Schema<ISearchAnalytics>({
   ipAddress: String,
   timestamp: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   }
 }, {
   timestamps: true,
@@ -148,8 +145,7 @@ const popularSearchTermSchema = new Schema<IPopularSearchTerm>({
     unique: true,
     trim: true,
     lowercase: true,
-    maxlength: 100,
-    index: true
+    maxlength: 100
   },
   searchCount: {
     type: Number,
@@ -158,8 +154,7 @@ const popularSearchTermSchema = new Schema<IPopularSearchTerm>({
   },
   lastSearched: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   },
   averageResultCount: {
     type: Number,
@@ -191,6 +186,8 @@ searchAnalyticsSchema.index({ contentTypes: 1, timestamp: -1 });
 
 popularSearchTermSchema.index({ searchCount: -1 });
 popularSearchTermSchema.index({ lastSearched: -1 });
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Instance Methods for SearchAnalytics
 searchAnalyticsSchema.methods.addSelectedResult = function(resultId: string, resultType: string, position: number): void {

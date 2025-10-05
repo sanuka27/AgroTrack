@@ -182,14 +182,12 @@ const reminderSchema = new Schema<IReminder>({
   // Scheduling
   dueDate: {
     type: Date,
-    required: [true, 'Due date is required'],
-    index: true
+    required: [true, 'Due date is required']
   },
   
   scheduledDate: {
     type: Date,
-    required: [true, 'Scheduled date is required'],
-    index: true
+    required: [true, 'Scheduled date is required']
   },
   
   originalDueDate: {
@@ -475,6 +473,8 @@ reminderSchema.index({ dueDate: 1, status: 1 });
 reminderSchema.index({ userId: 1, type: 1, status: 1 });
 reminderSchema.index({ status: 1, priority: 1, dueDate: 1 });
 reminderSchema.index({ userId: 1, createdAt: -1 });
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Virtual for days until due
 reminderSchema.virtual('daysUntilDue').get(function(this: IReminder) {

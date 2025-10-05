@@ -108,12 +108,13 @@ const blogTagSchema = new Schema<IBlogTag>({
 });
 
 // Indexes
-blogTagSchema.index({ slug: 1 });
 blogTagSchema.index({ name: 1 });
 blogTagSchema.index({ isActive: 1, isVisible: 1 });
 blogTagSchema.index({ postCount: -1 });
 blogTagSchema.index({ isTrending: 1, postCount: -1 });
 blogTagSchema.index({ name: 'text', description: 'text' });
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Virtual for posts with this tag
 blogTagSchema.virtual('posts', {

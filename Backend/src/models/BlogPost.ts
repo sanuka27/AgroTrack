@@ -378,12 +378,13 @@ blogPostSchema.index({ status: 1, publishedAt: -1 });
 blogPostSchema.index({ contentType: 1, status: 1 });
 blogPostSchema.index({ categories: 1, status: 1 });
 blogPostSchema.index({ tags: 1, status: 1 });
-blogPostSchema.index({ slug: 1 });
 blogPostSchema.index({ title: 'text', content: 'text', excerpt: 'text' });
 blogPostSchema.index({ isFeatured: 1, status: 1 });
 blogPostSchema.index({ isPopular: 1, status: 1 });
 blogPostSchema.index({ views: -1 });
 blogPostSchema.index({ scheduledFor: 1, status: 1 });
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Virtual for populated author details
 blogPostSchema.virtual('authorDetails', {

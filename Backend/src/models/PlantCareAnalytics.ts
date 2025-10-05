@@ -85,22 +85,19 @@ const plantCareAnalyticsSchema = new Schema<IPlantCareAnalytics>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'User ID is required'],
-    index: true
+    required: [true, 'User ID is required']
   },
   
   plantId: {
     type: Schema.Types.ObjectId,
     ref: 'Plant',
-    required: [true, 'Plant ID is required'],
-    index: true
+    required: [true, 'Plant ID is required']
   },
   
   metricType: {
     type: String,
     enum: Object.values(CareMetricType),
-    required: [true, 'Metric type is required'],
-    index: true
+    required: [true, 'Metric type is required']
   },
   
   value: {
@@ -200,14 +197,12 @@ const plantCareAnalyticsSchema = new Schema<IPlantCareAnalytics>({
   
   calculatedAt: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   },
   
   validUntil: {
     type: Date,
-    required: true,
-    index: true
+    required: true
   }
 }, {
   timestamps: true,
@@ -220,6 +215,8 @@ plantCareAnalyticsSchema.index({ userId: 1, plantId: 1, metricType: 1 });
 plantCareAnalyticsSchema.index({ plantId: 1, metricType: 1, calculatedAt: -1 });
 plantCareAnalyticsSchema.index({ metricType: 1, successLevel: 1 });
 plantCareAnalyticsSchema.index({ validUntil: 1 }); // For cleanup
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Virtual for plant details
 plantCareAnalyticsSchema.virtual('plantDetails', {

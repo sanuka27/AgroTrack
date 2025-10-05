@@ -125,7 +125,6 @@ const careLogSchema = new Schema<ICareLog>({
   date: {
     type: Date,
     required: [true, 'Care date is required'],
-    index: true,
     default: Date.now
   },
   
@@ -385,6 +384,8 @@ careLogSchema.index({ userId: 1, plantId: 1, careType: 1 });
 careLogSchema.index({ date: -1 });
 careLogSchema.index({ careType: 1, date: -1 });
 careLogSchema.index({ userId: 1, careType: 1, date: -1 });
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Virtual for days since care
 careLogSchema.virtual('daysAgo').get(function(this: ICareLog) {

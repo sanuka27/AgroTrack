@@ -152,11 +152,12 @@ const blogCategorySchema = new Schema<IBlogCategory>({
 });
 
 // Indexes
-blogCategorySchema.index({ slug: 1 });
 blogCategorySchema.index({ parent: 1, sortOrder: 1 });
 blogCategorySchema.index({ path: 1 });
 blogCategorySchema.index({ isActive: 1, isVisible: 1 });
 blogCategorySchema.index({ name: 'text', description: 'text' });
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Virtual for posts in this category
 blogCategorySchema.virtual('posts', {

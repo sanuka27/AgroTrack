@@ -33,14 +33,12 @@ const notificationSchema = new Schema<INotification>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   type: {
     type: String,
     enum: ['reminder', 'alert', 'tip', 'community', 'expert', 'system'],
-    required: true,
-    index: true
+    required: true
   },
   title: {
     type: String,
@@ -60,22 +58,18 @@ const notificationSchema = new Schema<INotification>({
   priority: {
     type: String,
     enum: ['low', 'medium', 'high', 'urgent'],
-    default: 'medium',
-    index: true
+    default: 'medium'
   },
   status: {
     type: String,
     enum: ['pending', 'sent', 'delivered', 'failed', 'read'],
-    default: 'pending',
-    index: true
+    default: 'pending'
   },
   scheduledFor: {
-    type: Date,
-    index: true
+    type: Date
   },
   sentAt: {
-    type: Date,
-    index: true
+    type: Date
   },
   readAt: {
     type: Date
@@ -115,6 +109,8 @@ notificationSchema.index({ userId: 1, status: 1 });
 notificationSchema.index({ scheduledFor: 1, status: 1 });
 notificationSchema.index({ createdAt: -1 });
 notificationSchema.index({ type: 1, priority: 1 });
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // Extend interface for instance methods
 interface INotificationMethods {

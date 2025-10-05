@@ -137,15 +137,13 @@ const userAnalyticsSchema = new Schema<IUserAnalytics>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'User ID is required'],
-    index: true
+    required: [true, 'User ID is required']
   },
   
   eventType: {
     type: String,
     enum: Object.values(AnalyticsEventType),
-    required: [true, 'Event type is required'],
-    index: true
+    required: [true, 'Event type is required']
   },
   
   eventData: {
@@ -154,8 +152,7 @@ const userAnalyticsSchema = new Schema<IUserAnalytics>({
   },
   
   sessionId: {
-    type: String,
-    index: true
+    type: String
   },
   
   deviceInfo: {
@@ -184,8 +181,7 @@ const userAnalyticsSchema = new Schema<IUserAnalytics>({
   
   timestamp: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
   }
 }, {
   timestamps: { createdAt: true, updatedAt: false },
@@ -199,6 +195,8 @@ userAnalyticsSchema.index({ eventType: 1, timestamp: -1 });
 userAnalyticsSchema.index({ sessionId: 1, timestamp: -1 });
 userAnalyticsSchema.index({ timestamp: -1 });
 userAnalyticsSchema.index({ 'location.country': 1, timestamp: -1 });
+
+// ✅ Duplicate index removed to avoid Mongoose warning
 
 // TTL index to automatically delete old analytics data after 2 years
 userAnalyticsSchema.index({ timestamp: 1 }, { expireAfterSeconds: 63072000 }); // 2 years
