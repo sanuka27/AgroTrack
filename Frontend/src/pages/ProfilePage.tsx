@@ -10,9 +10,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { mockApi } from '@/lib/mockApi';
+import type { User } from '@/types/api';
 import { 
-  User, 
+  User as UserIcon, 
   Camera, 
   MapPin, 
   Save,
@@ -55,26 +56,31 @@ const ProfilePage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Partial<ProfileData>>({});
 
-  // Load profile data from localStorage on mount
+  // Load profile data from mock API on mount
   useEffect(() => {
-    const savedProfile = localStorage.getItem('agrotrack:profile');
-    if (savedProfile) {
+    const loadProfile = async () => {
       try {
-        const parsed = JSON.parse(savedProfile);
-        setProfileData(parsed);
-        setAvatarPreview(parsed.avatarUrl || '');
+        const userProfile = await mockApi.auth.getProfile();
+        setProfileData({
+          displayName: userProfile.name,
+          bio: '', // Mock bio - not in API yet
+          location: '', // Mock location - not in API yet
+          avatarUrl: userProfile.profilePicture || ''
+        });
+        setAvatarPreview(userProfile.profilePicture || '');
       } catch (error) {
-        console.error('Error loading profile data:', error);
+        console.error('Error loading profile:', error);
+        // Fallback to user data if available
+        setProfileData({
+          displayName: user?.name || '',
+          bio: '',
+          location: '',
+          avatarUrl: ''
+        });
       }
-    } else {
-      // Initialize with user data if available
-      setProfileData({
-        displayName: user?.name || '',
-        bio: '',
-        location: '',
-        avatarUrl: ''
-      });
-    }
+    };
+
+    loadProfile();
   }, [user]);
 
   // Mock stats from localStorage
@@ -131,7 +137,7 @@ const ProfilePage = () => {
   };
 
   // Handle avatar upload
-  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -166,12 +172,19 @@ const ProfilePage = () => {
       avatarUrl
     }));
 
-    // Save to localStorage immediately for avatar preview persistence
-    const currentProfile = JSON.parse(localStorage.getItem('agrotrack:profile') || '{}');
-    localStorage.setItem('agrotrack:profile', JSON.stringify({
-      ...currentProfile,
-      avatarUrl
-    }));
+    // Save avatar to API immediately
+    try {
+      await mockApi.auth.updateProfile({
+        profilePicture: avatarUrl
+      });
+    } catch (error) {
+      console.error('Error saving avatar:', error);
+      toast({
+        title: "Avatar upload failed",
+        description: "Your avatar was uploaded but couldn't be saved. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Handle save
@@ -188,12 +201,12 @@ const ProfilePage = () => {
     setIsSaving(true);
 
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Save to localStorage
-      localStorage.setItem('agrotrack:profile', JSON.stringify(profileData));
-      
+      // Update profile via mock API
+      await mockApi.auth.updateProfile({
+        name: profileData.displayName,
+        profilePicture: profileData.avatarUrl
+      });
+
       setIsEditing(false);
       
       toast({
@@ -213,13 +226,23 @@ const ProfilePage = () => {
 
   // Handle cancel
   const handleCancel = () => {
-    // Reload from localStorage
-    const savedProfile = localStorage.getItem('agrotrack:profile');
-    if (savedProfile) {
-      const parsed = JSON.parse(savedProfile);
-      setProfileData(parsed);
-      setAvatarPreview(parsed.avatarUrl || '');
-    }
+    // Reload from API
+    const loadProfile = async () => {
+      try {
+        const userProfile = await mockApi.auth.getProfile();
+        setProfileData({
+          displayName: userProfile.name,
+          bio: '', // Mock bio - not in API yet
+          location: '', // Mock location - not in API yet
+          avatarUrl: userProfile.profilePicture || ''
+        });
+        setAvatarPreview(userProfile.profilePicture || '');
+      } catch (error) {
+        console.error('Error reloading profile:', error);
+      }
+    };
+
+    loadProfile();
     setIsEditing(false);
     setErrors({});
   };
@@ -461,7 +484,7 @@ const ProfilePage = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <User className="w-5 h-5 text-gray-600" />
+                    <UserIcon className="w-5 h-5 text-gray-600" />
                     <span>Account Info</span>
                   </CardTitle>
                 </CardHeader>

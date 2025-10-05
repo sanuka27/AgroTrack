@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { mockApi } from '@/lib/mockApi';
 import { Sun, Moon, Cog, Bell, User, Eye, EyeOff, Lock } from 'lucide-react';
 
 // LocalStorage key
@@ -74,20 +74,46 @@ const SettingsPage = () => {
   });
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // Load settings from localStorage on component mount
+  // Load settings from mock API on component mount
   useEffect(() => {
-    try {
-      const savedSettings = localStorage.getItem(SETTINGS_KEY);
-      if (savedSettings) {
-        const parsed = JSON.parse(savedSettings);
-        setSettings({ ...defaultSettings, ...parsed });
-        applyTheme(parsed.theme || defaultSettings.theme);
+    const loadSettings = async () => {
+      try {
+        const userProfile = await mockApi.auth.getProfile();
+        const userPreferences = userProfile.preferences;
+
+        // Map API preferences to settings format
+        const apiSettings: SettingsData = {
+          theme: 'system', // Default theme - not in API yet
+          units: 'metric', // Default units - not in API yet
+          notifications: {
+            watering: userPreferences.notifications,
+            fertilizer: userPreferences.notifications,
+            dailySummary: false, // Not in API yet
+            dailySummaryTime: '08:00', // Not in API yet
+          }
+        };
+
+        setSettings(apiSettings);
+        applyTheme(apiSettings.theme);
+      } catch (error) {
+        console.error('Error loading settings:', error);
+        // Fallback to localStorage if API fails
+        try {
+          const savedSettings = localStorage.getItem(SETTINGS_KEY);
+          if (savedSettings) {
+            const parsed = JSON.parse(savedSettings);
+            setSettings({ ...defaultSettings, ...parsed });
+            applyTheme(parsed.theme || defaultSettings.theme);
+          }
+        } catch (fallbackError) {
+          console.error('Error loading fallback settings:', fallbackError);
+        }
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error loading settings:', error);
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    loadSettings();
   }, []);
 
   // Apply theme changes immediately
@@ -98,7 +124,23 @@ const SettingsPage = () => {
   const saveSettings = async () => {
     setSaving(true);
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      // Map settings back to API preferences format
+      const apiPreferences = {
+        notifications: settings.notifications.watering, // Use watering as general notification setting
+        language: 'en', // Default - not in settings yet
+        timezone: 'UTC', // Default - not in settings yet
+      };
+
+      await mockApi.auth.updatePreferences(apiPreferences);
+
+      // Also save theme/units to localStorage for now (not in API)
+      const localSettings = {
+        theme: settings.theme,
+        units: settings.units,
+        notifications: settings.notifications
+      };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(localSettings));
+
       toast({
         title: "Settings Saved",
         description: "Your preferences have been updated successfully.",
@@ -151,8 +193,8 @@ const SettingsPage = () => {
 
     setChangingPassword(true);
     try {
-      // Simulate API call - replace with actual password change logic
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Change password via mock API
+      await mockApi.auth.changePassword(passwordData.currentPassword, passwordData.newPassword);
       
       toast({
         title: "Password Changed",
@@ -169,7 +211,7 @@ const SettingsPage = () => {
       console.error('Error changing password:', error);
       toast({
         title: "Error",
-        description: "Failed to change password. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to change password. Please try again.",
         variant: "destructive",
       });
     } finally {

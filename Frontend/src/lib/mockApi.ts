@@ -87,6 +87,55 @@ export const mockApi = {
       if (!token) throw new Error('Not authenticated');
       return mockUsers[0];
     },
+
+    updateProfile: async (profileData: Partial<Pick<User, 'name' | 'profilePicture'>>) => {
+      await delay(500);
+      const token = localStorage.getItem('authToken');
+      if (!token) throw new Error('Not authenticated');
+
+      // Update the mock user
+      const userIndex = 0; // Always update the first user for mock
+      mockUsers[userIndex] = {
+        ...mockUsers[userIndex],
+        ...profileData,
+        updatedAt: new Date()
+      };
+
+      return mockUsers[userIndex];
+    },
+
+    updatePreferences: async (preferences: Partial<User['preferences']>) => {
+      await delay(300);
+      const token = localStorage.getItem('authToken');
+      if (!token) throw new Error('Not authenticated');
+
+      // Update the mock user preferences
+      const userIndex = 0;
+      mockUsers[userIndex] = {
+        ...mockUsers[userIndex],
+        preferences: {
+          ...mockUsers[userIndex].preferences,
+          ...preferences
+        },
+        updatedAt: new Date()
+      };
+
+      return mockUsers[userIndex];
+    },
+
+    changePassword: async (currentPassword: string, newPassword: string) => {
+      await delay(500);
+      const token = localStorage.getItem('authToken');
+      if (!token) throw new Error('Not authenticated');
+
+      // Mock password validation (in real app, this would be done server-side)
+      if (currentPassword !== 'password') {
+        throw new Error('Current password is incorrect');
+      }
+
+      // In a real app, you'd hash and store the new password
+      return { message: 'Password changed successfully' };
+    },
   },
 
   // Plant endpoints
