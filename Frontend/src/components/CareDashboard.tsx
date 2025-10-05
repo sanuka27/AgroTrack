@@ -9,13 +9,14 @@ import { CareAnalytics } from './CareAnalytics';
 import { CareReminders } from './CareReminders';
 import { CareLog, CareType, PlantCareHistory, CareMetadata } from '@/types/care';
 import { Plant } from '@/types/plant';
-import { 
-  generatePlantCareHistory, 
-  createCareLog, 
+import {
+  generatePlantCareHistory,
+  createCareLog,
   getPlantCarePatterns,
-  formatCareType 
+  formatCareType
 } from '@/utils/careUtils';
 import { Plus, Calendar, BarChart3, Bell, History } from 'lucide-react';
+import mockApi from '@/lib/mockApi';
 
 interface CareDashboardProps {
   plants: Plant[];
@@ -34,19 +35,35 @@ export const CareDashboard: React.FC<CareDashboardProps> = ({
   const [isAddingCare, setIsAddingCare] = useState(false);
   const [plantCareHistories, setPlantCareHistories] = useState<Record<string, PlantCareHistory>>({});
   const [activeTab, setActiveTab] = useState('timeline');
+  const [loading, setLoading] = useState(true);
 
-  // Load care logs from localStorage
+  // Load care logs from mock API
   useEffect(() => {
-    try {
-      const storedLogs = localStorage.getItem(CARE_STORAGE_KEY);
-      if (storedLogs) {
-        const parsedLogs = JSON.parse(storedLogs) as CareLog[];
-        setCareLogs(parsedLogs);
+    const loadCareLogs = async () => {
+      try {
+        setLoading(true);
+        const allLogs: CareLog[] = [];
+
+        // Get care logs for each plant
+        for (const plant of plants) {
+          try {
+            const plantLogs = await mockApi.careLogs.getByPlant(plant.id);
+            allLogs.push(...plantLogs);
+          } catch (error) {
+            console.error(`Error loading care logs for plant ${plant.id}:`, error);
+          }
+        }
+
+        setCareLogs(allLogs);
+      } catch (error) {
+        console.error('Error loading care logs:', error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error loading care logs:', error);
-    }
-  }, []);
+    };
+
+    loadCareLogs();
+  }, [plants]);
 
   // Generate plant care histories when care logs change
   useEffect(() => {
@@ -62,11 +79,37 @@ export const CareDashboard: React.FC<CareDashboardProps> = ({
     setPlantCareHistories(histories);
   }, [careLogs, plants]);
 
-  // Save care logs to localStorage
-  const saveCareLog = (newLog: CareLog) => {
-    const updatedLogs = [...careLogs, newLog];
-    setCareLogs(updatedLogs);
-    localStorage.setItem(CARE_STORAGE_KEY, JSON.stringify(updatedLogs));
+  // Save care logs using mock API
+  const saveCareLog = async (newLog: CareLog) => {
+    try {
+      // Convert frontend CareLog to API format
+      const apiLogData = {
+        plantId: newLog.plantId,
+        action: newLog.careType, // Map careType to action
+        notes: newLog.notes || '',
+        date: newLog.date,
+      };
+
+      const createdLog = await mockApi.careLogs.create(apiLogData);
+
+      // Convert back to frontend format and add to state
+      const frontendLog: CareLog = {
+        id: createdLog._id,
+        plantId: createdLog.plantId,
+        careType: createdLog.action as CareType, // Map back
+        date: createdLog.date,
+        notes: createdLog.notes,
+        metadata: newLog.metadata, // Keep original metadata
+        createdAt: createdLog.createdAt,
+        updatedAt: createdLog.createdAt,
+      };
+
+      setCareLogs(prev => [...prev, frontendLog]);
+    } catch (error) {
+      console.error('Error saving care log:', error);
+      // Fallback: just add to local state
+      setCareLogs(prev => [...prev, newLog]);
+    }
   };
 
   // Handle adding new care log

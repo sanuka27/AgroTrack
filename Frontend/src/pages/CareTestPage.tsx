@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { CareDashboard } from '@/components/CareDashboard';
@@ -7,54 +7,119 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plant } from '@/types/plant';
 import { Activity, Leaf, TestTube } from 'lucide-react';
-
-// Sample plants for testing
-const samplePlants: Plant[] = [
-  {
-    id: 'plant-1',
-    name: 'Monstera Deliciosa',
-    category: 'Indoor',
-    sunlight: 'Partial Sun',
-    wateringEveryDays: 7,
-    lastWatered: '2025-09-25',
-    health: 'Good',
-    notes: 'Beautiful split leaves, growing well in bright indirect light',
-    soil: 'Well-draining potting mix',
-    imageUrl: '/placeholder.svg',
-    ageYears: 2,
-    fertilizerEveryWeeks: 2
-  },
-  {
-    id: 'plant-2',
-    name: 'Snake Plant',
-    category: 'Succulent',
-    sunlight: 'Low Light',
-    wateringEveryDays: 14,
-    lastWatered: '2025-09-20',
-    health: 'Excellent',
-    notes: 'Very low maintenance, perfect for beginners',
-    soil: 'Succulent mix',
-    imageUrl: '/placeholder.svg',
-    ageYears: 1,
-    fertilizerEveryWeeks: 4
-  },
-  {
-    id: 'plant-3',
-    name: 'Peace Lily',
-    category: 'Flower',
-    sunlight: 'Partial Sun',
-    wateringEveryDays: 5,
-    lastWatered: '2025-09-26',
-    health: 'Needs water',
-    notes: 'Leaves drooping, might need more water',
-    soil: 'Regular potting mix',
-    imageUrl: '/placeholder.svg',
-    ageYears: 3,
-    fertilizerEveryWeeks: 3
-  }
-];
+import mockApi from '@/lib/mockApi';
 
 const CareTestPage = () => {
+  const [plants, setPlants] = useState<Plant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadPlants = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await mockApi.plants.getAll();
+        // Convert API plant format to frontend Plant format
+        const convertedPlants: Plant[] = response.plants.map(apiPlant => ({
+          id: apiPlant._id,
+          name: apiPlant.name,
+          category: apiPlant.category === 'Vegetable' ? 'Outdoor' :
+                   apiPlant.category === 'Herb' ? 'Herb' :
+                   apiPlant.category === 'Flower' ? 'Flower' : 'Indoor',
+          sunlight: apiPlant.sunlightHours >= 8 ? "Full Sun" :
+                   apiPlant.sunlightHours >= 6 ? "Partial Sun" : "Low Light",
+          ageYears: undefined,
+          wateringEveryDays: apiPlant.wateringFrequency,
+          fertilizerEveryWeeks: undefined,
+          soil: apiPlant.soilType,
+          notes: apiPlant.careInstructions,
+          imageUrl: apiPlant.imageUrl,
+          lastWatered: undefined,
+          health: "Good" as const,
+          growthRatePctThisMonth: undefined,
+        }));
+        setPlants(convertedPlants);
+      } catch (err) {
+        console.error('Error loading plants:', err);
+        setError('Failed to load plants. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPlants();
+const CareTestPage = () => {
+  const [plants, setPlants] = useState<Plant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadPlants = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await mockApi.plants.getAll();
+        // Convert API plant format to frontend Plant format
+        const convertedPlants: Plant[] = response.plants.map(apiPlant => ({
+          id: apiPlant._id,
+          name: apiPlant.name,
+          category: apiPlant.category === 'Vegetable' ? 'Outdoor' :
+                   apiPlant.category === 'Herb' ? 'Herb' :
+                   apiPlant.category === 'Flower' ? 'Flower' : 'Indoor',
+          sunlight: apiPlant.sunlightHours >= 8 ? "Full Sun" :
+                   apiPlant.sunlightHours >= 6 ? "Partial Sun" : "Low Light",
+          ageYears: undefined,
+          wateringEveryDays: apiPlant.wateringFrequency,
+          fertilizerEveryWeeks: undefined,
+          soil: apiPlant.soilType,
+          notes: apiPlant.careInstructions,
+          imageUrl: apiPlant.imageUrl,
+          lastWatered: undefined,
+          health: "Good" as const,
+          growthRatePctThisMonth: undefined,
+        }));
+        setPlants(convertedPlants);
+      } catch (err) {
+        console.error('Error loading plants:', err);
+        setError('Failed to load plants. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPlants();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="mt-2 text-muted-foreground">Loading plants...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+            <p className="text-destructive">{error}</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
       <Header />
@@ -90,7 +155,7 @@ const CareTestPage = () => {
                   Complete care management dashboard with analytics, timeline, reminders, and multi-plant overview
                 </p>
                 <CareDashboard 
-                  plants={samplePlants}
+                  plants={plants}
                   showAllPlants={true}
                 />
               </CardContent>
@@ -99,7 +164,7 @@ const CareTestPage = () => {
 
           <TabsContent value="individual" className="space-y-6">
             <div className="grid gap-6">
-              {samplePlants.map(plant => (
+              {plants.map(plant => (
                 <Card key={plant.id}>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
