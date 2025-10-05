@@ -1,46 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
-
-export type UserRole = 'guest' | 'user' | 'admin';
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  createdAt: string;
-  lastLogin?: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  role: UserRole;
-  isAuthenticated: boolean;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  loginWithGoogle: () => Promise<boolean>;
-  logout: () => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
-  hasPermission: (permission: string) => boolean;
-  refreshToken: () => Promise<boolean>;
-}
+import type { UserRole, User, AuthContextType } from '../types/auth';
 
 // API configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -336,12 +297,5 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
+export { AuthContext };
 export default AuthContext;

@@ -1,7 +1,7 @@
 import React from "react";
 import { ArrowRight, Sparkles, Users, Brain } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import WatchDemo from "./WatchDemo";
 import heroPlant from "@/assets/hero-plant.jpg";
 

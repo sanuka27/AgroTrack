@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useDemo } from '@/contexts/DemoContext';
 import { Leaf, X, Sparkles, ArrowRight } from 'lucide-react';
 

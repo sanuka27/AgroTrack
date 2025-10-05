@@ -1,19 +1,63 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Users, Flag, Activity } from 'lucide-react';
-import { useRealtimeSnapshot } from '@/realtime/hooks';
+import { useToast } from '@/hooks/use-toast';
+import { mockApi } from '@/lib/mockApi';
 import { RecentActivity } from '@/components/admin/RecentActivity';
 
-export function Overview() {
-  const { snapshot, isLoading } = useRealtimeSnapshot();
+interface AnalyticsData {
+  userGrowth: {
+    total: number;
+    new: number;
+    active: number;
+  };
+  contentStats: {
+    posts: number;
+    comments: number;
+    reports: number;
+  };
+  engagement: {
+    dailyActiveUsers: number;
+    postsPerDay: number;
+    avgSessionTime: number;
+  };
+  timeframe: string;
+  generatedAt: Date;
+}
 
-  if (isLoading || !snapshot) {
+export function Overview() {
+  const { toast } = useToast();
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      try {
+        setLoading(true);
+        const response = await mockApi.admin.getAnalytics();
+        setAnalytics(response);
+      } catch (error) {
+        console.error('Error loading analytics:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load analytics. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAnalytics();
+  }, [toast]);
+
+  if (loading || !analytics) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
+            <Card key={i} className="animate-pulse rounded-2xl ring-1 ring-slate-200 shadow-sm">
               <CardContent className="p-6">
                 <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
                 <div className="h-8 bg-gray-200 rounded w-3/4 mb-2"></div>
@@ -26,7 +70,6 @@ export function Overview() {
     );
   }
 
-  const { metrics } = snapshot;
   const monthlyGrowthPct = 15.2; // Mock calculation
 
   return (
@@ -39,7 +82,7 @@ export function Overview() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Users</p>
                 <p className="text-3xl font-bold text-foreground animate-[countUp_0.5s_ease-out]">
-                  {metrics.totalUsers.toLocaleString()}
+                  {analytics.userGrowth.total.toLocaleString()}
                 </p>
                 <p className="text-xs text-green-600">+{monthlyGrowthPct}% this month</p>
               </div>
@@ -56,9 +99,9 @@ export function Overview() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Active Users</p>
                 <p className="text-3xl font-bold text-foreground animate-[countUp_0.5s_ease-out]">
-                  {metrics.activeUsers.toLocaleString()}
+                  {analytics.userGrowth.active.toLocaleString()}
                 </p>
-                <p className="text-xs text-blue-600">{metrics.activePct.toFixed(1)}% of total users</p>
+                <p className="text-xs text-blue-600">{((analytics.userGrowth.active / analytics.userGrowth.total) * 100).toFixed(1)}% of total users</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
                 <Activity className="h-6 w-6 text-green-600" />
@@ -73,25 +116,26 @@ export function Overview() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Pending Reports</p>
                 <p className="text-3xl font-bold text-foreground animate-[countUp_0.5s_ease-out]">
-                  {metrics.pendingReports}
+                  {analytics.contentStats.reports}
                 </p>
-                <Badge 
+                <Badge
                   variant={
-                    metrics.severityLabel === 'Normal' ? 'secondary' :
-                    metrics.severityLabel === 'Elevated' ? 'default' : 'destructive'
+                    analytics.contentStats.reports < 5 ? 'secondary' :
+                    analytics.contentStats.reports < 10 ? 'default' : 'destructive'
                   }
                   className="text-xs"
                 >
-                  {metrics.severityLabel}
+                  {analytics.contentStats.reports < 5 ? 'Normal' :
+                   analytics.contentStats.reports < 10 ? 'Elevated' : 'High'}
                 </Badge>
               </div>
               <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
-                metrics.severityLabel === 'Normal' ? 'bg-green-100' :
-                metrics.severityLabel === 'Elevated' ? 'bg-yellow-100' : 'bg-red-100'
+                analytics.contentStats.reports < 5 ? 'bg-green-100' :
+                analytics.contentStats.reports < 10 ? 'bg-yellow-100' : 'bg-red-100'
               }`}>
                 <Flag className={`h-6 w-6 ${
-                  metrics.severityLabel === 'Normal' ? 'text-green-600' :
-                  metrics.severityLabel === 'Elevated' ? 'text-yellow-600' : 'text-red-600'
+                  analytics.contentStats.reports < 5 ? 'text-green-600' :
+                  analytics.contentStats.reports < 10 ? 'text-yellow-600' : 'text-red-600'
                 }`} />
               </div>
             </div>
@@ -127,25 +171,25 @@ export function Overview() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center">
                 <p className="text-2xl font-bold text-emerald-600 animate-[countUp_0.5s_ease-out]">
-                  {metrics.community.engagementRate.toFixed(1)}%
+                  {((analytics.engagement.postsPerDay / analytics.userGrowth.active) * 100).toFixed(1)}%
                 </p>
                 <p className="text-sm text-muted-foreground">Engagement Rate</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-blue-600 animate-[countUp_0.5s_ease-out]">
-                  {metrics.community.dailyActiveUsers.toLocaleString()}
+                  {analytics.engagement.dailyActiveUsers.toLocaleString()}
                 </p>
                 <p className="text-sm text-muted-foreground">Daily Active</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-purple-600 animate-[countUp_0.5s_ease-out]">
-                  {metrics.community.postsPerDay}
+                  {analytics.engagement.postsPerDay}
                 </p>
                 <p className="text-sm text-muted-foreground">Posts/Day</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-orange-600 animate-[countUp_0.5s_ease-out]">
-                  {metrics.community.reportRate.toFixed(1)}%
+                  {((analytics.contentStats.reports / analytics.contentStats.posts) * 100).toFixed(1)}%
                 </p>
                 <p className="text-sm text-muted-foreground">Report Rate</p>
               </div>

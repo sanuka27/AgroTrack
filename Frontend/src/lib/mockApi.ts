@@ -42,7 +42,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export const mockApi = {
   // Auth endpoints
   auth: {
-    login: async (credentials: { email: string; password: string }) => {
+    login: async (credentials: { email: string; password: string }): Promise<AuthResponse> => {
       await delay(500);
       if (credentials.email === 'user@example.com' && credentials.password === 'password') {
         const user = mockUsers[0];
@@ -416,6 +416,200 @@ export const mockApi = {
       await delay(200);
       return mockTrendingTopics;
     },
+  },
+
+  // Admin endpoints
+  admin: {
+    // User management
+    getUsers: async (params?: { page?: number; limit?: number; status?: string; search?: string }) => {
+      await delay(300);
+      let users = [...mockUsers];
+
+      if (params?.status) {
+        users = users.filter(u => u.role === params.status || (params.status === 'active' && u.role === 'user'));
+      }
+
+      if (params?.search) {
+        const search = params.search.toLowerCase();
+        users = users.filter(u =>
+          u.name.toLowerCase().includes(search) ||
+          u.email.toLowerCase().includes(search)
+        );
+      }
+
+      const page = params?.page || 1;
+      const limit = params?.limit || 10;
+      const start = (page - 1) * limit;
+      const paginatedUsers = users.slice(start, start + limit);
+
+      return {
+        users: paginatedUsers,
+        total: users.length,
+        page,
+        limit
+      };
+    },
+
+    updateUserStatus: async (userId: string, status: 'active' | 'banned' | 'pending') => {
+      await delay(500);
+      const user = mockUsers.find(u => u._id === userId);
+      if (!user) throw new Error('User not found');
+
+      // In a real app, this would update the user's status
+      // For mock purposes, we'll just return success
+      return { message: `User ${status === 'banned' ? 'banned' : status === 'active' ? 'activated' : 'marked as pending'} successfully` };
+    },
+
+    deleteUser: async (userId: string) => {
+      await delay(500);
+      const userIndex = mockUsers.findIndex(u => u._id === userId);
+      if (userIndex === -1) throw new Error('User not found');
+
+      mockUsers.splice(userIndex, 1);
+      return { message: 'User deleted successfully' };
+    },
+
+    // Reports management
+    getReports: async (params?: { page?: number; limit?: number; status?: string }) => {
+      await delay(300);
+      // Mock reports data - in a real app this would come from a reports table
+      const mockReports = [
+        {
+          _id: 'report1',
+          reporterId: 'user2',
+          reporterName: 'Bob Smith',
+          targetId: 'post1',
+          targetType: 'post',
+          reason: 'Inappropriate content',
+          description: 'Post contains offensive language',
+          status: 'open',
+          createdAt: new Date(Date.now() - 86400000 * 2),
+          resolvedAt: null,
+          resolvedBy: null
+        },
+        {
+          _id: 'report2',
+          reporterId: 'user3',
+          reporterName: 'Charlie Brown',
+          targetId: 'comment1',
+          targetType: 'comment',
+          reason: 'Spam',
+          description: 'Comment is promotional spam',
+          status: 'resolved',
+          createdAt: new Date(Date.now() - 86400000 * 5),
+          resolvedAt: new Date(Date.now() - 86400000 * 1),
+          resolvedBy: 'admin1'
+        }
+      ];
+
+      let reports = [...mockReports];
+
+      if (params?.status) {
+        reports = reports.filter(r => r.status === params.status);
+      }
+
+      const page = params?.page || 1;
+      const limit = params?.limit || 10;
+      const start = (page - 1) * limit;
+      const paginatedReports = reports.slice(start, start + limit);
+
+      return {
+        reports: paginatedReports,
+        total: reports.length,
+        page,
+        limit
+      };
+    },
+
+    resolveReport: async (reportId: string, action: 'resolve' | 'dismiss', adminNote?: string) => {
+      await delay(500);
+      // In a real app, this would update the report status
+      return { message: `Report ${action}d successfully` };
+    },
+
+    // Content moderation
+    getContent: async (params?: { page?: number; limit?: number; status?: string; type?: string }) => {
+      await delay(300);
+      let content = [
+        ...mockCommunityPosts.map(p => ({
+          _id: p._id,
+          type: 'post' as const,
+          title: p.title,
+          content: p.content,
+          author: p.author.name,
+          authorId: p.author._id,
+          status: 'visible' as const,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+          reports: Math.floor(Math.random() * 3)
+        })),
+        ...mockComments.map(c => ({
+          _id: c._id,
+          type: 'comment' as const,
+          title: '',
+          content: c.content,
+          author: c.author.name,
+          authorId: c.author._id,
+          status: 'visible' as const,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+          reports: Math.floor(Math.random() * 2)
+        }))
+      ];
+
+      if (params?.status) {
+        content = content.filter(c => c.status === params.status);
+      }
+
+      if (params?.type) {
+        content = content.filter(c => c.type === params.type);
+      }
+
+      const page = params?.page || 1;
+      const limit = params?.limit || 10;
+      const start = (page - 1) * limit;
+      const paginatedContent = content.slice(start, start + limit);
+
+      return {
+        content: paginatedContent,
+        total: content.length,
+        page,
+        limit
+      };
+    },
+
+    moderateContent: async (contentId: string, action: 'hide' | 'remove' | 'restore', reason?: string) => {
+      await delay(500);
+      // In a real app, this would update the content status
+      return { message: `Content ${action}d successfully` };
+    },
+
+    // Analytics
+    getAnalytics: async (timeframe?: string) => {
+      await delay(500);
+      const now = new Date();
+      const days = timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90;
+
+      return {
+        userGrowth: {
+          total: mockUsers.length,
+          new: Math.floor(Math.random() * 20) + 5,
+          active: Math.floor(mockUsers.length * 0.7)
+        },
+        contentStats: {
+          posts: mockCommunityPosts.length,
+          comments: mockComments.length,
+          reports: Math.floor(Math.random() * 15) + 5
+        },
+        engagement: {
+          dailyActiveUsers: Math.floor(mockUsers.length * 0.4),
+          postsPerDay: Math.floor(Math.random() * 10) + 2,
+          avgSessionTime: Math.floor(Math.random() * 20) + 10
+        },
+        timeframe,
+        generatedAt: now
+      };
+    }
   },
 };
 

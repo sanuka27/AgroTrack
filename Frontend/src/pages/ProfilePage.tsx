@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { mockApi } from '@/lib/mockApi';
+import { useAuth } from '@/hooks/useAuth';
 import type { User } from '@/types/api';
 import { 
   User as UserIcon, 

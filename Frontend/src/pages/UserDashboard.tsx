@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Plant } from '@/types/plant';
 import { CareLog } from '@/types/care';
 import { Reminder, ReminderStatus, ReminderPreferences, SmartReminderConfig } from '@/types/reminders';

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Leaf, Menu, X, User, MessageSquare, BarChart3, LogOut, Shield, Settings, Bot } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

@@ -1,37 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useRealtimeSnapshot } from '@/realtime/hooks';
-import { ReportRow } from '@/realtime/types';
-import { Search, AlertTriangle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { mockApi } from '@/lib/mockApi';
+import { Search, AlertTriangle, CheckCircle, X } from 'lucide-react';
+
+interface Report {
+  _id: string;
+  reporterId: string;
+  reporterName: string;
+  targetId: string;
+  targetType: 'post' | 'comment';
+  reason: string;
+  description: string;
+  status: 'open' | 'resolved' | 'dismissed';
+  createdAt: Date;
+  resolvedAt: Date | null;
+  resolvedBy: string | null;
+}
 
 type ReportFilter = 'all' | 'open' | 'resolved' | 'dismissed';
 
 export function ReportsTab() {
-  const { snapshot, isLoading } = useRealtimeSnapshot();
+  const { toast } = useToast();
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<ReportFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  if (isLoading || !snapshot) {
-    return <div className="p-6">Loading reports...</div>;
-  }
+  // Load reports from mock API
+  useEffect(() => {
+    const loadReports = async () => {
+      try {
+        setLoading(true);
+        const response = await mockApi.admin.getReports();
+        // Ensure dates are Date objects and types are correct
+        const reportsWithDates: Report[] = response.reports.map(report => ({
+          ...report,
+          targetType: report.targetType as 'post' | 'comment',
+          status: report.status as 'open' | 'resolved' | 'dismissed',
+          createdAt: new Date(report.createdAt),
+          resolvedAt: report.resolvedAt ? new Date(report.resolvedAt) : null,
+          resolvedBy: report.resolvedBy,
+        }));
+        setReports(reportsWithDates);
+      } catch (error) {
+        console.error('Error loading reports:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load reports. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const { reports } = snapshot;
+    loadReports();
+  }, [toast]);
 
   // Apply filters
   const filteredReports = reports.filter(report => {
     const matchesFilter = filter === 'all' || report.status === filter;
-    const matchesSearch = searchTerm === '' || 
-      report.reporter.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = searchTerm === '' ||
+      report.reporterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       report.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
       report.targetId.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return matchesFilter && matchesSearch;
   });
 
-  const getStatusBadge = (status: ReportRow['status']) => {
+  const getStatusBadge = (status: Report['status']) => {
     switch (status) {
       case 'open':
         return <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">Open</Badge>;
@@ -44,8 +86,8 @@ export function ReportsTab() {
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('en-US', {
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -53,6 +95,45 @@ export function ReportsTab() {
       minute: '2-digit'
     });
   };
+
+  const handleReportAction = async (reportId: string, action: 'resolve' | 'dismiss') => {
+    setActionLoading(reportId);
+    try {
+      await mockApi.admin.resolveReport(reportId, action);
+      setReports(prev => prev.map(r =>
+        r._id === reportId
+          ? { ...r, status: action === 'resolve' ? 'resolved' : 'dismissed', resolvedAt: new Date(), resolvedBy: 'admin1' }
+          : r
+      ));
+      toast({
+        title: "Report Updated",
+        description: `Report has been ${action}d successfully.`,
+      });
+    } catch (error) {
+      console.error('Error updating report:', error);
+      toast({
+        title: "Error",
+        description: `Failed to ${action} report. Please try again.`,
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Card className="rounded-2xl ring-1 ring-slate-200 shadow-sm animate-pulse">
+          <CardContent className="p-6">
+            <div className="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+            <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+            <div className="h-10 bg-gray-200 rounded w-full"></div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const openReportsCount = reports.filter(r => r.status === 'open').length;
 
@@ -129,28 +210,32 @@ export function ReportsTab() {
                   <th className="text-left py-3 px-6 font-medium text-gray-600">Reason</th>
                   <th className="text-left py-3 px-6 font-medium text-gray-600">Status</th>
                   <th className="text-left py-3 px-6 font-medium text-gray-600">Created</th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredReports.map((report, index) => (
-                  <tr 
-                    key={report.id} 
+                  <tr
+                    key={report._id}
                     className={`hover:bg-gray-50 transition-colors ${
                       index < 3 ? 'animate-[slideIn_0.3s_ease-out]' : ''
                     } ${report.status === 'open' ? 'bg-amber-50/30' : ''}`}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <td className="py-4 px-6">
-                      <div className="font-mono text-sm text-gray-600">#{report.id}</div>
+                      <div className="font-mono text-sm text-gray-600">#{report._id.slice(-6)}</div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="font-medium text-gray-900">{report.reporter}</div>
+                      <div className="font-medium text-gray-900">{report.reporterName}</div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="font-mono text-sm text-blue-600">{report.targetId}</div>
+                      <div className="text-sm">
+                        <div className="font-mono text-blue-600">{report.targetId.slice(-6)}</div>
+                        <div className="text-xs text-gray-500 capitalize">{report.targetType}</div>
+                      </div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-800 max-w-xs truncate" title={report.reason}>
+                      <div className="text-gray-800 max-w-xs truncate" title={report.description}>
                         {report.reason}
                       </div>
                     </td>
@@ -159,6 +244,35 @@ export function ReportsTab() {
                     </td>
                     <td className="py-4 px-6">
                       <div className="text-gray-600 text-sm">{formatDate(report.createdAt)}</div>
+                    </td>
+                    <td className="py-4 px-6">
+                      {report.status === 'open' && (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleReportAction(report._id, 'resolve')}
+                            disabled={actionLoading === report._id}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Resolve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleReportAction(report._id, 'dismiss')}
+                            disabled={actionLoading === report._id}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Dismiss
+                          </Button>
+                        </div>
+                      )}
+                      {report.status !== 'open' && (
+                        <Badge variant="outline" className="text-gray-500">
+                          {report.status === 'resolved' ? 'Resolved' : 'Dismissed'}
+                        </Badge>
+                      )}
                     </td>
                   </tr>
                 ))}

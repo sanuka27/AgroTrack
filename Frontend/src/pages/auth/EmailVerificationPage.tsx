@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, RefreshCw, CheckCircle, ArrowLeft, AlertCircle } from "lucide-react";
 

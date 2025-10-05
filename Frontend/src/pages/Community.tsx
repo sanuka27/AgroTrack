@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { RoleGuard, PermissionCheck, GuestPrompt } from "@/components/RoleGuard";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { mockApi } from "@/lib/mockApi";
 import type { CommunityPost, CommunityStats, TrendingTopic } from "@/types/api";
 import { Users, MessageCircle, Heart, TrendingUp, Shield, Flag, Trash2, Edit, Sparkles, ArrowUp, ArrowDown, Minus, MessageSquare } from "lucide-react";
