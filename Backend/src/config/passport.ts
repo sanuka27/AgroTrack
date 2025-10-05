@@ -96,14 +96,16 @@ passport.use(new GoogleStrategy({
         email: user.email
       });
 
-      // Create Firebase user if not exists
+      // Create Firebase user if not exists (only if Firebase is available)
       try {
-        await firebaseService.createUser({
-          email: googleData.email,
-          displayName: googleData.name,
-          photoURL: googleData.avatar,
-          emailVerified: googleData.verified
-        });
+        if (firebaseService.isFirebaseAvailable()) {
+          await firebaseService.createUser({
+            email: googleData.email,
+            displayName: googleData.name,
+            photoURL: googleData.avatar,
+            emailVerified: googleData.verified
+          });
+        }
       } catch (firebaseError: any) {
         // User might already exist in Firebase
         if (firebaseError.code !== 'auth/email-already-exists') {
@@ -115,19 +117,21 @@ passport.use(new GoogleStrategy({
       }
     }
 
-    // Set custom claims in Firebase for role-based access
-    try {
-      const firebaseUser = await firebaseService.getUserByEmail(user.email);
-      await firebaseService.setCustomUserClaims(firebaseUser.uid, {
-        role: user.role,
-        userId: user._id.toString(),
-        emailVerified: user.isEmailVerified
-      });
-    } catch (firebaseError) {
-      logger.warn('Failed to set Firebase custom claims', {
-        error: firebaseError,
-        userId: user._id
-      });
+    // Set custom claims in Firebase for role-based access (only if Firebase is available)
+    if (firebaseService.isFirebaseAvailable()) {
+      try {
+        const firebaseUser = await firebaseService.getUserByEmail(user.email);
+        await firebaseService.setCustomUserClaims(firebaseUser.uid, {
+          role: user.role,
+          userId: user._id.toString(),
+          emailVerified: user.isEmailVerified
+        });
+      } catch (firebaseError) {
+        logger.warn('Failed to set Firebase custom claims', {
+          error: firebaseError,
+          userId: user._id
+        });
+      }
     }
 
     return done(null, user);
@@ -204,7 +208,13 @@ passport.use('firebase-jwt', new JwtStrategy({
     const firebaseToken = authHeader.substring(9); // Remove 'Firebase ' prefix
 
     // Verify Firebase ID token
-    const decodedToken = await firebaseService.verifyIdToken(firebaseToken);
+    let decodedToken;
+    try {
+      decodedToken = await firebaseService.verifyIdToken(firebaseToken);
+    } catch (firebaseError) {
+      logger.warn('Firebase token verification failed - Firebase not configured', { error: firebaseError });
+      return done(null, false);
+    }
     
     // Find user by Firebase UID or email
     let user = await User.findOne({

@@ -46,7 +46,9 @@ class FirebaseService {
       const firebaseConfig = this.getFirebaseConfig();
       
       if (!firebaseConfig) {
-        throw new Error('Firebase configuration not found');
+        logger.warn('Firebase configuration not found - running in offline mode');
+        this.isInitialized = true; // Mark as initialized even without Firebase
+        return;
       }
 
       // Initialize Firebase Admin SDK
@@ -119,6 +121,13 @@ class FirebaseService {
   }
 
   /**
+   * Check if Firebase is available
+   */
+  isFirebaseAvailable(): boolean {
+    return this.app !== null && this.isInitialized;
+  }
+
+  /**
    * Get Firebase Auth service
    */
   getAuth(): admin.auth.Auth {
@@ -143,6 +152,10 @@ class FirebaseService {
    * Verify Firebase ID token
    */
   async verifyIdToken(idToken: string): Promise<admin.auth.DecodedIdToken> {
+    if (!this.isFirebaseAvailable()) {
+      throw new Error('Firebase not available - running in offline mode');
+    }
+    
     try {
       const decodedToken = await this.getAuth().verifyIdToken(idToken);
       return decodedToken;
@@ -182,6 +195,10 @@ class FirebaseService {
    * Get user by email
    */
   async getUserByEmail(email: string): Promise<admin.auth.UserRecord> {
+    if (!this.isFirebaseAvailable()) {
+      throw new Error('Firebase not available - running in offline mode');
+    }
+    
     try {
       const userRecord = await this.getAuth().getUserByEmail(email);
       return userRecord;
@@ -202,6 +219,10 @@ class FirebaseService {
     emailVerified?: boolean;
     disabled?: boolean;
   }): Promise<admin.auth.UserRecord> {
+    if (!this.isFirebaseAvailable()) {
+      throw new Error('Firebase not available - running in offline mode');
+    }
+    
     try {
       const userRecord = await this.getAuth().createUser(userData);
       logger.info('Firebase user created successfully', { uid: userRecord.uid, email: userData.email });
@@ -249,6 +270,11 @@ class FirebaseService {
    * Set custom user claims (for role-based access)
    */
   async setCustomUserClaims(uid: string, customClaims: object): Promise<void> {
+    if (!this.isFirebaseAvailable()) {
+      logger.warn('Firebase not available - skipping custom claims setup');
+      return;
+    }
+    
     try {
       await this.getAuth().setCustomUserClaims(uid, customClaims);
       logger.info('Custom user claims set successfully', { uid, claims: customClaims });

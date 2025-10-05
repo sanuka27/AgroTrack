@@ -615,7 +615,16 @@ router.post('/firebase', async (req, res): Promise<any> => {
     }
 
     // Verify Firebase ID token
-    const decodedToken = await firebaseService.verifyIdToken(idToken);
+    let decodedToken;
+    try {
+      decodedToken = await firebaseService.verifyIdToken(idToken);
+    } catch (firebaseError) {
+      logger.warn('Firebase authentication failed - Firebase not configured', { error: firebaseError });
+      return res.status(503).json({
+        success: false,
+        message: 'Firebase authentication not available - please configure Firebase or use regular authentication'
+      });
+    }
     
     if (!decodedToken) {
       return res.status(400).json({ 
