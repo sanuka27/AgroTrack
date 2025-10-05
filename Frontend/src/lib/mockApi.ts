@@ -158,6 +158,11 @@ export const mockApi = {
 
   // Care log endpoints
   careLogs: {
+    getAll: async () => {
+      await delay(200);
+      return mockCareLogs;
+    },
+
     getByPlant: async (plantId: string) => {
       await delay(200);
       return mockCareLogs.filter(log => log.plantId === plantId);
