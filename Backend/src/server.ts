@@ -9,7 +9,11 @@ import session from 'express-session';
 import path from 'path';
 
 // Load environment variables FIRST
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+const envPath = path.resolve(__dirname, '../.env');
+console.log('Loading .env from:', envPath);
+console.log('File exists:', require('fs').existsSync(envPath));
+const result = dotenv.config();
+console.log('Dotenv result:', result);
 
 console.log('Environment variables loaded:');
 console.log('NODE_ENV:', process.env.NODE_ENV);
@@ -43,6 +47,9 @@ import exportImportRoutes from './routes/exportImportRoutes';
 import searchRoutes from './routes/searchRoutes';
 import adminRoutes from './routes/adminRoutes';
 import cacheRoutes from './routes/cacheRoutes';
+import bugReportRoutes from './routes/bugReportRoutes';
+import contactRoutes from './routes/contactRoutes';
+import aiChatRoutes from './routes/aiChatRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -122,6 +129,9 @@ app.use('/api/export-import', exportImportRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cache', cacheRoutes);
+app.use('/api/bug-reports', bugReportRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/ai/chat', aiChatRoutes);
 
 // Serve uploaded files (if in production, use a CDN or cloud storage)
 app.use('/uploads', express.static('uploads'));

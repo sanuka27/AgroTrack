@@ -106,3 +106,62 @@ Format as JSON with keys: diagnosis, severity, recommendations (array).`;
     };
   }
 }
+
+// Function to generate plant care advice for chat
+export async function generatePlantCareAdvice(
+  userMessage: string,
+  context?: {
+    plantId?: string;
+    careType?: string;
+    chatHistory?: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>;
+  }
+): Promise<{
+  text: string;
+  suggestions?: string[];
+  confidence?: number;
+  tokens?: number;
+}> {
+  try {
+    let prompt = `You are a helpful plant care AI assistant. 
+User question: ${userMessage}`;
+
+    if (context?.careType) {
+      prompt += `\nContext: The user is asking about ${context.careType}.`;
+    }
+
+    prompt += `\n\nProvide helpful, friendly, and accurate plant care advice. 
+Keep your response conversational and easy to understand. 
+If suggesting multiple actions, use bullet points or numbered lists.`;
+
+    // If there's chat history, use it for context
+    if (context?.chatHistory && context.chatHistory.length > 0) {
+      const chat = model.startChat({
+        history: context.chatHistory,
+      });
+      
+      const result = await chat.sendMessage(userMessage);
+      const response = await result.response;
+      const text = response.text();
+
+      return {
+        text,
+        confidence: 0.85,
+        tokens: text.length, // Approximate
+      };
+    } else {
+      // No history, just generate a single response
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      return {
+        text,
+        confidence: 0.85,
+        tokens: text.length, // Approximate
+      };
+    }
+  } catch (err) {
+    console.error("Gemini API error:", err);
+    throw new Error('Failed to generate AI response');
+  }
+}
