@@ -1,63 +1,36 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signOut, 
+  onAuthStateChanged, 
+  User as FirebaseUser,
+  Auth 
+} from 'firebase/auth';
 import type { UserRole, User, AuthContextType } from '../types/auth';
+import api from '../lib/api';
 
-// API configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+};
 
-// Axios instance for API calls
-import axios from 'axios';
-import mockApi from '../lib/mockApi';
+// Initialize Firebase (only if config is available)
+let auth: Auth | null = null;
+let googleProvider: GoogleAuthProvider | null = null;
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true,
-});
-
-// Add token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('agrotrack_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Add response interceptor to handle token refresh
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401 && !error.config._retry) {
-      error.config._retry = true;
-      
-      const refreshTokenValue = localStorage.getItem('agrotrack_refresh_token');
-      if (refreshTokenValue) {
-        try {
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refreshToken: refreshTokenValue
-          });
-          
-          if (response.data.success) {
-            const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-            localStorage.setItem('agrotrack_token', accessToken);
-            localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
-            
-            // Retry the original request
-            error.config.headers.Authorization = `Bearer ${accessToken}`;
-            return api.request(error.config);
-          }
-        } catch (refreshError) {
-          // Refresh failed, clear tokens and redirect to login
-          localStorage.removeItem('agrotrack_token');
-          localStorage.removeItem('agrotrack_refresh_token');
-          window.location.href = '/login';
-        }
-      }
-    }
-    return Promise.reject(error);
-  }
-);
+if (firebaseConfig.apiKey) {
+  const app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  googleProvider = new GoogleAuthProvider();
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -114,16 +87,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check for existing auth on mount
     checkExistingAuth();
     
-    // Listen to Firebase auth changes
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Get Firebase ID token and authenticate with backend
-        const idToken = await firebaseUser.getIdToken();
-        await authenticateWithFirebase(idToken);
-      }
-    });
+    // Listen to Firebase auth changes (only if Firebase is configured)
+    if (auth) {
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          // Get Firebase ID token and authenticate with backend
+          const idToken = await firebaseUser.getIdToken();
+          await authenticateWithFirebase(idToken);
+        }
+      });
 
-    return () => unsubscribe();
+      return () => unsubscribe();
+    }
   }, []);
 
   const checkExistingAuth = async () => {
@@ -165,21 +140,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
-      const response = await mockApi.auth.login({ email, password });
+      const response = await api.post('/auth/login', { email, password });
 
-      // Mock successful login response structure
-      const userData = {
-        id: response.user._id,
-        email: response.user.email,
-        name: response.user.name,
-        role: response.user.role as UserRole,
-        createdAt: response.user.createdAt.toISOString(),
-        lastLogin: new Date().toISOString(),
-      };
+      if (response.data.success) {
+        const { user: userData, accessToken, refreshToken: newRefreshToken } = response.data.data;
+        
+        const userObj: User = {
+          id: userData._id || userData.id,
+          email: userData.email,
+          name: userData.name,
+          role: userData.role as UserRole,
+          createdAt: userData.createdAt,
+          lastLogin: new Date().toISOString(),
+        };
 
-      setUser(userData);
-      setRole(userData.role);
-      return true;
+        setUser(userObj);
+        setRole(userObj.role);
+        localStorage.setItem('agrotrack_token', accessToken);
+        localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Login error:', error);
       return false;
@@ -190,6 +171,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogle = async (): Promise<boolean> => {
     try {
+      if (!auth || !googleProvider) {
+        console.error('Firebase not configured');
+        return false;
+      }
+
       setLoading(true);
       const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
@@ -206,21 +192,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
-      const response = await mockApi.auth.register({ name, email, password });
+      const response = await api.post('/auth/register', { name, email, password });
 
-      // Mock successful registration response structure
-      const userData = {
-        id: response.user._id,
-        email: response.user.email,
-        name: response.user.name,
-        role: response.user.role as UserRole,
-        createdAt: response.user.createdAt.toISOString(),
-        lastLogin: new Date().toISOString(),
-      };
+      if (response.data.success) {
+        const { user: userData, accessToken, refreshToken: newRefreshToken } = response.data.data;
+        
+        const userObj: User = {
+          id: userData._id || userData.id,
+          email: userData.email,
+          name: userData.name,
+          role: userData.role as UserRole,
+          createdAt: userData.createdAt,
+          lastLogin: new Date().toISOString(),
+        };
 
-      setUser(userData);
-      setRole(userData.role);
-      return true;
+        setUser(userObj);
+        setRole(userObj.role);
+        localStorage.setItem('agrotrack_token', accessToken);
+        localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Registration error:', error);
       return false;
@@ -233,11 +225,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
 
-      // Logout from mock API
-      await mockApi.auth.logout();
+      // Logout from backend API
+      try {
+        await api.post('/auth/logout');
+      } catch (error) {
+        console.error('Backend logout error:', error);
+      }
 
-      // Sign out from Firebase
-      await signOut(auth);
+      // Sign out from Firebase (only if configured)
+      if (auth) {
+        await signOut(auth);
+      }
 
       // Clear local state
       setUser(null);
