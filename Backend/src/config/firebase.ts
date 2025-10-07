@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 import { ServiceAccount } from 'firebase-admin';
-import logger from './logger';
+import { logger } from './logger';
 
 /**
  * Firebase Admin SDK Configuration for AgroTrack

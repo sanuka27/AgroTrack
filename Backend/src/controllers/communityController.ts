@@ -9,7 +9,7 @@ import { BlogSeries } from '../models/BlogSeries';
 import { BlogTag } from '../models/BlogTag';
 import { User } from '../models/User';
 import { UserAnalytics, AnalyticsEventType } from '../models/UserAnalytics';
-import logger from '../config/logger';
+import { logger } from '../config/logger';
 
 export class CommunityController {
   

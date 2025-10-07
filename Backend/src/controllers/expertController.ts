@@ -3,7 +3,7 @@ import { User } from '../models/User';
 import { Plant } from '../models/Plant';
 import { UserAnalytics } from '../models/UserAnalytics';
 import mongoose from 'mongoose';
-import logger from '../config/logger';
+import { logger } from '../config/logger';
 
 // Define interfaces for expert consultation data structures
 interface ExpertProfile {

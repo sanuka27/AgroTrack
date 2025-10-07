@@ -11,7 +11,7 @@ import { CareLog, CareType } from '../models/CareLog';
 import { Reminder } from '../models/Reminder';
 import { Post } from '../models/Post';
 import { Notification } from '../models/Notification';
-import logger from '../config/logger';
+import { logger } from '../config/logger';
 
 // Interfaces for request types
 interface AuthenticatedRequest extends Request {

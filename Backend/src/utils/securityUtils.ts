@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { Request } from 'express';
 import validator from 'validator';
-import logger from '../config/logger';
+import { logger } from '../config/logger';
 
 /**
  * Security utilities for AgroTrack API

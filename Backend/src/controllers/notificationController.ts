@@ -8,7 +8,7 @@ import { Plant } from '../models/Plant';
 import { Reminder } from '../models/Reminder';
 import { UserAnalytics } from '../models/UserAnalytics';
 import { generateNotificationContent } from '../ai/gemini';
-import logger from '../config/logger';
+import { logger } from '../config/logger';
 
 // Interfaces for request types
 interface AuthenticatedRequest extends Request {

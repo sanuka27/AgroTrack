@@ -3,7 +3,7 @@ import { Plant } from '../models/Plant';
 import { User } from '../models/User';
 import { UserAnalytics } from '../models/UserAnalytics';
 import mongoose from 'mongoose';
-import logger from '../config/logger';
+import { logger } from '../config/logger';
 
 // Define interfaces for disease detection data structures
 interface DiseaseDetection {

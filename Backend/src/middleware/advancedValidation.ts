@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { DataValidator, ValidationResult } from './validation';
-import logger from '../config/logger';
+import { logger } from '../config/logger';
 
 // Advanced validation utilities
 export class AdvancedValidator {

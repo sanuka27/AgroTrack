@@ -4,7 +4,7 @@ import { User } from '../models/User';
 import { Reminder } from '../models/Reminder';
 import { UserAnalytics } from '../models/UserAnalytics';
 import mongoose from 'mongoose';
-import logger from '../config/logger';
+import { logger } from '../config/logger';
 import axios from 'axios';
 
 // Define interfaces for weather data structures

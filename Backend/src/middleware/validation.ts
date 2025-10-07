@@ -1,7 +1,7 @@
 import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
 import sanitizeHtml from 'sanitize-html';
-import logger from '../config/logger';
+import { logger } from '../config/logger';
 
 // Common validation patterns
 export const ValidationPatterns = {

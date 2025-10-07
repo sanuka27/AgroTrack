@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { SecurityAnalyzer, PrivacyUtils } from '../utils/securityUtils';
-import logger from '../config/logger';
+import { logger } from '../config/logger';
 
 /**
  * Security Audit Middleware for AgroTrack API

@@ -1,25 +1,21 @@
-// backend/ai/gemini.ts
-import dotenv from "dotenv";
+﻿import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 dotenv.config();
 
-// Initialize Gemini with your API key
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
-  throw new Error('GEMINI_API_KEY is not configured in environment variables');
+  console.warn("GEMINI_API_KEY not configured - AI features disabled");
 }
 
-const genAI = new GoogleGenerativeAI(apiKey);
+const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
+const model = genAI ? genAI.getGenerativeModel({ model: "gemini-pro" }) : null;
 
-// Get the text model
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const unavailable = "AI features are disabled. Please configure GEMINI_API_KEY.";
 
-// Function to generate plant care tips
 export async function getPlantCareTips(plantName: string, problem: string): Promise<string> {
-  const prompt = `Give me detailed care tips for a ${plantName} showing signs of ${problem}. 
-Include causes, solutions, and prevention tips.`;
-
+  if (!model) return unavailable;
+  const prompt = `Give me detailed care tips for a ${plantName} showing signs of ${problem}. Include causes, solutions, and prevention tips.`;
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -30,138 +26,87 @@ Include causes, solutions, and prevention tips.`;
   }
 }
 
-// Function to generate notification content
-export async function generateNotificationContent(
-  type: 'reminder' | 'alert' | 'tip',
-  context: Record<string, any>
-): Promise<string> {
-  let prompt = '';
-  
-  switch (type) {
-    case 'reminder':
-      prompt = `Generate a friendly plant care reminder message for ${context.plantName}. The task is ${context.task}. Keep it encouraging and under 100 characters.`;
-      break;
-    case 'alert':
-      prompt = `Generate an urgent but helpful alert message about ${context.issue} for ${context.plantName}. Include a quick action tip. Keep it under 120 characters.`;
-      break;
-    case 'tip':
-      prompt = `Generate a helpful plant care tip for ${context.plantName} owners. Make it seasonal and practical. Keep it under 150 characters.`;
-      break;
-    default:
-      return 'Plant care notification';
-  }
-
+export async function identifyPlantDisease(symptoms: string, imageDescription?: string): Promise<string> {
+  if (!model) return unavailable;
+  let prompt = `Based on these symptoms: ${symptoms}`;
+  if (imageDescription) prompt += ` and this image description: ${imageDescription}`;
+  prompt += `, identify possible plant diseases and suggest treatments.`;
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
   } catch (err) {
     console.error("Gemini API error:", err);
-    return `Plant care ${type}`;
+    return "Sorry, I couldn't identify the disease at the moment.";
   }
 }
 
-// Function to analyze plant health from description
-export async function analyzePlantHealth(
-  plantName: string,
-  symptoms: string,
-  environment: Record<string, any>
-): Promise<{
-  diagnosis: string;
-  severity: 'low' | 'medium' | 'high';
-  recommendations: string[];
-}> {
-  const prompt = `Analyze the health of a ${plantName} with these symptoms: ${symptoms}. 
-Environment details: ${JSON.stringify(environment)}. 
-Provide a diagnosis, severity level (low/medium/high), and 3-5 specific recommendations.
-Format as JSON with keys: diagnosis, severity, recommendations (array).`;
+export async function generateCareSchedule(plantName: string, environment: string): Promise<string> {
+  if (!model) return unavailable;
+  const prompt = `Create a detailed care schedule for a ${plantName} in a ${environment} environment. Include watering, fertilizing, pruning, and other maintenance tasks.`;
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (err) {
+    console.error("Gemini API error:", err);
+    return "Sorry, I couldn't generate a care schedule at the moment.";
+  }
+}
 
+export async function chatWithGardener(message: string, context?: string): Promise<string> {
+  if (!model) return unavailable;
+  const prompt = context
+    ? `As an expert gardener, respond to this message: "${message}" with this context: ${context}`
+    : `As an expert gardener, respond to this message: "${message}"`;
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (err) {
+    console.error("Gemini API error:", err);
+    return "Sorry, I couldn't respond at the moment.";
+  }
+}
+
+export async function generateNotificationContent(type: string, data: any): Promise<string> {
+  if (!model) return `Notification: ${type}`;
+  const prompt = `Generate a friendly notification message for type "${type}" with this data: ${JSON.stringify(data)}`;
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (err) {
+    console.error("Gemini API error:", err);
+    return `Notification: ${type}`;
+  }
+}
+
+export async function generatePlantCareAdvice(content: string, context: { plantId?: string; careType?: string; chatHistory?: any[] }): Promise<{ text: string; suggestions?: string[]; confidence?: number; tokens?: number }> {
+  if (!model) return { text: unavailable };
+  let prompt = `As an expert gardener, provide helpful advice for: ${content}`;
+  if (context.plantId) prompt += `\nPlant ID: ${context.plantId}`;
+  if (context.careType) prompt += `\nCare type: ${context.careType}`;
+  if (context.chatHistory && context.chatHistory.length > 0) {
+    prompt += `\nPrevious conversation:\n${context.chatHistory.map(msg => `${msg.role}: ${msg.content}`).join('\n')}`;
+  }
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
-    
-    // Try to parse JSON response
-    try {
-      const analysis = JSON.parse(text);
-      return {
-        diagnosis: analysis.diagnosis || 'Unable to determine diagnosis',
-        severity: ['low', 'medium', 'high'].includes(analysis.severity) ? analysis.severity : 'medium',
-        recommendations: Array.isArray(analysis.recommendations) ? analysis.recommendations : ['Monitor plant closely']
-      };
-    } catch (parseError) {
-      // Fallback if JSON parsing fails
-      return {
-        diagnosis: text.slice(0, 200),
-        severity: 'medium',
-        recommendations: ['Monitor plant health', 'Ensure proper watering', 'Check light conditions']
-      };
-    }
+    return {
+      text,
+      suggestions: [], // Could parse suggestions from text if needed
+      confidence: 0.8, // Mock confidence
+      tokens: text.length / 4, // Rough token estimate
+    };
   } catch (err) {
     console.error("Gemini API error:", err);
     return {
-      diagnosis: 'Unable to analyze plant health at this time',
-      severity: 'medium',
-      recommendations: ['Monitor plant closely', 'Ensure basic care needs are met']
+      text: "Sorry, I couldn't generate care advice at the moment.",
+      suggestions: [],
+      confidence: 0,
+      tokens: 0,
     };
-  }
-}
-
-// Function to generate plant care advice for chat
-export async function generatePlantCareAdvice(
-  userMessage: string,
-  context?: {
-    plantId?: string;
-    careType?: string;
-    chatHistory?: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>;
-  }
-): Promise<{
-  text: string;
-  suggestions?: string[];
-  confidence?: number;
-  tokens?: number;
-}> {
-  try {
-    let prompt = `You are a helpful plant care AI assistant. 
-User question: ${userMessage}`;
-
-    if (context?.careType) {
-      prompt += `\nContext: The user is asking about ${context.careType}.`;
-    }
-
-    prompt += `\n\nProvide helpful, friendly, and accurate plant care advice. 
-Keep your response conversational and easy to understand. 
-If suggesting multiple actions, use bullet points or numbered lists.`;
-
-    // If there's chat history, use it for context
-    if (context?.chatHistory && context.chatHistory.length > 0) {
-      const chat = model.startChat({
-        history: context.chatHistory,
-      });
-      
-      const result = await chat.sendMessage(userMessage);
-      const response = await result.response;
-      const text = response.text();
-
-      return {
-        text,
-        confidence: 0.85,
-        tokens: text.length, // Approximate
-      };
-    } else {
-      // No history, just generate a single response
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-
-      return {
-        text,
-        confidence: 0.85,
-        tokens: text.length, // Approximate
-      };
-    }
-  } catch (err) {
-    console.error("Gemini API error:", err);
-    throw new Error('Failed to generate AI response');
   }
 }
