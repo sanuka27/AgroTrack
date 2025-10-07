@@ -4,8 +4,8 @@
   "description": "Backend API for AgroTrack plant management application",
   "main": "dist/server.js",
   "scripts": {
-    "start": "node dist/server.js",
-    "dev": "nodemon src/server.ts",
+    "start": "node dist/bootstrap.js",
+    "dev": "nodemon src/bootstrap.ts",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "lint": "eslint src/**/*.ts",
