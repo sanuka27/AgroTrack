@@ -191,7 +191,7 @@ app.use(errorHandler);
 const startServer = async () => {
   try {
     // Connect to MongoDB (optional for development)
-    const skipMongoDB = process.env.SKIP_MONGODB === 'true';
+    const skipMongoDB = (process.env.SKIP_MONGODB ?? 'true') === 'true';
     if (!skipMongoDB) {
       try {
         await connectDatabase();
