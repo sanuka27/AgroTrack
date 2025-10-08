@@ -1,9 +1,12 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+import multer from 'multer';
 import { body, query, param } from 'express-validator';
 import { DiseaseDetectionController } from '../controllers/diseaseDetectionController';
 import { authMiddleware, optionalAuth } from '../middleware/authMiddleware';
 import { validate } from '../middleware/validate';
+import path from 'path';
+import fs from 'fs';
 
 const router = express.Router();
 
@@ -29,6 +32,36 @@ const feedbackRateLimit = rateLimit({
   max: 10, // 10 feedback submissions per hour
   message: {
     error: 'Too many feedback submissions from this IP, please try again later.'
+  }
+});
+
+// Configure multer for image uploads
+const imageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      const uploadDir = path.join(__dirname, '../../uploads/images');
+      // Create directory if it doesn't exist
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      // Generate unique filename
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, 'ai-' + uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit for images
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
   }
 });
 
@@ -194,6 +227,48 @@ const detectionStatsValidation = [
 ];
 
 // Disease Detection routes
+
+/**
+ * @route   POST /api/disease-detection/upload
+ * @desc    Upload an image for disease detection
+ * @access  Public (with optional auth for guests)
+ */
+router.post('/upload',
+  diseaseDetectionRateLimit,
+  optionalAuth,
+  imageUpload.single('image'),
+  (req: express.Request, res: express.Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'No image file provided'
+        });
+      }
+
+      // Return the file path that can be used for disease detection
+      const imageUrl = `${req.protocol}://${req.get('host')}/uploads/images/${req.file.filename}`;
+
+      res.json({
+        success: true,
+        message: 'Image uploaded successfully',
+        data: {
+          imageUrl,
+          filename: req.file.filename,
+          originalName: req.file.originalname,
+          size: req.file.size
+        }
+      });
+    } catch (error) {
+      console.error('Image upload error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to upload image'
+      });
+    }
+  }
+);
+
 router.post('/detect', 
   diseaseDetectionRateLimit,
   optionalAuth,

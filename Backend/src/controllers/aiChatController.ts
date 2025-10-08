@@ -24,14 +24,48 @@ interface AuthRequest extends Request {
  */
 export const sendMessage = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    if (!req.user) {
-      res.status(401).json({
-        success: false,
-        message: 'Authentication required',
+    const isGuest = !req.user;
+    
+    if (isGuest) {
+      // Handle guest user - skip database operations
+      const { content, careType } = req.body;
+
+      if (!content || content.trim().length === 0) {
+        res.status(400).json({
+          success: false,
+          message: 'Message content is required',
+        });
+        return;
+      }
+
+      // Get AI response for guest user
+      const aiResponse = await generatePlantCareAdvice(content, {
+        careType,
+        chatHistory: [], // No chat history for guests
+      });
+
+      logger.info('Guest AI chat message processed', {
+        messageLength: content.length,
+        responseLength: aiResponse.text.length,
+      });
+
+      res.json({
+        success: true,
+        data: {
+          response: {
+            content: aiResponse.text,
+            role: 'assistant',
+            metadata: {
+              careType,
+              confidence: aiResponse.confidence,
+            },
+          },
+        },
       });
       return;
     }
 
+    // Handle authenticated user - existing logic
     const { content, sessionId, plantId, careType } = req.body;
 
     if (!content || content.trim().length === 0) {

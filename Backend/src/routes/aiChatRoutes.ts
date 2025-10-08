@@ -12,7 +12,7 @@ import {
   provideFeedback,
   startNewSession,
 } from '../controllers/aiChatController';
-import { protect as authenticate } from '../middleware/authMiddleware';
+import { protect as authenticate, optionalAuth } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
@@ -21,7 +21,7 @@ const router = express.Router();
  * @desc    Send a message to AI assistant
  * @access  Private
  */
-router.post('/', authenticate, sendMessage);
+router.post('/', optionalAuth, sendMessage);
 
 /**
  * @route   GET /api/ai/chat/history

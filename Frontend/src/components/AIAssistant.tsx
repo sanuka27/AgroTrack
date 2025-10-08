@@ -82,7 +82,7 @@ export function AIAssistant() {
             diagnosis: "Plant Care Analysis",
             confidence: 0.8,
             causes: ["User inquiry about plant care"],
-            treatments: [data.data.response || "Please consult with a local gardening expert for specific advice"],
+            treatments: [data.data.response?.content || "Please consult with a local gardening expert for specific advice"],
             nextActions: ["Monitor your plant's response", "Adjust care based on specific plant needs"]
           });
         } else {
@@ -93,10 +93,23 @@ export function AIAssistant() {
 
       // Handle image analysis
       if (file) {
-        // TODO: Implement file upload to get permanent URL
-        const imageUrl = preview; // Temporary: using preview URL
+        // First upload the image to get a proper URL
+        const formData = new FormData();
+        formData.append('image', file);
 
-        // Call disease detection API
+        const uploadResponse = await api.post('/disease-detection/upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        if (!uploadResponse.data.success) {
+          throw new Error('Failed to upload image');
+        }
+
+        const imageUrl = uploadResponse.data.data.imageUrl;
+
+        // Now call disease detection API with the proper URL
         const response = await api.post('/disease-detection/detect', {
           imageUrl,
           originalFileName: file.name,
