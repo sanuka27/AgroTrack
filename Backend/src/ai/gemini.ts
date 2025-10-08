@@ -6,6 +6,8 @@ dotenv.config();
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
   console.warn("GEMINI_API_KEY not configured - AI features disabled");
+} else {
+  console.log("✅ Gemini AI initialized successfully");
 }
 
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;

@@ -356,7 +356,7 @@ systemMetricsSchema.statics.recordMetric = async function(
   const { periodStart, periodEnd } = calculatePeriodBounds(now, period);
   
   // Try to find existing metric for this period
-  let existingMetric = await this.findOne({
+  const existingMetric = await this.findOne({
     metricType,
     period,
     periodStart,
@@ -410,11 +410,12 @@ function calculatePeriodBounds(timestamp: Date, period: MetricPeriod) {
       periodStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
       periodEnd = new Date(periodStart.getTime() + 24 * 60 * 60 * 1000);
       break;
-    case MetricPeriod.WEEK:
+    case MetricPeriod.WEEK: {
       const dayOfWeek = date.getDay();
       periodStart = new Date(date.getFullYear(), date.getMonth(), date.getDate() - dayOfWeek);
       periodEnd = new Date(periodStart.getTime() + 7 * 24 * 60 * 60 * 1000);
       break;
+    }
     case MetricPeriod.MONTH:
       periodStart = new Date(date.getFullYear(), date.getMonth(), 1);
       periodEnd = new Date(date.getFullYear(), date.getMonth() + 1, 1);

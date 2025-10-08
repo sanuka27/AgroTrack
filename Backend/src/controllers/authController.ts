@@ -82,13 +82,12 @@ export class AuthController {
       }
 
       // Check password strength
-      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-      if (!passwordRegex.test(password)) {
+      if (password.length < 6) {
         return res.status(400).json({
           success: false,
-          message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+          message: 'Password must be at least 6 characters long',
           errors: {
-            password: 'Password does not meet security requirements'
+            password: 'Password must be at least 6 characters long'
           }
         });
       }

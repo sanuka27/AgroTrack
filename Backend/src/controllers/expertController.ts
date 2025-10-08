@@ -206,7 +206,7 @@ export class ExpertController {
       } = req.query;
 
       // Build filter criteria
-      let filteredExperts = ExpertProfiles.filter(expert => {
+      const filteredExperts = ExpertProfiles.filter(expert => {
         if (!expert.isActive) return false;
         if (expert.verificationStatus !== verificationStatus) return false;
         if (expert.rating.average < Number(minRating)) return false;
@@ -511,7 +511,7 @@ export class ExpertController {
       } = req.query;
 
       // Build filter
-      let filteredConsultations = Consultations.filter(consultation => {
+      const filteredConsultations = Consultations.filter(consultation => {
         // User can see their own consultations as client or expert
         const isClient = consultation.client.toString() === userId.toString();
         const isExpert = consultation.expert.toString() === userId.toString();
@@ -973,7 +973,7 @@ export class ExpertController {
       } = req.query;
 
       // Filter reviews
-      let filteredReviews = ExpertReviews.filter(review => {
+      const filteredReviews = ExpertReviews.filter(review => {
         if (review.expert.toString() !== expertId) return false;
         if (minRating && review.rating < Number(minRating)) return false;
         return true;

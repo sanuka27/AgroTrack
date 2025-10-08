@@ -230,7 +230,7 @@ interface INotificationPreferenceMethods {
 }
 
 // Extend interface for static methods
-interface INotificationPreferenceModel extends mongoose.Model<INotificationPreference, {}, INotificationPreferenceMethods> {
+interface INotificationPreferenceModel extends mongoose.Model<INotificationPreference, object, INotificationPreferenceMethods> {
   getOrCreateForUser(userId: mongoose.Types.ObjectId): Promise<INotificationPreference>;
 }
 

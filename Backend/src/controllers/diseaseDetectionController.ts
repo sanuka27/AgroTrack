@@ -346,7 +346,7 @@ export class DiseaseDetectionController {
       } = req.query;
 
       // Build filter
-      let filteredDetections = DiseaseDetections.filter(detection => {
+      const filteredDetections = DiseaseDetections.filter(detection => {
         if (detection.userId.toString() !== userId.toString()) return false;
         if (plantId && detection.plantId?.toString() !== plantId) return false;
         if (status && detection.status !== status) return false;
@@ -579,7 +579,7 @@ export class DiseaseDetectionController {
       } = req.query;
 
       // Filter diseases
-      let filteredDiseases = DiseaseKnowledgeBase.filter(disease => {
+      const filteredDiseases = DiseaseKnowledgeBase.filter(disease => {
         if (!disease.isActive) return false;
         if (category && disease.category !== category) return false;
         if (affectedPlant && !disease.affectedPlants.includes(affectedPlant as string)) return false;

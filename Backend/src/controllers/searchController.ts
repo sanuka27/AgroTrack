@@ -90,7 +90,7 @@ export class SearchController {
         offset: parseInt(offset as string) || 0
       };
 
-      let allResults: SearchResult[] = [];
+      const allResults: SearchResult[] = [];
       
       // Search across different content types
       if (!type || type === 'plant') {

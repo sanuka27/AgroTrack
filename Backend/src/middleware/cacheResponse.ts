@@ -18,7 +18,9 @@ export const cacheResponse =
       // monkey-patch res.json to store payload
       const _json = res.json.bind(res);
       res.json = (body: any) => {
-        try { cs.set(key, JSON.stringify(body), ttlSec).catch(() => {}); } catch {}
+        try { cs.set(key, JSON.stringify(body), ttlSec).catch(() => {}); } catch {
+        // Ignore cache errors
+      }
         res.setHeader("X-Cache", "MISS");
         return _json(body);
       };

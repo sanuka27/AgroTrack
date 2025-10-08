@@ -226,7 +226,7 @@ export const slidingWindowLimiter = (options: {
 }) => {
   const requestCounts = new Map<string, { count: number; resetTime: number }>();
   
-  return (req: Request, res: Response, next: Function) => {
+  return (req: Request, res: Response, next: (error?: any) => void) => {
     const key = req.ip || 'unknown';
     const now = Date.now();
     const windowStart = now - options.windowMs;

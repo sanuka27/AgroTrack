@@ -6,8 +6,8 @@ import { logger } from '../config/logger';
 // Common validation patterns
 export const ValidationPatterns = {
   objectId: /^[0-9a-fA-F]{24}$/,
-  email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  phone: /^\+?[\d\s\-\(\)]{10,15}$/,
+  email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, // eslint-disable-line no-useless-escape
+  phone: /^\+?[\d\s\-\(\)]{10,15}$/, // eslint-disable-line no-useless-escape
   url: /^https?:\/\/.+\..+/,
   base64Image: /^data:image\/(png|jpg|jpeg|gif|webp);base64,/,
   hexColor: /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/,

@@ -118,7 +118,7 @@ interface INotificationMethods {
 }
 
 // Extend interface for static methods
-interface INotificationModel extends mongoose.Model<INotification, {}, INotificationMethods> {
+interface INotificationModel extends mongoose.Model<INotification, object, INotificationMethods> {
   getUnreadCount(userId: mongoose.Types.ObjectId): Promise<number>;
   getUserNotifications(
     userId: mongoose.Types.ObjectId, 

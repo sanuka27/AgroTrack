@@ -707,7 +707,7 @@ export class ReminderController {
           }
 
           // User pattern optimization
-          let preferredTime = { hour: 9, dayOfWeek: null }; // Default to 9 AM
+          const preferredTime = { hour: 9, dayOfWeek: null }; // Default to 9 AM
           if (userPatterns) {
             const userPattern = userPatterns.find(p => p._id.careType === careType);
             if (userPattern) {
@@ -853,7 +853,7 @@ export class ReminderController {
           message = `${result.modifiedCount} reminders completed successfully`;
           break;
 
-        case 'snooze':
+        case 'snooze': {
           const snoozeHours = data?.snoozeHours || 24;
           const newSnoozeDate = new Date();
           newSnoozeDate.setHours(newSnoozeDate.getHours() + snoozeHours);
@@ -870,6 +870,7 @@ export class ReminderController {
           );
           message = `${result.modifiedCount} reminders snoozed for ${snoozeHours} hours`;
           break;
+        }
 
         case 'updatePriority':
           if (!data?.priority) {

@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import fs from 'fs/promises';
+import fsSync from 'fs';
 import { User } from '../models/User';
 import { Plant } from '../models/Plant';
 import { CareLog } from '../models/CareLog';
@@ -11,7 +13,6 @@ import { ExportImportOperation } from '../models/ExportImportOperation';
 import { createObjectCsvWriter } from 'csv-writer';
 import { Parser } from 'json2csv';
 import path from 'path';
-import fs from 'fs/promises';
 import archiver from 'archiver';
 import { v4 as uuidv4 } from 'uuid';
 import mongoose from 'mongoose';
@@ -111,7 +112,7 @@ class ExportImportController {
 
       // Export care logs
       if (options.dataTypes.includes('careLogs')) {
-        let careLogQuery: any = { userId };
+        const careLogQuery: any = { userId };
         
         if (options.dateRange) {
           careLogQuery.date = {
@@ -140,7 +141,7 @@ class ExportImportController {
 
       // Export notifications
       if (options.dataTypes.includes('notifications')) {
-        let notificationQuery: any = { userId };
+        const notificationQuery: any = { userId };
         
         if (options.dateRange) {
           notificationQuery.createdAt = {
@@ -443,7 +444,7 @@ class ExportImportController {
   // Helper methods
   private async createZipArchive(files: string[], zipFile: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const output = require('fs').createWriteStream(zipFile);
+      const output = fsSync.createWriteStream(zipFile);
       const archive = archiver('zip', { zlib: { level: 9 } });
 
       output.on('close', resolve);

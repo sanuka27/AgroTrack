@@ -169,7 +169,7 @@ export const getChatHistory = async (req: AuthRequest, res: Response): Promise<v
 
     const { sessionId } = req.query;
 
-    let query: any = { userId: req.user._id };
+    const query: any = { userId: req.user._id };
 
     // If sessionId provided, get that session's history
     // Otherwise, get the most recent session

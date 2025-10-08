@@ -820,7 +820,7 @@ export class WeatherController {
 
     for (const reminder of reminders) {
       let adjustmentMade = false;
-      let newDate = new Date(reminder.scheduledDate);
+      const newDate = new Date(reminder.scheduledDate);
 
       // Watering adjustments
       if (reminder.careType === 'watering') {

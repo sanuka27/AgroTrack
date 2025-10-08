@@ -344,8 +344,8 @@ export class AdminController {
       const limitNum = parseInt(limit as string);
       const skip = (pageNum - 1) * limitNum;
 
-      let query: any = {};
-      let model: any = Post;
+      const query: any = {};
+      const model: any = Post;
 
       // For now, focus on posts - can be extended to other content types
       if (status === 'pending') {
@@ -412,7 +412,7 @@ export class AdminController {
         return;
       }
 
-      let model = Post; // Default to Post, can be extended
+      const model = Post; // Default to Post, can be extended
       const content = await model.findById(contentId);
 
       if (!content) {
@@ -423,7 +423,7 @@ export class AdminController {
         return;
       }
 
-      let updateData: any = {
+      const updateData: any = {
         moderatedBy: req.user ? (req.user as any)._id || (req.user as any).id : null,
         moderatedAt: new Date(),
         moderationReason: reason

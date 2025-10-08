@@ -66,7 +66,7 @@ const contactMessageSchema = new Schema<IContactMessage>({
     required: [true, 'Email is required'],
     lowercase: true,
     trim: true,
-    match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
+    match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email'] // eslint-disable-line no-useless-escape
   },
   
   subject: {

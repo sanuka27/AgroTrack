@@ -7,11 +7,12 @@ import dotenv from 'dotenv';
 import passport from 'passport';
 import session from 'express-session';
 import path from 'path';
+import fs from 'fs';
 
 // Load environment variables FIRST
 const envPath = path.resolve(__dirname, '../.env');
 console.log('Loading .env from:', envPath);
-console.log('File exists:', require('fs').existsSync(envPath));
+console.log('File exists:', fs.existsSync(envPath));
 const result = dotenv.config();
 console.log('Dotenv result:', result);
 
