@@ -25,8 +25,8 @@ const AuthCallback = () => {
         localStorage.setItem('agrotrack_token', token);
         localStorage.setItem('agrotrack_refresh_token', refreshToken);
         
-        // Redirect to plants page
-        navigate('/plants', { replace: true });
+        // Redirect to home page
+        navigate('/', { replace: true });
       } else {
         console.error('No tokens received from OAuth callback');
       }

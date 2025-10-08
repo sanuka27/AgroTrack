@@ -123,12 +123,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await api.post('/auth/firebase', { idToken });
       if (response.data.success) {
-        const { user: userData, accessToken, refreshToken: newRefreshToken } = response.data.data;
+        const { user: userData, tokens } = response.data.data;
         
         setUser(userData);
         setRole(userData.role || 'user');
-        localStorage.setItem('agrotrack_token', accessToken);
-        localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
+        localStorage.setItem('agrotrack_token', tokens.accessToken);
+        localStorage.setItem('agrotrack_refresh_token', tokens.refreshToken);
         return true;
       }
     } catch (error) {
@@ -143,7 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await api.post('/auth/login', { email, password });
 
       if (response.data.success) {
-        const { user: userData, accessToken, refreshToken: newRefreshToken } = response.data.data;
+        const { user: userData, tokens } = response.data.data;
         
         const userObj: User = {
           id: userData._id || userData.id,
@@ -156,8 +156,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setUser(userObj);
         setRole(userObj.role);
-        localStorage.setItem('agrotrack_token', accessToken);
-        localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
+        localStorage.setItem('agrotrack_token', tokens.accessToken);
+        localStorage.setItem('agrotrack_refresh_token', tokens.refreshToken);
         return true;
       }
       return false;
@@ -192,10 +192,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, password: string): Promise<boolean> => {
     try {
       setLoading(true);
-      const response = await api.post('/auth/register', { name, email, password });
+      const response = await api.post('/auth/register', { 
+        name, 
+        email, 
+        password,
+        confirmPassword: password // Add confirmPassword field required by backend
+      });
 
       if (response.data.success) {
-        const { user: userData, accessToken, refreshToken: newRefreshToken } = response.data.data;
+        const { user: userData, tokens } = response.data.data;
         
         const userObj: User = {
           id: userData._id || userData.id,
@@ -208,8 +213,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         setUser(userObj);
         setRole(userObj.role);
-        localStorage.setItem('agrotrack_token', accessToken);
-        localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
+        localStorage.setItem('agrotrack_token', tokens.accessToken);
+        localStorage.setItem('agrotrack_refresh_token', tokens.refreshToken);
         return true;
       }
       return false;

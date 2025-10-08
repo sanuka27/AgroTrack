@@ -14,7 +14,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, loginWithGoogle, loading } = useAuth();
-  const from = location.state?.from?.pathname || "/plants";
+  const from = location.state?.from?.pathname || "/";
   
   const [formData, setFormData] = useState({
     email: "",

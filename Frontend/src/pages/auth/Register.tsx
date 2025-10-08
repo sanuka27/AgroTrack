@@ -81,7 +81,7 @@ const Register = () => {
     try {
       const success = await register(formData.name, formData.email, formData.password);
       if (success) {
-        navigate('/plants'); // Direct to plants page after successful registration
+        navigate('/'); // Direct to home page after successful registration
       } else {
         setRegisterError("Registration failed. Please try again.");
       }
@@ -101,7 +101,7 @@ const Register = () => {
       const success = await loginWithGoogle();
       
       if (success) {
-        navigate('/plants');
+        navigate('/');
       } else {
         setRegisterError("Google signup failed. Please try again.");
       }

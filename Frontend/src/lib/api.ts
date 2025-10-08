@@ -24,8 +24,10 @@ const api = axios.create({
  */
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Try both token names for compatibility
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+    // Try all possible token names for compatibility
+    const token = localStorage.getItem('agrotrack_token') || 
+                  localStorage.getItem('accessToken') || 
+                  localStorage.getItem('authToken');
     
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
