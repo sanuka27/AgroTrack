@@ -2,7 +2,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { body, query, param } from 'express-validator';
 import { DiseaseDetectionController } from '../controllers/diseaseDetectionController';
-import { authMiddleware } from '../middleware/authMiddleware';
+import { authMiddleware, optionalAuth } from '../middleware/authMiddleware';
 import { validate } from '../middleware/validate';
 
 const router = express.Router();
@@ -196,7 +196,7 @@ const detectionStatsValidation = [
 // Disease Detection routes
 router.post('/detect', 
   diseaseDetectionRateLimit,
-  authMiddleware,
+  optionalAuth,
   detectDiseaseValidation,
   validate,
   DiseaseDetectionController.detectDisease

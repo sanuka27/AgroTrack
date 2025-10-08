@@ -4,6 +4,7 @@ import { User } from '../models/User';
 import { UserAnalytics } from '../models/UserAnalytics';
 import mongoose from 'mongoose';
 import { logger } from '../config/logger';
+import { validateAgriculturalImage } from '../ai/gemini';
 
 // Define interfaces for disease detection data structures
 interface DiseaseDetection {
@@ -204,11 +205,16 @@ export class DiseaseDetectionController {
    */
   static async detectDisease(req: Request, res: Response): Promise<void> {
     try {
-      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+      // Handle both authenticated and guest users
+      const isGuest = !req.user;
+      const userId = isGuest
+        ? new mongoose.Types.ObjectId('507f1f77bcf86cd799439011') // Guest user ID
+        : new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+
       const { imageUrl, plantId, originalFileName } = req.body;
 
-      // Validate plant if provided
-      if (plantId) {
+      // For guest users, skip plant validation (they don't have plants)
+      if (!isGuest && plantId) {
         const plant = await Plant.findOne({ _id: plantId, userId });
         if (!plant) {
           res.status(404).json({
@@ -218,6 +224,26 @@ export class DiseaseDetectionController {
           return;
         }
       }
+
+      // Validate that the image contains agricultural/plant content
+      logger.info(`Validating image content for user ${userId}: ${imageUrl}`);
+      const imageValidation = await validateAgriculturalImage(imageUrl);
+
+      if (!imageValidation.isValid) {
+        logger.warn(`Image validation failed for user ${userId}: ${imageValidation.message}`);
+        res.status(400).json({
+          success: false,
+          message: 'Invalid image content. Please upload a photo showing plants, trees, crops, or agricultural content only.',
+          details: {
+            reason: imageValidation.message,
+            category: imageValidation.category,
+            confidence: imageValidation.confidence
+          }
+        });
+        return;
+      }
+
+      logger.info(`Image validation passed for user ${userId}: ${imageValidation.category} (confidence: ${imageValidation.confidence})`);
 
       // Create initial detection record
       const detection: DiseaseDetection = {

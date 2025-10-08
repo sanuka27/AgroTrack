@@ -48,6 +48,47 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
   }
 };
 
+// Optional authentication - allows guest users
+export const optionalAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    let token: string | undefined;
+
+    // Check for token in headers
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    // If no token, continue as guest user
+    if (!token) {
+      req.user = null;
+      return next();
+    }
+
+    try {
+      // Verify token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret') as { userId: string };
+
+      // Get user from database
+      const user = await User.findById(decoded.userId).select('-password');
+
+      if (!user) {
+        // Invalid token, but continue as guest
+        req.user = null;
+        return next();
+      }
+
+      req.user = user;
+      next();
+    } catch (error) {
+      // Invalid token, but continue as guest
+      req.user = null;
+      next();
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Authorize user roles
 export const authorize = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {

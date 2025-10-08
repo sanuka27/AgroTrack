@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { GeminiLogo } from "@/components/ui/gemini-logo";
 import { useAuth } from "@/hooks/useAuth";
-import { Camera, Image as ImageIcon, Send, Sparkles, Bot, Loader2, Leaf, AlertTriangle, Lock, Users, TrendingUp } from "lucide-react";
+import { Camera, Image as ImageIcon, Send, Sparkles, Bot, Loader2, Leaf, AlertTriangle, Lock, Users, TrendingUp, X } from "lucide-react";
+import api from "@/lib/api";
 
 interface AnalysisResult {
   diagnosis: string;
@@ -15,6 +16,12 @@ interface AnalysisResult {
   causes: string[];
   treatments: string[];
   nextActions: string[];
+  error?: string;
+  validationError?: {
+    reason: string;
+    category: string;
+    confidence: number;
+  };
 }
 
 export function AIAssistant() {
@@ -24,6 +31,7 @@ export function AIAssistant() {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [guestUsageCount, setGuestUsageCount] = useState(() => {
     return parseInt(sessionStorage.getItem('guest_ai_usage') || '0');
   });
@@ -45,40 +53,96 @@ export function AIAssistant() {
     return !!file || prompt.trim().length > 5;
   }, [file, prompt, user, guestUsageCount]);
 
-  const analyze = () => {
+  const analyze = async () => {
     if (!canAnalyze) return;
-    
+
     // Track guest usage
     if (!user) {
       const newCount = guestUsageCount + 1;
       setGuestUsageCount(newCount);
       sessionStorage.setItem('guest_ai_usage', newCount.toString());
     }
-    
+
     setLoading(true);
     setResult(null);
-    setTimeout(() => {
-      setResult({
-        diagnosis: "Nutrient Deficiency (Likely Potassium)",
-        confidence: 0.87,
-        causes: [
-          "Irregular fertilization schedule",
-          "Soil potassium lockout due to pH imbalance",
-          "Overwatering reducing nutrient uptake",
-        ],
-        treatments: [
-          "Apply a balanced organic fertilizer (NPK 5-5-5) with added potassium",
-          "Test soil pH and adjust to 6.0-7.0 if necessary",
-          "Reduce watering frequency and ensure proper drainage",
-        ],
-        nextActions: [
-          "Apply fertilizer within 2-3 days",
-          "Monitor for improvement over 1-2 weeks",
-          "Schedule monthly fertilization going forward",
-        ],
-      });
+    setError(null);
+
+    try {
+      // Handle text-only analysis (no image)
+      if (!file && prompt.trim()) {
+        // Call AI chat endpoint for text analysis
+        const response = await api.post('/ai/chat', {
+          content: `Please analyze this plant care question and provide helpful advice: ${prompt}`,
+          careType: 'general'
+        });
+
+        const data = response.data;
+        if (data.success && data.data) {
+          setResult({
+            diagnosis: "Plant Care Analysis",
+            confidence: 0.8,
+            causes: ["User inquiry about plant care"],
+            treatments: [data.data.response || "Please consult with a local gardening expert for specific advice"],
+            nextActions: ["Monitor your plant's response", "Adjust care based on specific plant needs"]
+          });
+        } else {
+          throw new Error('AI analysis failed');
+        }
+        return;
+      }
+
+      // Handle image analysis
+      if (file) {
+        // TODO: Implement file upload to get permanent URL
+        const imageUrl = preview; // Temporary: using preview URL
+
+        // Call disease detection API
+        const response = await api.post('/disease-detection/detect', {
+          imageUrl,
+          originalFileName: file.name,
+          plantId: undefined // Could be selected from user's plants
+        });
+
+        const data = response.data;
+
+        if (data.success && data.data) {
+          const detection = data.data;
+
+          // Transform backend response to frontend format
+          setResult({
+            diagnosis: detection.detectionResults.primaryDisease
+              ? `${detection.detectionResults.primaryDisease.name} (${detection.detectionResults.primaryDisease.category})`
+              : "Analysis completed - no specific disease detected",
+            confidence: detection.detectionResults.confidence,
+            causes: detection.treatmentRecommendations.preventionMeasures || [],
+            treatments: detection.treatmentRecommendations.treatments?.map((t: any) =>
+              `${t.name}: ${t.description} (${t.applicationMethod})`
+            ) || [],
+            nextActions: detection.treatmentRecommendations.immediateActions || []
+          });
+        } else {
+          throw new Error(data.message || 'Analysis failed');
+        }
+      }
+      console.error('Analysis error:', err);
+
+      // Handle validation errors specifically
+      if (err.response?.status === 400 && err.response?.data?.message?.includes('Invalid image content')) {
+        setError(`Please upload a photo of plants, trees, crops, or agricultural content only. Images of cars, people, buildings, or other objects are not accepted.`);
+        setResult({
+          diagnosis: "Invalid Image Content",
+          confidence: 0,
+          causes: [],
+          treatments: [],
+          nextActions: ["Please upload a photo showing plants, trees, crops, or agricultural scenes"],
+          validationError: err.response.data.details
+        });
+      } else {
+        setError(err.response?.data?.message || err.message || 'Analysis failed. Please try again.');
+      }
+    } finally {
       setLoading(false);
-    }, 900);
+    }
   };
 
   return (
@@ -94,7 +158,7 @@ export function AIAssistant() {
             Diagnose • Plan • Grow
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Upload a plant photo or describe the issue. AgroTrack's AI provides instant diagnosis, care plans, and reminders.
+            Upload a photo of plants, trees, or crops for AI-powered disease detection and care advice. Only plant-related images are accepted.
           </p>
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <span>Powered by</span>
@@ -166,6 +230,9 @@ export function AIAssistant() {
               </CardTitle>
               <CardDescription>
                 Upload a photo or describe your plant's symptoms for AI analysis
+                <span className="text-xs text-muted-foreground block mt-1">
+                  Only images of plants, trees, crops, or agricultural content accepted
+                </span>
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -258,6 +325,26 @@ export function AIAssistant() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {error && (
+                <div className="border border-destructive/20 bg-destructive/5 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-destructive mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-destructive mb-1">Analysis Error</h3>
+                      <p className="text-sm text-destructive/80">{error}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setError(null)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {loading && (
                 <div className="flex flex-col items-center justify-center py-12 space-y-4">
                   <div className="relative">
@@ -276,7 +363,7 @@ export function AIAssistant() {
                   <div>
                     <p className="font-medium text-muted-foreground">Ready to help!</p>
                     <p className="text-sm text-muted-foreground">
-                      Upload a photo or describe symptoms to get started
+                      Upload a photo of plants, trees, or crops to get started
                     </p>
                   </div>
                 </div>
@@ -284,6 +371,29 @@ export function AIAssistant() {
 
               {result && (
                 <div className="space-y-6">
+                  {/* Validation Error */}
+                  {result.validationError && (
+                    <div className="border border-amber-200 bg-amber-50 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-amber-800 mb-1">Image Content Validation</h3>
+                          <p className="text-sm text-amber-700 mb-2">
+                            {result.validationError.reason}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs border-amber-300 text-amber-700">
+                              Category: {result.validationError.category}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs border-amber-300 text-amber-700">
+                              Confidence: {Math.round(result.validationError.confidence * 100)}%
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Diagnosis */}
                   <div className="border border-border rounded-lg p-4 bg-accent/5">
                     <div className="flex items-start gap-3">

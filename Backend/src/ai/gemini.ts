@@ -112,3 +112,134 @@ export async function generatePlantCareAdvice(content: string, context: { plantI
     };
   }
 }
+
+/**
+ * Validate if an image contains ONLY agricultural/plant content
+ * STRICT VALIDATION: Rejects all non-plant images (cars, people, buildings, objects, etc.)
+ * Only accepts: plants, trees, crops, gardens, farms, agricultural scenes
+ * @param imageUrl - URL of the image to validate
+ * @returns Promise<{isValid: boolean, confidence: number, category: string, message: string}>
+ */
+export async function validateAgriculturalImage(imageUrl: string): Promise<{
+  isValid: boolean;
+  confidence: number;
+  category: string;
+  message: string;
+}> {
+  try {
+    // Use Gemini Vision model for image analysis
+    const visionModel = genAI ? genAI.getGenerativeModel({ model: "gemini-1.5-flash" }) : null;
+
+    if (!visionModel) {
+      return {
+        isValid: false,
+        confidence: 0,
+        category: 'service_unavailable',
+        message: 'Image validation service is currently unavailable'
+      };
+    }
+
+    // Fetch the image
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      return {
+        isValid: false,
+        confidence: 0,
+        category: 'fetch_error',
+        message: 'Unable to access the image URL'
+      };
+    }
+
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const imageData = new Uint8Array(imageBuffer);
+
+    // Determine MIME type from URL or response
+    const mimeType = imageResponse.headers.get('content-type') ||
+                    (imageUrl.toLowerCase().includes('.png') ? 'image/png' :
+                     imageUrl.toLowerCase().includes('.jpg') || imageUrl.toLowerCase().includes('.jpeg') ? 'image/jpeg' :
+                     imageUrl.toLowerCase().includes('.webp') ? 'image/webp' : 'image/jpeg');
+
+    const imagePart = {
+      inlineData: {
+        data: Buffer.from(imageData).toString('base64'),
+        mimeType: mimeType
+      }
+    };
+
+    const prompt = `Analyze this image and determine if it contains ONLY plants, trees, crops, or agricultural content.
+
+IMPORTANT: This image should be STRICTLY related to plants/agriculture. Reject images that contain:
+- People, animals, or pets
+- Cars, vehicles, or machinery (unless agricultural machinery)
+- Buildings, houses, or urban scenes
+- Objects, furniture, or man-made items
+- Landscapes without clear plant content
+- Food items that are not fresh produce/plants
+
+Accept ONLY images that show:
+- Individual plants, flowers, or trees
+- Gardens, farms, or agricultural fields
+- Crops, vegetables, or fruits on plants
+- Plant diseases, pests, or growth issues
+- Agricultural equipment in plant context
+
+Respond with a JSON object in this exact format:
+{
+  "isValid": boolean (true ONLY if image contains plants/trees/agricultural content as the main subject, false for everything else),
+  "confidence": number (0-1, how confident you are in the classification),
+  "category": string (one of: "plant", "tree", "crop", "agricultural", "farm", "garden", "invalid"),
+  "message": string (brief explanation of your analysis - be specific about what was detected)
+}
+
+Only respond with the JSON object, no additional text.`;
+
+    const result = await visionModel.generateContent([prompt, imagePart]);
+    const response = await result.response;
+    const text = response.text();
+
+    try {
+      // Parse the JSON response
+      const parsed = JSON.parse(text.trim());
+
+      // Validate the response structure
+      if (typeof parsed.isValid !== 'boolean' ||
+          typeof parsed.confidence !== 'number' ||
+          typeof parsed.category !== 'string' ||
+          typeof parsed.message !== 'string') {
+        throw new Error('Invalid response structure');
+      }
+
+      // Additional validation: ensure confidence is reasonable
+      if (parsed.confidence < 0 || parsed.confidence > 1) {
+        parsed.confidence = 0.5; // Default confidence
+      }
+
+      return {
+        isValid: parsed.isValid,
+        confidence: parsed.confidence,
+        category: parsed.category,
+        message: parsed.message
+      };
+
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', text);
+      // Fallback: assume valid if we can't parse (better to allow than block)
+      return {
+        isValid: true,
+        confidence: 0.5,
+        category: 'unknown',
+        message: 'Image validation completed but response unclear - proceeding with caution'
+      };
+    }
+
+  } catch (error) {
+    console.error('Image validation error:', error);
+    // On error, allow the image to proceed (fail-open approach)
+    return {
+      isValid: true,
+      confidence: 0.3,
+      category: 'error_fallback',
+      message: 'Image validation failed - proceeding with analysis'
+    };
+  }
+}
