@@ -124,6 +124,7 @@ export function AIAssistant() {
           throw new Error(data.message || 'Analysis failed');
         }
       }
+    } catch (err: any) {
       console.error('Analysis error:', err);
 
       // Handle validation errors specifically
