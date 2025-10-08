@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DemoProvider } from "@/contexts/DemoContext";
@@ -50,6 +50,21 @@ const SearchPage = lazy(() => import("./pages/SearchPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 const queryClient = new QueryClient();
+
+// Component to conditionally render CTA components only on home page
+const ConditionalCTAComponents = () => {
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
+
+  if (!isHomePage) return null;
+
+  return (
+    <>
+      <GuestCTABanner />
+      <GuestFloatingCTA />
+    </>
+  );
+};
 
 const App = () => {
   return (
@@ -130,9 +145,8 @@ const App = () => {
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
             
-            {/* Guest Conversion Components */}
-            <GuestCTABanner />
-            <GuestFloatingCTA />
+            {/* Guest Conversion Components - Only on Home Page */}
+            <ConditionalCTAComponents />
             
             {/* Global Navigation Components */}
             <BackToTop />
