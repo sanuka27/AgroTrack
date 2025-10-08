@@ -17,9 +17,7 @@ const registerValidation = [
   body('name')
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('Name must be between 2 and 50 characters')
-    .matches(/^[a-zA-Z\s]+$/)
-    .withMessage('Name can only contain letters and spaces'),
+    .withMessage('Name must be between 2 and 50 characters'),
   
   body('email')
     .isEmail()
@@ -27,10 +25,8 @@ const registerValidation = [
     .withMessage('Please provide a valid email address'),
   
   body('password')
-    .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters long')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long'),
   
   body('confirmPassword')
     .custom((value, { req }) => {
@@ -603,15 +599,26 @@ router.get('/google/callback',
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.post('/firebase', async (req, res): Promise<any> => {
+router.post('/firebase', async (req, res): Promise<void> => {
   try {
     const { idToken } = req.body;
 
     if (!idToken) {
-      return res.status(400).json({ 
+      res.status(400).json({ 
         success: false,
         message: 'Firebase ID token is required' 
       });
+      return;
+    }
+
+    // Check if Firebase is available
+    if (!firebaseService.isFirebaseAvailable()) {
+      logger.warn('Firebase not initialized - service unavailable');
+      res.status(503).json({
+        success: false,
+        message: 'Firebase authentication not available - please use email/password registration'
+      });
+      return;
     }
 
     // Verify Firebase ID token
@@ -619,18 +626,12 @@ router.post('/firebase', async (req, res): Promise<any> => {
     try {
       decodedToken = await firebaseService.verifyIdToken(idToken);
     } catch (firebaseError) {
-      logger.warn('Firebase authentication failed - Firebase not configured', { error: firebaseError });
-      return res.status(503).json({
+      logger.warn('Firebase authentication failed', { error: firebaseError });
+      res.status(400).json({
         success: false,
-        message: 'Firebase authentication not available - please configure Firebase or use regular authentication'
+        message: 'Invalid Firebase token'
       });
-    }
-    
-    if (!decodedToken) {
-      return res.status(400).json({ 
-        success: false,
-        message: 'Invalid Firebase token' 
-      });
+      return;
     }
 
     // Find or create user
@@ -675,8 +676,10 @@ router.post('/firebase', async (req, res): Promise<any> => {
       message: 'Authentication successful',
       data: {
         user: user.toJSON(),
-        accessToken: token,
-        refreshToken
+        tokens: {
+          accessToken: token,
+          refreshToken
+        }
       }
     });
     return;

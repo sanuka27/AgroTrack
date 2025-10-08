@@ -43,6 +43,16 @@ class FirebaseService {
     }
 
     try {
+      // If GOOGLE_APPLICATION_CREDENTIALS is set, use Application Default Credentials
+      if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+        this.app = admin.initializeApp({
+          credential: admin.credential.applicationDefault(),
+        });
+        this.isInitialized = true;
+        logger.info('Firebase Admin SDK initialized using GOOGLE_APPLICATION_CREDENTIALS');
+        return;
+      }
+
       const firebaseConfig = this.getFirebaseConfig();
       
       if (!firebaseConfig) {
@@ -51,7 +61,7 @@ class FirebaseService {
         return;
       }
 
-      // Initialize Firebase Admin SDK
+      // Initialize Firebase Admin SDK with explicit service account fields from env
       this.app = admin.initializeApp({
         credential: admin.credential.cert(firebaseConfig as ServiceAccount),
         projectId: firebaseConfig.projectId,
