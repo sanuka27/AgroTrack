@@ -50,32 +50,36 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
+        const refreshToken =
+          localStorage.getItem('agrotrack_refresh_token') ||
+          localStorage.getItem('refreshToken');
         
         if (refreshToken) {
-          // Try to refresh token
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refreshToken,
-          });
+          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+          // Your backend returns: { data: { tokens: { accessToken, refreshToken } } }
+          const accessToken = response?.data?.data?.tokens?.accessToken;
+          const newRefreshToken = response?.data?.data?.tokens?.refreshToken;
 
-          const { accessToken } = response.data.data;
-          
-          // Save new token
-          localStorage.setItem('accessToken', accessToken);
+          // Save new token(s)
+          if (accessToken) {
+            localStorage.setItem('agrotrack_token', accessToken);
+            localStorage.setItem('accessToken', accessToken); // keep backward compatibility
+          }
+          if (newRefreshToken) {
+            localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
+            localStorage.setItem('refreshToken', newRefreshToken);
+          }
 
           // Retry original request
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           }
-          
           return api(originalRequest);
         }
       } catch (refreshError) {
-        // Token refresh failed - clear auth and redirect
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
+        // clear and redirect
+        ['agrotrack_token','accessToken','authToken','agrotrack_refresh_token','refreshToken','user']
+          .forEach(k => localStorage.removeItem(k));
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
@@ -115,7 +119,7 @@ export const getErrorMessage = (error: unknown): string => {
  * Check if user is authenticated
  */
 export const isAuthenticated = (): boolean => {
-  return !!(localStorage.getItem('accessToken') || localStorage.getItem('authToken'));
+  return !!(localStorage.getItem('agrotrack_token') || localStorage.getItem('accessToken') || localStorage.getItem('authToken'));
 };
 
 /**
@@ -137,10 +141,8 @@ export const getCurrentUser = () => {
  * Clear all authentication data
  */
 export const clearAuth = () => {
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('authToken');
-  localStorage.removeItem('refreshToken');
-  localStorage.removeItem('user');
+  ['agrotrack_token','accessToken','authToken','agrotrack_refresh_token','refreshToken','user']
+    .forEach(k => localStorage.removeItem(k));
 };
 
 export default api;

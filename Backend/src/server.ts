@@ -26,6 +26,7 @@ console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
 import { connectDatabase } from './config/database';
 import { logger } from './config/logger';
 import { cache } from './config/redis';
+import { firebaseService } from './config/firebase';
 import { errorHandler, notFound } from './middleware/errorMiddleware';
 import { globalRateLimit, burstLimiter } from './middleware/rateLimiting';
 import { setupSwagger } from './config/swagger';
@@ -222,6 +223,14 @@ const startServer = async () => {
       }
     } catch (cacheError) {
       logger.warn('⚠️ Redis cache connection failed, continuing without cache:', cacheError);
+    }
+    
+    // Initialize Firebase Admin
+    try {
+      await firebaseService.initialize();
+      console.log('✅ Firebase Admin initialized');
+    } catch (e) {
+      console.error('❌ Firebase Admin failed to init:', e);
     }
     
     // Start server - always start regardless of DB/Redis status

@@ -59,6 +59,7 @@ tmp/
 firebase-service-account.json
 firebase-adminsdk*.json
 serviceAccountKey.json
+serviceAccount.json
 *-firebase-adminsdk-*.json
 
 # Environment files with secrets
