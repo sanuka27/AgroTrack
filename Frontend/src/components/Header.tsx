@@ -17,6 +17,7 @@ export function Header() {
   // Base navigation items available to all users
   const baseNavItems = [
     { label: "Features", href: "/features", icon: Leaf, permission: null },
+    { label: "Community", href: "/community", icon: MessageSquare, permission: null },
   ];
 
   // User-specific navigation items
@@ -24,7 +25,6 @@ export function Header() {
     { label: "Dashboard", href: "/dashboard", icon: Leaf, permission: "view_plants" },
     { label: "My Plants", href: "/plants", icon: Leaf, permission: "view_plants" },
     { label: "AI Assistant", href: "/assistant", icon: Bot, permission: "view_assistant" },
-    { label: "Community", href: "/community", icon: MessageSquare, permission: "view_community" },
     { label: "Analytics", href: "/analytics", icon: BarChart3, permission: "view_analytics" },
   ];
 
