@@ -47,9 +47,17 @@ class FirebaseService {
       if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
         this.app = admin.initializeApp({
           credential: admin.credential.applicationDefault(),
+          projectId: process.env.FIREBASE_PROJECT_ID || 'agrotrack-b980f',
+          storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'agrotrack-b980f.firebasestorage.app',
+          databaseURL: process.env.FIREBASE_PROJECT_ID
+            ? `https://${process.env.FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com/`
+            : undefined,
         });
         this.isInitialized = true;
-        logger.info('Firebase Admin SDK initialized using GOOGLE_APPLICATION_CREDENTIALS');
+        logger.info('✅ Firebase Admin initialized using ADC', {
+          projectId: this.app.options.projectId,
+          bucket: this.app.options.storageBucket,
+        });
         return;
       }
 
@@ -65,7 +73,7 @@ class FirebaseService {
       this.app = admin.initializeApp({
         credential: admin.credential.cert(firebaseConfig as ServiceAccount),
         projectId: firebaseConfig.projectId,
-        storageBucket: `${firebaseConfig.projectId}.appspot.com`,
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${firebaseConfig.projectId}.firebasestorage.app`,
         databaseURL: `https://${firebaseConfig.projectId}-default-rtdb.firebaseio.com/`
       });
 

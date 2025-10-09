@@ -1,12 +1,32 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+import multer from 'multer';
 import { body, query, param } from 'express-validator';
 import { UserController } from '../controllers/userController';
 import { authMiddleware } from '../middleware/authMiddleware';
 import { validate } from '../middleware/validate';
 import { adminOnly } from '../middleware/roleGuard';
+import path from 'path';
+import { firebaseService } from '../config/firebase';
+import { User } from '../models/User';
 
 const router = express.Router();
+
+// Configure multer for profile picture uploads (store in memory for Firebase upload)
+const profilePictureUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit for profile pictures
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 // Rate limiting for user operations
 const userRateLimit = rateLimit({
@@ -265,6 +285,69 @@ router.get('/profile',
   userRateLimit,
   authMiddleware,
   UserController.getProfile
+);
+
+router.post('/profile/avatar',
+  userRateLimit,
+  authMiddleware,
+  profilePictureUpload.single('avatar'),
+  async (req: express.Request, res: express.Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'No image file provided'
+        });
+      }
+
+      // Upload to Firebase Storage
+      const bucket = firebaseService.getStorage().bucket();
+      const userId = (req.user as any)._id || (req.user as any).uid;
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const filename = `profile-${userId}-${uniqueSuffix}${path.extname(req.file.originalname)}`;
+      const file = bucket.file(`profile-pictures/${filename}`);
+
+      // Upload file buffer to Firebase Storage
+      await file.save(req.file.buffer, {
+        metadata: {
+          contentType: req.file.mimetype,
+          metadata: {
+            originalName: req.file.originalname,
+            userId: userId,
+            uploadDate: new Date().toISOString()
+          }
+        },
+        validation: 'md5'
+      });
+
+      // ✅ Ensure it's publicly readable
+      await file.makePublic();
+
+      // Get the public URL
+      const avatarUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
+
+      // Update user's avatar in database
+      await User.findByIdAndUpdate(userId, { avatar: avatarUrl });
+
+      res.json({
+        success: true,
+        message: 'Profile picture uploaded successfully',
+        data: {
+          avatarUrl,
+          filename: file.name,
+          originalName: req.file.originalname,
+          size: req.file.size
+        }
+      });
+    } catch (error: any) {
+      console.error('Profile picture upload error:', error?.message || error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to upload profile picture',
+        error: process.env.NODE_ENV === 'development' ? (error?.message || String(error)) : undefined,
+      });
+    }
+  }
 );
 
 router.put('/profile', 

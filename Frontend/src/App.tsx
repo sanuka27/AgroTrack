@@ -49,6 +49,11 @@ const WeatherPage = lazy(() => import("./pages/WeatherPage"));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
+// Community Forum pages
+const FeedPage = lazy(() => import("./pages/community/FeedPage"));
+const PostEditor = lazy(() => import("./pages/community/PostEditor"));
+const PostDetailPage = lazy(() => import("./pages/community/PostDetailPage"));
+
 const queryClient = new QueryClient();
 
 // Component to conditionally render CTA components only on home page
@@ -98,7 +103,13 @@ const App = () => {
                   <MyPlants />
                 </ProtectedRoute>
               } />
-              <Route path="/community" element={<Community />} />
+              <Route path="/community" element={<FeedPage />} />
+              <Route path="/community/new" element={
+                <ProtectedRoute>
+                  <PostEditor />
+                </ProtectedRoute>
+              } />
+              <Route path="/community/:postId" element={<PostDetailPage />} />
               <Route path="/analytics" element={
                 <ProtectedRoute>
                   <Analytics />

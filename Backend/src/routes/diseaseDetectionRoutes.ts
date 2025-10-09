@@ -6,7 +6,7 @@ import { DiseaseDetectionController } from '../controllers/diseaseDetectionContr
 import { authMiddleware, optionalAuth } from '../middleware/authMiddleware';
 import { validate } from '../middleware/validate';
 import path from 'path';
-import fs from 'fs';
+import { firebaseService } from '../config/firebase';
 
 const router = express.Router();
 
@@ -35,23 +35,9 @@ const feedbackRateLimit = rateLimit({
   }
 });
 
-// Configure multer for image uploads
+// Configure multer for image uploads (store in memory for Firebase upload)
 const imageUpload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      const uploadDir = path.join(__dirname, '../../uploads/images');
-      // Create directory if it doesn't exist
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      // Generate unique filename
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, 'ai-' + uniqueSuffix + path.extname(file.originalname));
-    }
-  }),
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit for images
   },
@@ -237,7 +223,7 @@ router.post('/upload',
   diseaseDetectionRateLimit,
   optionalAuth,
   imageUpload.single('image'),
-  (req: express.Request, res: express.Response) => {
+  async (req: express.Request, res: express.Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({
@@ -246,24 +232,47 @@ router.post('/upload',
         });
       }
 
-      // Return the file path that can be used for disease detection
-      const imageUrl = `${req.protocol}://${req.get('host')}/uploads/images/${req.file.filename}`;
+      // Upload to Firebase Storage
+      const bucket = firebaseService.getStorage().bucket();
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const filename = 'ai-' + uniqueSuffix + path.extname(req.file.originalname);
+      const file = bucket.file(`disease-detection/${filename}`);
+
+      // Upload file buffer to Firebase Storage
+      await file.save(req.file.buffer, {
+        metadata: {
+          contentType: req.file.mimetype,
+          metadata: {
+            originalName: req.file.originalname,
+            uploadedBy: (req.user as any)?._id || (req.user as any)?.uid || 'guest',
+            uploadDate: new Date().toISOString()
+          }
+        },
+        validation: 'md5'
+      });
+
+      // ✅ Ensure it's publicly readable
+      await file.makePublic();
+
+      // Get the public URL
+      const imageUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
 
       res.json({
         success: true,
         message: 'Image uploaded successfully',
         data: {
           imageUrl,
-          filename: req.file.filename,
+          filename: file.name,
           originalName: req.file.originalname,
           size: req.file.size
         }
       });
-    } catch (error) {
-      console.error('Image upload error:', error);
+    } catch (error: any) {
+      console.error('Image upload error:', error?.message || error);
       res.status(500).json({
         success: false,
-        message: 'Failed to upload image'
+        message: 'Failed to upload image',
+        error: process.env.NODE_ENV === 'development' ? (error?.message || String(error)) : undefined,
       });
     }
   }

@@ -135,8 +135,8 @@ app.use('/api/bug-reports', bugReportRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/ai/chat', aiChatRoutes);
 
-// Serve uploaded files (if in production, use a CDN or cloud storage)
-app.use('/uploads', express.static('uploads'));
+// Serve uploaded files (now using Firebase Storage instead of local files)
+// app.use('/uploads', express.static('uploads'));
 
 // API documentation endpoint
 app.get('/api/docs', (req, res) => {
