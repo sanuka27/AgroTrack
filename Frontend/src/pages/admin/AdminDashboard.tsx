@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { RoleGuard } from '@/components/RoleGuard';
+import { AdminAccessCheck } from '@/components/admin/AdminAccessCheck';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield, BarChart3, Users, AlertTriangle, FileText } from 'lucide-react';
 
@@ -43,6 +44,9 @@ export function AdminDashboard() {
               </div>
             </div>
           </div>
+
+          {/* Admin Access Check */}
+          <AdminAccessCheck />
 
           {/* Tabs */}
           <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">

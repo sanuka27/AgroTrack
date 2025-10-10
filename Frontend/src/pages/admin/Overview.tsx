@@ -3,45 +3,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Users, Flag, Activity } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { mockApi } from '@/lib/mockApi';
+import { adminApi, DashboardStats } from '@/api/admin';
 import { RecentActivity } from '@/components/admin/RecentActivity';
-
-interface AnalyticsData {
-  userGrowth: {
-    total: number;
-    new: number;
-    active: number;
-  };
-  contentStats: {
-    posts: number;
-    comments: number;
-    reports: number;
-  };
-  engagement: {
-    dailyActiveUsers: number;
-    postsPerDay: number;
-    avgSessionTime: number;
-  };
-  timeframe: string;
-  generatedAt: Date;
-}
 
 export function Overview() {
   const { toast } = useToast();
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadAnalytics = async () => {
+    const loadDashboard = async () => {
       try {
         setLoading(true);
-        const response = await mockApi.admin.getAnalytics();
-        setAnalytics(response);
-      } catch (error) {
-        console.error('Error loading analytics:', error);
+        console.log('📊 Loading dashboard data...');
+        const data = await adminApi.getDashboard();
+        console.log('✅ Dashboard data loaded:', data);
+        setStats(data);
+      } catch (error: any) {
+        console.error('❌ Error loading dashboard:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
         toast({
           title: "Error",
-          description: "Failed to load analytics. Please try again.",
+          description: error.response?.data?.message || "Failed to load dashboard data. Please try again.",
           variant: "destructive",
         });
       } finally {
@@ -49,10 +35,10 @@ export function Overview() {
       }
     };
 
-    loadAnalytics();
+    loadDashboard();
   }, [toast]);
 
-  if (loading || !analytics) {
+  if (loading || !stats) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -70,7 +56,11 @@ export function Overview() {
     );
   }
 
-  const monthlyGrowthPct = 15.2; // Mock calculation
+  const totalUsers = stats.users.total;
+  const activeUsers = stats.activity.dailyActiveUsers;
+  const newUsersThisMonth = stats.users.newThisMonth;
+  const monthlyGrowthPct = totalUsers > 0 ? ((newUsersThisMonth / totalUsers) * 100).toFixed(1) : '0.0';
+  const pendingReports = 5; // We'll add real reports count later
 
   return (
     <div className="space-y-6">
@@ -82,7 +72,7 @@ export function Overview() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Users</p>
                 <p className="text-3xl font-bold text-foreground animate-[countUp_0.5s_ease-out]">
-                  {analytics.userGrowth.total.toLocaleString()}
+                  {totalUsers.toLocaleString()}
                 </p>
                 <p className="text-xs text-green-600">+{monthlyGrowthPct}% this month</p>
               </div>
@@ -99,9 +89,9 @@ export function Overview() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Active Users</p>
                 <p className="text-3xl font-bold text-foreground animate-[countUp_0.5s_ease-out]">
-                  {analytics.userGrowth.active.toLocaleString()}
+                  {activeUsers.toLocaleString()}
                 </p>
-                <p className="text-xs text-blue-600">{((analytics.userGrowth.active / analytics.userGrowth.total) * 100).toFixed(1)}% of total users</p>
+                <p className="text-xs text-blue-600">{totalUsers > 0 ? ((activeUsers / totalUsers) * 100).toFixed(1) : '0'}% of total users</p>
               </div>
               <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
                 <Activity className="h-6 w-6 text-green-600" />
@@ -116,26 +106,26 @@ export function Overview() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Pending Reports</p>
                 <p className="text-3xl font-bold text-foreground animate-[countUp_0.5s_ease-out]">
-                  {analytics.contentStats.reports}
+                  {pendingReports}
                 </p>
                 <Badge
                   variant={
-                    analytics.contentStats.reports < 5 ? 'secondary' :
-                    analytics.contentStats.reports < 10 ? 'default' : 'destructive'
+                    pendingReports < 5 ? 'secondary' :
+                    pendingReports < 10 ? 'default' : 'destructive'
                   }
                   className="text-xs"
                 >
-                  {analytics.contentStats.reports < 5 ? 'Normal' :
-                   analytics.contentStats.reports < 10 ? 'Elevated' : 'High'}
+                  {pendingReports < 5 ? 'Normal' :
+                   pendingReports < 10 ? 'Elevated' : 'High'}
                 </Badge>
               </div>
               <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
-                analytics.contentStats.reports < 5 ? 'bg-green-100' :
-                analytics.contentStats.reports < 10 ? 'bg-yellow-100' : 'bg-red-100'
+                pendingReports < 5 ? 'bg-green-100' :
+                pendingReports < 10 ? 'bg-yellow-100' : 'bg-red-100'
               }`}>
                 <Flag className={`h-6 w-6 ${
-                  analytics.contentStats.reports < 5 ? 'text-green-600' :
-                  analytics.contentStats.reports < 10 ? 'text-yellow-600' : 'text-red-600'
+                  pendingReports < 5 ? 'text-green-600' :
+                  pendingReports < 10 ? 'text-yellow-600' : 'text-red-600'
                 }`} />
               </div>
             </div>
@@ -171,25 +161,25 @@ export function Overview() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center">
                 <p className="text-2xl font-bold text-emerald-600 animate-[countUp_0.5s_ease-out]">
-                  {((analytics.engagement.postsPerDay / analytics.userGrowth.active) * 100).toFixed(1)}%
+                  {activeUsers > 0 ? ((stats.content.posts / activeUsers) * 100).toFixed(1) : '0'}%
                 </p>
                 <p className="text-sm text-muted-foreground">Engagement Rate</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-blue-600 animate-[countUp_0.5s_ease-out]">
-                  {analytics.engagement.dailyActiveUsers.toLocaleString()}
+                  {activeUsers.toLocaleString()}
                 </p>
                 <p className="text-sm text-muted-foreground">Daily Active</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-purple-600 animate-[countUp_0.5s_ease-out]">
-                  {analytics.engagement.postsPerDay}
+                  {stats.content.posts}
                 </p>
                 <p className="text-sm text-muted-foreground">Posts/Day</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-orange-600 animate-[countUp_0.5s_ease-out]">
-                  {((analytics.contentStats.reports / analytics.contentStats.posts) * 100).toFixed(1)}%
+                  {stats.content.posts > 0 ? ((pendingReports / stats.content.posts) * 100).toFixed(1) : '0'}%
                 </p>
                 <p className="text-sm text-muted-foreground">Report Rate</p>
               </div>
