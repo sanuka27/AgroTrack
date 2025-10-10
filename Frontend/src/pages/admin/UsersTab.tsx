@@ -5,8 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { mockApi } from '@/lib/mockApi';
-import { User } from '@/types/api';
+import { adminApi, User } from '@/api/admin';
 import { Search, Filter, MoreHorizontal, Ban, CheckCircle, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -24,14 +23,29 @@ export function UsersTab() {
   const [filter, setFilter] = useState<UserFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalUsers: 0,
+  });
 
-  // Load users from mock API
+  // Load users from real API
   useEffect(() => {
     const loadUsers = async () => {
       try {
         setLoading(true);
-        const response = await mockApi.admin.getUsers();
+        const response = await adminApi.getUsers({
+          page: 1,
+          limit: 50,
+          search: searchTerm || undefined,
+          status: filter !== 'all' ? filter : undefined,
+        });
         setUsers(response.users);
+        setPagination({
+          currentPage: response.pagination.currentPage,
+          totalPages: response.pagination.totalPages,
+          totalUsers: response.pagination.totalUsers,
+        });
       } catch (error) {
         console.error('Error loading users:', error);
         toast({
@@ -45,40 +59,34 @@ export function UsersTab() {
     };
 
     loadUsers();
-  }, [toast]);
+  }, [toast, filter, searchTerm]);
 
-  // Apply filters
-  const filteredUsers = users.filter(user => {
-    const matchesFilter = filter === 'all' ||
-      (filter === 'active' && user.role === 'user') ||
-      (filter === 'pending' && user.role === 'pending') ||
-      (filter === 'banned' && user.role === 'banned');
-
-    const matchesSearch = searchTerm === '' ||
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
-
-    return matchesFilter && matchesSearch;
-  });
+  // Apply filters (now handled by API, but keep for display)
+  const filteredUsers = users;
 
   const getStatusBadge = (user: User) => {
-    const status = user.role === 'admin' ? 'active' :
-                  user.role === 'user' ? 'active' :
-                  user.role === 'pending' ? 'pending' : 'banned';
+    if (!user.isActive) {
+      return <Badge variant="destructive">Banned</Badge>;
+    }
+    if (!user.isEmailVerified) {
+      return <Badge variant="outline" className="border-yellow-300 text-yellow-700">Pending</Badge>;
+    }
+    return <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">Active</Badge>;
+  };
 
-    switch (status) {
-      case 'active':
-        return <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">Active</Badge>;
-      case 'pending':
-        return <Badge variant="outline" className="border-yellow-300 text-yellow-700">Pending</Badge>;
-      case 'banned':
-        return <Badge variant="destructive">Banned</Badge>;
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return <Badge className="bg-orange-100 text-orange-800 border-orange-200">Admin</Badge>;
+      case 'mod':
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Moderator</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">User</Badge>;
     }
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -90,26 +98,25 @@ export function UsersTab() {
     setActionLoading(userId);
     try {
       if (action === 'delete') {
-        await mockApi.admin.deleteUser(userId);
+        await adminApi.deleteUser(userId);
         setUsers(prev => prev.filter(u => u._id !== userId));
         toast({
           title: "User Deleted",
           description: "The user has been permanently removed.",
         });
       } else {
-        const status = action === 'activate' ? 'active' : 'banned';
-        await mockApi.admin.updateUserStatus(userId, status);
-        // Update local state
+        const isActive = action === 'activate';
+        await adminApi.updateUser(userId, { isActive });
         setUsers(prev => prev.map(u =>
-          u._id === userId ? { ...u, role: status === 'active' ? 'user' : 'banned' } : u
+          u._id === userId ? { ...u, isActive } : u
         ));
         toast({
-          title: "User Updated",
-          description: `User has been ${action}d successfully.`,
+          title: isActive ? "User Activated" : "User Banned",
+          description: `The user has been ${isActive ? 'activated' : 'banned'} successfully.`,
         });
       }
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error(`Error ${action}ing user:`, error);
       toast({
         title: "Error",
         description: `Failed to ${action} user. Please try again.`,
@@ -192,6 +199,7 @@ export function UsersTab() {
                 <tr>
                   <th className="text-left py-3 px-6 font-medium text-gray-600">Name</th>
                   <th className="text-left py-3 px-6 font-medium text-gray-600">Email</th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-600">Role</th>
                   <th className="text-left py-3 px-6 font-medium text-gray-600">Status</th>
                   <th className="text-left py-3 px-6 font-medium text-gray-600">Joined</th>
                   <th className="text-left py-3 px-6 font-medium text-gray-600">Actions</th>
@@ -213,6 +221,9 @@ export function UsersTab() {
                       <div className="text-gray-600">{user.email}</div>
                     </td>
                     <td className="py-4 px-6">
+                      {getRoleBadge(user.role)}
+                    </td>
+                    <td className="py-4 px-6">
                       {getStatusBadge(user)}
                     </td>
                     <td className="py-4 px-6">
@@ -226,25 +237,27 @@ export function UsersTab() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {user.role !== 'user' && (
+                          {!user.isActive && (
                             <DropdownMenuItem onClick={() => handleUserAction(user._id, 'activate')}>
                               <CheckCircle className="w-4 h-4 mr-2" />
                               Activate
                             </DropdownMenuItem>
                           )}
-                          {user.role !== 'banned' && (
+                          {user.isActive && user.role !== 'admin' && (
                             <DropdownMenuItem onClick={() => handleUserAction(user._id, 'ban')}>
                               <Ban className="w-4 h-4 mr-2" />
                               Ban User
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem
-                            onClick={() => handleUserAction(user._id, 'delete')}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete User
-                          </DropdownMenuItem>
+                          {user.role !== 'admin' && (
+                            <DropdownMenuItem
+                              onClick={() => handleUserAction(user._id, 'delete')}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete User
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>

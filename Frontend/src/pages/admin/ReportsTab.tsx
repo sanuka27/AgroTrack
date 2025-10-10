@@ -4,24 +4,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { mockApi } from '@/lib/mockApi';
+import { adminApi, Report } from '@/api/admin';
 import { Search, AlertTriangle, CheckCircle, X } from 'lucide-react';
 
-interface Report {
-  _id: string;
-  reporterId: string;
-  reporterName: string;
-  targetId: string;
-  targetType: 'post' | 'comment';
-  reason: string;
-  description: string;
-  status: 'open' | 'resolved' | 'dismissed';
-  createdAt: Date;
-  resolvedAt: Date | null;
-  resolvedBy: string | null;
-}
-
-type ReportFilter = 'all' | 'open' | 'resolved' | 'dismissed';
+type ReportFilter = 'all' | 'pending' | 'resolved' | 'dismissed';
 
 export function ReportsTab() {
   const { toast } = useToast();
@@ -31,22 +17,13 @@ export function ReportsTab() {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Load reports from mock API
+  // Load reports from admin API
   useEffect(() => {
     const loadReports = async () => {
       try {
         setLoading(true);
-        const response = await mockApi.admin.getReports();
-        // Ensure dates are Date objects and types are correct
-        const reportsWithDates: Report[] = response.reports.map(report => ({
-          ...report,
-          targetType: report.targetType as 'post' | 'comment',
-          status: report.status as 'open' | 'resolved' | 'dismissed',
-          createdAt: new Date(report.createdAt),
-          resolvedAt: report.resolvedAt ? new Date(report.resolvedAt) : null,
-          resolvedBy: report.resolvedBy,
-        }));
-        setReports(reportsWithDates);
+        const response = await adminApi.getReports();
+        setReports(response.reports);
       } catch (error) {
         console.error('Error loading reports:', error);
         toast({
@@ -75,8 +52,8 @@ export function ReportsTab() {
 
   const getStatusBadge = (status: Report['status']) => {
     switch (status) {
-      case 'open':
-        return <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">Open</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">Pending</Badge>;
       case 'resolved':
         return <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-200">Resolved</Badge>;
       case 'dismissed':
@@ -86,7 +63,8 @@ export function ReportsTab() {
     }
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -99,10 +77,10 @@ export function ReportsTab() {
   const handleReportAction = async (reportId: string, action: 'resolve' | 'dismiss') => {
     setActionLoading(reportId);
     try {
-      await mockApi.admin.resolveReport(reportId, action);
+      await adminApi.resolveReport(reportId, action);
       setReports(prev => prev.map(r =>
         r._id === reportId
-          ? { ...r, status: action === 'resolve' ? 'resolved' : 'dismissed', resolvedAt: new Date(), resolvedBy: 'admin1' }
+          ? { ...r, status: action === 'resolve' ? 'resolved' : 'dismissed', resolvedAt: new Date().toISOString() }
           : r
       ));
       toast({
@@ -135,7 +113,7 @@ export function ReportsTab() {
     );
   }
 
-  const openReportsCount = reports.filter(r => r.status === 'open').length;
+  const openReportsCount = reports.filter(r => r.status === 'pending').length;
 
   return (
     <div className="space-y-6">
@@ -181,7 +159,7 @@ export function ReportsTab() {
             
             {/* Filter buttons */}
             <div className="flex gap-2">
-              {(['all', 'open', 'resolved', 'dismissed'] as ReportFilter[]).map((filterOption) => (
+              {(['all', 'pending', 'resolved', 'dismissed'] as ReportFilter[]).map((filterOption) => (
                 <Button
                   key={filterOption}
                   variant={filter === filterOption ? 'default' : 'outline'}
@@ -219,7 +197,7 @@ export function ReportsTab() {
                     key={report._id}
                     className={`hover:bg-gray-50 transition-colors ${
                       index < 3 ? 'animate-[slideIn_0.3s_ease-out]' : ''
-                    } ${report.status === 'open' ? 'bg-amber-50/30' : ''}`}
+                    } ${report.status === 'pending' ? 'bg-amber-50/30' : ''}`}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <td className="py-4 px-6">
@@ -246,7 +224,7 @@ export function ReportsTab() {
                       <div className="text-gray-600 text-sm">{formatDate(report.createdAt)}</div>
                     </td>
                     <td className="py-4 px-6">
-                      {report.status === 'open' && (
+                      {report.status === 'pending' && (
                         <div className="flex gap-2">
                           <Button
                             size="sm"
@@ -268,7 +246,7 @@ export function ReportsTab() {
                           </Button>
                         </div>
                       )}
-                      {report.status !== 'open' && (
+                      {report.status !== 'pending' && (
                         <Badge variant="outline" className="text-gray-500">
                           {report.status === 'resolved' ? 'Resolved' : 'Dismissed'}
                         </Badge>
