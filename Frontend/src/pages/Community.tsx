@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from 'react-dom';
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +39,24 @@ const Community = () => {
     };
 
     loadCommunityData();
+  }, []);
+
+  // Prevent background scroll when guest overlay is visible
+  useEffect(() => {
+    const overlayVisible = !user && posts.length > 3;
+    const previousOverflow = document.body.style.overflow;
+    if (overlayVisible) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = previousOverflow || '';
+    };
+  }, [user, posts.length]);
+
+  // For portal rendering (ensure document available)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
   }, []);
 
   const handleLikePost = async (postId: string) => {
@@ -213,7 +232,7 @@ const Community = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Community Feed */}
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="relative">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -240,8 +259,8 @@ const Community = () => {
                     <p className="text-muted-foreground">No posts yet. Be the first to share!</p>
                   </div>
                 ) : (
-                  posts.map((post) => (
-                    <Card key={post._id} className={`${post.isPinned ? 'border-yellow-300 bg-yellow-50' : ''}`}>
+                  posts.map((post, index) => (
+                    <Card key={post._id} className={`${post.isPinned ? 'border-yellow-300 bg-yellow-50' : ''} ${!user && index >= 3 ? 'opacity-30 blur-sm pointer-events-none' : ''}`}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center space-x-2">
@@ -305,6 +324,7 @@ const Community = () => {
                     </Card>
                   ))
                 )}
+                {/* Guest overlay is rendered via portal to ensure correct centering */}
               </CardContent>
             </Card>
           </div>
@@ -398,6 +418,26 @@ const Community = () => {
           </div>
         </div>
       </main>
+      {mounted && !user && posts.length > 3 && createPortal(
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-auto bg-black/40">
+          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full mx-4 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-full mb-4 mx-auto">
+              <MessageSquare className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Want to see more?</h2>
+            <p className="text-gray-600 mb-6">Sign in to view all community posts, share your gardening experiences, vote on topics, and join the conversation!</p>
+
+            <div className="flex justify-center gap-3">
+              <Button size="lg" asChild className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
+                <Link to="/login">Sign In</Link>
+              </Button>
+              <Button variant="outline" size="lg" asChild>
+                <Link to="/register">Sign Up</Link>
+              </Button>
+            </div>
+          </div>
+        </div>, document.body)
+      }
       <Footer />
     </div>
   );

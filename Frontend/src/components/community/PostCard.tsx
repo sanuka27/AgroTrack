@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MessageSquare, CheckCircle, Calendar, User } from 'lucide-react';
+import { MessageSquare, CheckCircle, Calendar, User, Leaf } from 'lucide-react';
 import { CommunityPost } from '../../types/community';
 import VoteButton from './VoteButton';
 import HashtagChips from './HashtagChips.tsx';
@@ -21,7 +21,7 @@ export default function PostCard({ post, truncateBody = true, onVoteChange }: Po
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-2xl shadow-[0_2px_8px_hsl(120_100%_25%_/_0.08)] border border-green-100 p-5 hover:shadow-[0_4px_16px_hsl(120_100%_25%_/_0.12)] transition-all duration-300 hover:-translate-y-0.5">
       <div className="flex gap-4">
         {/* Vote buttons */}
         <VoteButton
@@ -39,17 +39,20 @@ export default function PostCard({ post, truncateBody = true, onVoteChange }: Po
             className="block group"
           >
             <div className="flex items-start gap-2 mb-2">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
+              <h2 className="text-lg font-semibold text-gray-900 group-hover:bg-gradient-to-r group-hover:from-green-700 group-hover:to-emerald-700 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-300">
                 {post.title}
               </h2>
               {post.isSolved && (
-                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-1" aria-label="Solved" />
+                <div className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg flex-shrink-0">
+                  <CheckCircle className="w-4 h-4 text-green-600" aria-label="Solved" />
+                  <span className="text-xs font-medium text-green-700">Solved</span>
+                </div>
               )}
             </div>
           </Link>
 
           {/* Body preview */}
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 whitespace-pre-wrap line-clamp-3">
+          <p className="text-sm text-gray-700 mb-3 whitespace-pre-wrap line-clamp-3 leading-relaxed">
             {displayBody}
           </p>
 
@@ -61,12 +64,12 @@ export default function PostCard({ post, truncateBody = true, onVoteChange }: Po
                   key={idx}
                   src={img.url}
                   alt=""
-                  className="h-20 w-auto rounded object-cover"
+                  className="h-24 w-auto rounded-xl object-cover border-2 border-green-100 shadow-sm"
                 />
               ))}
               {post.images.length > 3 && (
-                <div className="h-20 w-20 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm text-gray-500">
-                  +{post.images.length - 3}
+                <div className="h-24 w-24 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 flex items-center justify-center text-sm font-medium text-green-700">
+                  +{post.images.length - 3} more
                 </div>
               )}
             </div>
@@ -80,46 +83,50 @@ export default function PostCard({ post, truncateBody = true, onVoteChange }: Po
           )}
 
           {/* Footer */}
-          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-4 text-xs text-gray-600">
             {/* Author */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               {post.author?.avatarUrl ? (
                 <img
                   src={post.author.avatarUrl}
                   alt={post.author.name}
-                  className="w-5 h-5 rounded-full"
+                  className="w-6 h-6 rounded-full border-2 border-green-200"
                 />
               ) : (
-                <User className="w-4 h-4" />
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center border border-green-200">
+                  <User className="w-3.5 h-3.5 text-green-700" />
+                </div>
               )}
-              <span className="font-medium">
+              <span className="font-medium text-gray-800">
                 {post.author?.name || 'Unknown'}
               </span>
               {post.author?.role === 'mod' && (
-                <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs font-medium">
+                <span className="px-2 py-0.5 bg-gradient-to-r from-blue-100 to-sky-100 text-blue-700 rounded-lg text-xs font-semibold border border-blue-200">
                   MOD
                 </span>
               )}
               {post.author?.role === 'admin' && (
-                <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-xs font-medium">
+                <span className="px-2 py-0.5 bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 rounded-lg text-xs font-semibold border border-orange-200">
                   ADMIN
                 </span>
               )}
             </div>
 
             {/* Timestamp */}
-            <div className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1.5 text-gray-500">
+              <Leaf className="w-3.5 h-3.5 text-green-600" />
               <span>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
             </div>
 
             {/* Comments */}
             <Link
               to={`/community/${post._id}#comments`}
-              className="flex items-center gap-1 hover:text-green-600 dark:hover:text-green-400 transition-colors"
+              className="flex items-center gap-1.5 hover:text-green-700 transition-colors group"
             >
-              <MessageSquare className="w-4 h-4" />
-              <span>{post.commentCount}</span>
+              <div className="p-1 rounded-lg group-hover:bg-green-50 transition-colors">
+                <MessageSquare className="w-4 h-4 text-green-600" />
+              </div>
+              <span className="font-medium">{post.commentCount} {post.commentCount === 1 ? 'comment' : 'comments'}</span>
             </Link>
           </div>
         </div>

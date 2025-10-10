@@ -24,14 +24,14 @@ export default function HashtagChips({ tags, maxDisplay, onTagClick }: HashtagCh
           key={tag}
           to={`/community?tag=${encodeURIComponent(tag)}`}
           onClick={(e) => handleTagClick(e, tag)}
-          className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 hover:from-green-200 hover:to-emerald-200 hover:shadow-sm border border-green-200 transition-all duration-300 hover:-translate-y-0.5"
         >
           #{tag}
         </Link>
       ))}
       {remainingCount > 0 && (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
-          +{remainingCount}
+        <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 border border-gray-200">
+          +{remainingCount} more
         </span>
       )}
     </div>

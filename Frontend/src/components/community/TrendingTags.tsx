@@ -29,12 +29,12 @@ export default function TrendingTags({ onTagClick, activeTag }: TrendingTagsProp
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white rounded-2xl shadow-[0_2px_8px_hsl(120_100%_25%_/_0.08)] border border-green-100 p-6">
         <div className="animate-pulse space-y-3">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-5 bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg w-2/3"></div>
+          <div className="h-4 bg-green-50 rounded-lg"></div>
+          <div className="h-4 bg-green-50 rounded-lg"></div>
+          <div className="h-4 bg-green-50 rounded-lg"></div>
         </div>
       </div>
     );
@@ -43,27 +43,45 @@ export default function TrendingTags({ onTagClick, activeTag }: TrendingTagsProp
   if (tags.length === 0) return null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 sticky top-6">
-      <div className="flex items-center gap-2 mb-4">
-        <TrendingUp className="w-5 h-5 text-green-600" />
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <div className="bg-white rounded-2xl shadow-[0_2px_8px_hsl(120_100%_25%_/_0.08)] border border-green-100 p-6 sticky top-6 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-50 to-emerald-50 rounded-full blur-2xl opacity-50 -z-10" />
+      
+      <div className="flex items-center gap-2 mb-5">
+        <div className="p-1.5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg shadow-sm">
+          <TrendingUp className="w-4 h-4 text-white" />
+        </div>
+        <h2 className="text-lg font-bold bg-gradient-to-r from-green-800 to-emerald-700 bg-clip-text text-transparent">
           Trending This Week
         </h2>
       </div>
 
       <div className="space-y-2">
-        {tags.map((tag) => (
+        {tags.map((tag, index) => (
           <button
             key={tag.tag}
             onClick={() => onTagClick?.(tag.tag)}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-left transition-all duration-300 group ${
               activeTag === tag.tag
-                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 shadow-sm border border-green-300'
+                : 'hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50 text-gray-700 hover:shadow-sm border border-transparent hover:border-green-200'
             }`}
           >
-            <span className="font-medium">#{tag.tag}</span>
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-bold px-2 py-1 rounded-lg ${
+                activeTag === tag.tag 
+                  ? 'bg-green-200 text-green-800' 
+                  : 'bg-gray-100 text-gray-600 group-hover:bg-green-200 group-hover:text-green-700'
+              }`}>
+                #{index + 1}
+              </span>
+              <span className="font-semibold">#{tag.tag}</span>
+            </div>
+            <span className={`text-sm font-medium px-2.5 py-1 rounded-lg ${
+              activeTag === tag.tag
+                ? 'bg-green-200 text-green-800'
+                : 'bg-gray-100 text-gray-600 group-hover:bg-green-100 group-hover:text-green-700'
+            }`}>
               {tag.count}
             </span>
           </button>

@@ -77,24 +77,24 @@ export default function VoteButton({
       <button
         onClick={() => handleVote(1)}
         disabled={isDisabled}
-        className={`p-1 rounded transition-colors ${
+        className={`p-1.5 rounded-xl transition-all duration-300 ${
           userVote === 1
-            ? 'text-orange-500 bg-orange-100 dark:bg-orange-900/30'
-            : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-        } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            ? 'text-green-700 bg-gradient-to-br from-green-100 to-emerald-100 shadow-sm border border-green-200'
+            : 'text-gray-400 hover:text-green-600 hover:bg-green-50 border border-transparent'
+        } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_2px_8px_hsl(120_100%_25%_/_0.12)]'}`}
         aria-label="Upvote"
         title={!user ? 'Sign in to vote' : 'Upvote'}
       >
-        <ChevronUp className="w-6 h-6" />
+        <ChevronUp className="w-5 h-5" />
       </button>
 
       <span
-        className={`text-sm font-semibold min-w-[2rem] text-center ${
+        className={`text-sm font-bold min-w-[2.5rem] text-center px-2 py-1 rounded-lg ${
           userVote === 1
-            ? 'text-orange-500'
+            ? 'text-green-700 bg-green-50'
             : userVote === -1
-            ? 'text-blue-500'
-            : 'text-gray-700 dark:text-gray-300'
+            ? 'text-gray-700 bg-gray-100'
+            : 'text-gray-600'
         }`}
       >
         {score}
@@ -103,15 +103,15 @@ export default function VoteButton({
       <button
         onClick={() => handleVote(-1)}
         disabled={isDisabled}
-        className={`p-1 rounded transition-colors ${
+        className={`p-1.5 rounded-xl transition-all duration-300 ${
           userVote === -1
-            ? 'text-blue-500 bg-blue-100 dark:bg-blue-900/30'
-            : 'text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-        } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            ? 'text-gray-700 bg-gradient-to-br from-gray-100 to-gray-200 shadow-sm border border-gray-300'
+            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 border border-transparent'
+        } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:translate-y-0.5 hover:shadow-[0_2px_8px_hsl(0_0%_0%_/_0.08)]'}`}
         aria-label="Downvote"
         title={!user ? 'Sign in to vote' : 'Downvote'}
       >
-        <ChevronDown className="w-6 h-6" />
+        <ChevronDown className="w-5 h-5" />
       </button>
     </div>
   );
