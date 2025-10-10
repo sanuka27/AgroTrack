@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { mockApi } from '@/lib/mockApi';
+import { adminApi, Content } from '@/api/admin';
+import ModerationModal from '@/components/admin/ModerationModal';
 import { Search, FileText, Eye, EyeOff, Trash2, MoreHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
@@ -13,35 +14,26 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-interface ContentItem {
-  _id: string;
-  type: 'post' | 'comment';
-  title: string;
-  content: string;
-  author: string;
-  authorId: string;
-  status: 'visible' | 'flagged' | 'removed';
-  createdAt: Date;
-  updatedAt: Date;
-  reports: number;
-}
-
 type ContentFilter = 'all' | 'visible' | 'flagged' | 'removed';
 
 export function ContentTab() {
   const { toast } = useToast();
-  const [content, setContent] = useState<ContentItem[]>([]);
+  const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<ContentFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalContentId, setModalContentId] = useState<string | null>(null);
+  const [modalAction, setModalAction] = useState<'hide' | 'remove' | 'approve' | 'delete' | null>(null);
+  const [modalContentType, setModalContentType] = useState<'post' | 'comment' | null>(null);
 
-  // Load content from mock API
+  // Load content from admin API
   useEffect(() => {
     const loadContent = async () => {
       try {
         setLoading(true);
-        const response = await mockApi.admin.getContent();
+        const response = await adminApi.getContent();
         setContent(response.content);
       } catch (error) {
         console.error('Error loading content:', error);
@@ -69,7 +61,7 @@ export function ContentTab() {
     return matchesFilter && matchesSearch;
   });
 
-  const getStatusBadge = (status: ContentItem['status']) => {
+  const getStatusBadge = (status: Content['status']) => {
     switch (status) {
       case 'visible':
         return <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-200">Visible</Badge>;
@@ -82,7 +74,8 @@ export function ContentTab() {
     }
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -92,28 +85,53 @@ export function ContentTab() {
     });
   };
 
-  const handleContentAction = async (contentId: string, action: 'hide' | 'remove' | 'restore') => {
+  // We'll use a modal for reasons instead of prompt
+
+  const openModerationModal = (contentId: string, uiAction: 'hide' | 'remove' | 'approve' | 'delete', contentType: 'post' | 'comment' = 'post') => {
+    setModalContentId(contentId);
+    setModalAction(uiAction);
+    setModalContentType(contentType);
+    setModalOpen(true);
+  };
+
+  const handleModalSubmit = async (reason: string) => {
+    if (!modalContentId || !modalAction) return;
+    const contentId = modalContentId;
+    const uiAction = modalAction;
     setActionLoading(contentId);
+
     try {
-      await mockApi.admin.moderateContent(contentId, action);
+      if (uiAction === 'delete') {
+        const ok = window.confirm('Permanently delete this content? This action cannot be undone.');
+        if (!ok) return;
+        await adminApi.deleteContent(contentId, modalContentType || 'post');
+        setContent(prev => prev.filter(c => c._id !== contentId));
+        toast({ title: 'Content Deleted', description: 'Content has been permanently deleted.' });
+        return;
+      }
+
+      let backendAction: 'approve' | 'reject' | 'delete' = 'reject';
+      if (uiAction === 'approve') backendAction = 'approve';
+      if (uiAction === 'remove') backendAction = 'delete';
+      if (uiAction === 'hide') backendAction = 'reject';
+
+  await adminApi.moderateContent(contentId, backendAction, reason, modalContentType || 'post');
+
       setContent(prev => prev.map(c =>
         c._id === contentId
-          ? { ...c, status: action === 'hide' ? 'flagged' : action === 'remove' ? 'removed' : 'visible' }
+          ? { ...c, status: uiAction === 'hide' ? 'flagged' : uiAction === 'remove' ? 'removed' : 'visible' }
           : c
       ));
-      toast({
-        title: "Content Updated",
-        description: `Content has been ${action}d successfully.`,
-      });
+
+      toast({ title: 'Content Updated', description: 'Content moderation action completed.' });
     } catch (error) {
       console.error('Error updating content:', error);
-      toast({
-        title: "Error",
-        description: `Failed to ${action} content. Please try again.`,
-        variant: "destructive",
-      });
+      toast({ title: 'Error', description: 'Failed to moderate content. Please try again.', variant: 'destructive' });
     } finally {
       setActionLoading(null);
+      setModalOpen(false);
+      setModalContentId(null);
+      setModalAction(null);
     }
   };
 
@@ -257,7 +275,7 @@ export function ContentTab() {
                         <DropdownMenuContent align="end">
                           {item.status === 'visible' && (
                             <DropdownMenuItem
-                              onClick={() => handleContentAction(item._id, 'hide')}
+                              onClick={() => openModerationModal(item._id, 'hide', item.type)}
                               className="text-amber-600"
                             >
                               <EyeOff className="w-4 h-4 mr-2" />
@@ -267,14 +285,14 @@ export function ContentTab() {
                           {item.status === 'flagged' && (
                             <>
                               <DropdownMenuItem
-                                onClick={() => handleContentAction(item._id, 'restore')}
+                                onClick={() => openModerationModal(item._id, 'approve', item.type)}
                                 className="text-emerald-600"
                               >
                                 <Eye className="w-4 h-4 mr-2" />
-                                Restore Content
+                                Approve Content
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => handleContentAction(item._id, 'remove')}
+                                onClick={() => openModerationModal(item._id, 'remove', item.type)}
                                 className="text-rose-600"
                               >
                                 <Trash2 className="w-4 h-4 mr-2" />
@@ -284,7 +302,7 @@ export function ContentTab() {
                           )}
                           {item.status === 'removed' && (
                             <DropdownMenuItem
-                              onClick={() => handleContentAction(item._id, 'restore')}
+                              onClick={() => openModerationModal(item._id, 'approve', item.type)}
                               className="text-emerald-600"
                             >
                               <Eye className="w-4 h-4 mr-2" />
@@ -308,6 +326,13 @@ export function ContentTab() {
           </div>
         </CardContent>
       </Card>
+      <ModerationModal
+        open={modalOpen}
+        initialReason=""
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleModalSubmit}
+        title={modalAction === 'remove' ? 'Remove Content' : modalAction === 'hide' ? 'Hide Content' : modalAction === 'approve' ? 'Approve Content' : 'Moderation'}
+      />
     </div>
   );
 }
