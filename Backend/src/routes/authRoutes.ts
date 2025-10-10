@@ -446,9 +446,13 @@ router.get('/check', authMiddleware, (req, res) => {
 });
 
 // Helper function to generate JWT tokens
-const generateToken = (userId: string) => {
+const generateToken = (userId: string, role: string = 'user', email?: string) => {
   const secret = process.env.JWT_SECRET || 'default-secret';
-  return jwt.sign({ userId }, secret, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as any);
+  return jwt.sign({ 
+    userId, 
+    role,
+    email 
+  }, secret, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as any);
 };
 
 // Helper function to generate refresh token
@@ -519,8 +523,8 @@ router.get('/google/callback',
         return res.redirect('/auth/failure');
       }
 
-      // Generate tokens
-      const token = generateToken(user._id.toString());
+      // Generate tokens with role and email
+      const token = generateToken(user._id.toString(), user.role || 'user', user.email);
       const refreshToken = generateRefreshToken(user._id.toString());
 
       // Update last login
@@ -665,8 +669,8 @@ router.post('/firebase', async (req, res): Promise<void> => {
     user.lastActiveAt = new Date();
     await user.save();
 
-    // Generate tokens
-    const token = generateToken(user._id.toString());
+    // Generate tokens with role and email
+    const token = generateToken(user._id.toString(), user.role || 'user', user.email);
     const refreshToken = generateRefreshToken(user._id.toString());
 
     logger.info(`Firebase authentication: ${user.email}`);
