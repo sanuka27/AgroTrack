@@ -9,16 +9,16 @@ config();
 
 // Sample data
 const sampleUsers = [
-  { uid: 'seed-user-1', name: 'Emma Gardner', role: 'admin' },
-  { uid: 'seed-user-2', name: 'John Farmer', role: 'mod' },
-  { uid: 'seed-user-3', name: 'Sarah Green', role: 'user' },
-  { uid: 'seed-user-4', name: 'Mike Organic', role: 'user' },
-  { uid: 'seed-user-5', name: 'Lisa Plant', role: 'user' },
-  { uid: 'seed-user-6', name: 'Tom Harvest', role: 'user' },
-  { uid: 'seed-user-7', name: 'Anna Seed', role: 'user' },
-  { uid: 'seed-user-8', name: 'David Crop', role: 'user' },
-  { uid: 'seed-user-9', name: 'Maria Soil', role: 'user' },
-  { uid: 'seed-user-10', name: 'Robert Field', role: 'user' },
+  { uid: 'seed-user-1', name: 'Kasun Perera', role: 'admin' },
+  { uid: 'seed-user-2', name: 'Nimal Fernando', role: 'mod' },
+  { uid: 'seed-user-3', name: 'Sanduni Silva', role: 'user' },
+  { uid: 'seed-user-4', name: 'Ruwan Jayasinghe', role: 'user' },
+  { uid: 'seed-user-5', name: 'Chamari Wickramasinghe', role: 'user' },
+  { uid: 'seed-user-6', name: 'Tharaka Rajapaksa', role: 'user' },
+  { uid: 'seed-user-7', name: 'Dilini Gunawardena', role: 'user' },
+  { uid: 'seed-user-8', name: 'Mahesh Bandara', role: 'user' },
+  { uid: 'seed-user-9', name: 'Nadeesha Kumari', role: 'user' },
+  { uid: 'seed-user-10', name: 'Sunil Dissanayake', role: 'user' },
 ];
 
 const samplePosts = [
