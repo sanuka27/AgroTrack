@@ -273,14 +273,9 @@ router.get('/logs',
  * @desc    Get comprehensive analytics overview
  * @access  Private (Admin/Super Admin)
  */
-router.get('/analytics/overview', (req, res) => {
-  // Placeholder for analytics overview
-  res.json({
-    success: true,
-    message: 'Analytics overview endpoint - to be implemented',
-    data: {}
-  });
-});
+router.get('/analytics/overview',
+  adminController.getDashboard
+);
 
 /**
  * @route   POST /api/admin/maintenance/cache-clear
@@ -344,6 +339,70 @@ router.get('/reports/users',
 /**
  * @route   GET /api/admin/reports/content
  * @desc    Generate content activity report
+    router.get('/reports/content',
+      query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+      query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+      query('status').optional().isIn(['pending','resolved','dismissed','reviewed']).withMessage('Invalid status'),
+      validate,
+      async (req, res) => {
+        try {
+          const page = parseInt((req.query.page as string) || '1');
+          const limit = Math.min(parseInt((req.query.limit as string) || '10'), 100);
+          const status = req.query.status as string | undefined;
+
+          const query: any = {};
+          if (status) query.status = status;
+
+          const skip = (page - 1) * limit;
+
+          // Import CommunityReport model lazily to avoid circular deps
+          const { CommunityReport } = await import('../models/CommunityReport');
+
+          const [reports, total] = await Promise.all([
+            CommunityReport.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+            CommunityReport.countDocuments(query)
+          ]);
+
+          // Resolve reporter names
+          const reporterUids = [...new Set(reports.map(r => r.reporterUid))];
+          const { CommunityUser } = await import('../models/CommunityUser');
+          const users = await CommunityUser.find({ uid: { $in: reporterUids } }).lean();
+          const userMap = new Map(users.map(u => [u.uid, u]));
+
+          // Map reports to a cleaner shape
+          const mapped = reports.map(r => {
+            const reporter = userMap.get(r.reporterUid);
+            return {
+              _id: r._id,
+              reporterId: r.reporterUid,
+              reporterName: reporter ? reporter.name : r.reporterUid,
+              targetId: r.targetId,
+              targetType: r.targetType,
+              reason: r.reason,
+              description: r.description,
+              status: r.status === 'reviewed' ? 'resolved' : r.status,
+              createdAt: r.createdAt,
+              resolvedAt: r.reviewedAt || r.updatedAt,
+              resolvedBy: r.reviewedBy
+            };
+          });
+
+          res.json({
+            success: true,
+            data: {
+              reports: mapped,
+              total,
+              page,
+              limit
+            }
+          });
+        } catch (error) {
+          console.error('Failed to fetch admin content reports:', error);
+          res.status(500).json({ success: false, message: 'Failed to fetch reports' });
+        }
+      }
+    );
+
  * @access  Private (Admin/Super Admin)
  */
 router.get('/reports/content',

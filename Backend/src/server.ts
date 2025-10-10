@@ -52,6 +52,7 @@ import cacheRoutes from './routes/cacheRoutes';
 import bugReportRoutes from './routes/bugReportRoutes';
 import contactRoutes from './routes/contactRoutes';
 import aiChatRoutes from './routes/aiChatRoutes';
+import communityForumRoutes from './routes/communityForumRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -134,6 +135,7 @@ app.use('/api/cache', cacheRoutes);
 app.use('/api/bug-reports', bugReportRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/ai/chat', aiChatRoutes);
+app.use('/api/community/forum', communityForumRoutes);
 
 // Serve uploaded files (now using Firebase Storage instead of local files)
 // app.use('/uploads', express.static('uploads'));

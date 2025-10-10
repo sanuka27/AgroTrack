@@ -105,10 +105,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const token = localStorage.getItem('agrotrack_token');
     if (token) {
       try {
-        const response = await api.get('/auth/me');
+        const response = await api.get('/users/profile');
         if (response.data.success) {
-          setUser(response.data.user);
-          setRole(response.data.user.role || 'user');
+          setUser(response.data.data);
+          setRole(response.data.data.role || 'user');
         }
       } catch (error) {
         // Token invalid, clear storage

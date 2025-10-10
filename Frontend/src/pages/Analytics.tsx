@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { useAuth } from '@/hooks/useAuth';
+import AdminAnalytics from './analytics/AdminAnalytics';
+import UserAnalytics from './analytics/UserAnalytics';
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,12 +15,17 @@ const Analytics = () => {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const { role } = useAuth();
+
   useEffect(() => {
     const loadAnalytics = async () => {
       try {
         setLoading(true);
-        const data = await mockApi.analytics.getDashboard();
-        setAnalyticsData(data);
+        // For non-admin users keep using existing mock/user endpoint
+        if (role !== 'admin') {
+          const data = await mockApi.analytics.getDashboard();
+          setAnalyticsData(data);
+        }
       } catch (error) {
         console.error('Error loading analytics:', error);
       } finally {
@@ -26,7 +34,7 @@ const Analytics = () => {
     };
 
     loadAnalytics();
-  }, []);
+  }, [role]);
 
   if (loading) {
     return (
@@ -108,6 +116,15 @@ const Analytics = () => {
         </div>
 
         {/* Main Content */}
+        <div className="space-y-6">
+          {/* Role-adaptive analytics content */}
+          {role === 'admin' ? (
+            <AdminAnalytics />
+          ) : (
+            <UserAnalytics />
+          )}
+
+        {/* Keep legacy sections for non-admins */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Growth Analytics */}
           <Card>
@@ -249,6 +266,7 @@ const Analytics = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
         </div>
       </main>
       <Footer />
