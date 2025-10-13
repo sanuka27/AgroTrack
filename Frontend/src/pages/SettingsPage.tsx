@@ -30,7 +30,7 @@ interface SettingsData {
 }
 
 const defaultSettings: SettingsData = {
-  theme: 'system',
+  theme: 'light',
   units: 'metric',
   notifications: {
     watering: true,

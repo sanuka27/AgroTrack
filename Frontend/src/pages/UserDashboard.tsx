@@ -13,7 +13,8 @@ import { CareLog } from '@/types/care';
 import { Reminder, ReminderStatus, ReminderPreferences, SmartReminderConfig } from '@/types/reminders';
 import { generateSmartReminders, getTodaysReminders, getOverdueReminders } from '@/utils/reminderUtils';
 import { getPlantCareLogs } from '@/utils/careUtils';
-import { mockApi } from '@/lib/mockApi';
+import api from '@/lib/api';
+import { analyticsApi } from '@/lib/api/analytics';
 import type { DashboardStats, RecentActivity, AnalyticsData } from '@/types/api';
 import type { Plant as APIPlant, CareLog as APICareLog } from '@/types/api';
 import type { Category, Sunlight, Health } from '@/types/plant';
@@ -78,20 +79,49 @@ const UserDashboard = () => {
       setLoading(true);
 
       // Load analytics data from API
-      const analytics = await mockApi.analytics.getDashboard();
-      setAnalyticsData(analytics);
+      try {
+        const analytics = await analyticsApi.getDashboardAnalytics();
+        // analyticsApi returns DashboardAnalytics; adapt to existing shape used in this component
+        setAnalyticsData({
+          dashboard: {
+            totalPlants: analytics.totalPlants || 0,
+            healthScore: Math.round(((analytics.healthyPlants || 0) / Math.max(1, analytics.totalPlants || 1)) * 100) || 0,
+            activeReminders: analytics.upcomingReminders || 0,
+            overdueReminders: analytics.overdueReminders || 0,
+            recentCareLogs: analytics.careThisWeek || 0,
+          },
+          recentActivity: [],
+        } as any);
+      } catch (err) {
+        console.warn('Failed to load analytics dashboard, falling back to minimal values', err);
+      }
 
       // Load plants from API
-      const plantsResponse = await mockApi.plants.getAll();
-      const convertedPlants = plantsResponse.plants.map(convertAPIPlantToPlant);
+      const plantsResp = await api.get('/plants?limit=100');
+      const plantsList = plantsResp?.data?.data?.plants || plantsResp?.data?.plants || [];
+      const convertedPlants = plantsList.map(convertAPIPlantToPlant);
       setPlants(convertedPlants);
 
-      // Load care logs (we'll need to get them for each plant)
+      // Load care logs (attempt to use /care-logs or per-plant endpoint)
       const allCareLogs: CareLog[] = [];
-      for (const plant of plantsResponse.plants) {
-        const plantCareLogs = await mockApi.careLogs.getByPlant(plant._id);
-        const convertedLogs = plantCareLogs.map(convertAPICareLogToCareLog);
-        allCareLogs.push(...convertedLogs);
+      try {
+        // Try global care-logs endpoint
+        const careResp = await api.get('/care-logs');
+        const careLogsData = careResp?.data?.data?.careLogs || careResp?.data || [];
+        const converted = careLogsData.map((l: any) => convertAPICareLogToCareLog(l));
+        allCareLogs.push(...converted);
+      } catch (err) {
+        // Fallback: fetch per-plant care logs
+        for (const plant of plantsList) {
+          try {
+            const plantCareResp = await api.get(`/plants/${plant._id}/care-logs`);
+            const plantCare = plantCareResp?.data?.data?.careLogs || plantCareResp?.data || [];
+            const convertedLogs = plantCare.map((l: any) => convertAPICareLogToCareLog(l));
+            allCareLogs.push(...convertedLogs);
+          } catch (e) {
+            // ignore per-plant failures
+          }
+        }
       }
       setCareLogs(allCareLogs);
 
