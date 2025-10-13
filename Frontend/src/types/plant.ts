@@ -17,3 +17,13 @@ export interface Plant {
   health: Health;                   // default "Good"
   growthRatePctThisMonth?: number;  // default 0
 }
+
+export type Confidence = 'low' | 'medium' | 'high';
+export type Urgency = 'low' | 'medium' | 'high';
+
+export interface PlantAnalysis {
+  likelyDiseases: { name: string; confidence: Confidence; why: string }[];
+  urgency: Urgency;
+  careSteps: string[];
+  prevention: string[];
+}
