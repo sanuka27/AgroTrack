@@ -134,7 +134,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/cache', cacheRoutes);
 app.use('/api/bug-reports', bugReportRoutes);
 app.use('/api/contact', contactRoutes);
-app.use('/api/ai/chat', aiChatRoutes);
+app.use('/api/ai', aiChatRoutes);
 app.use('/api/community/forum', communityForumRoutes);
 
 // Serve uploaded files (now using Firebase Storage instead of local files)
