@@ -8,14 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { GeminiLogo } from "@/components/ui/gemini-logo";
 import { useAuth } from "@/hooks/useAuth";
 import { Camera, Image as ImageIcon, Send, Sparkles, Bot, Loader2, Leaf, AlertTriangle, Lock, Users, TrendingUp, X } from "lucide-react";
-import api from "@/lib/api";
+import api, { analyzePlant } from "@/lib/api";
+import { PlantAnalysis } from "@/types/plant";
+import PlantAnalysisCard from "./PlantAnalysisCard";
 
-interface AnalysisResult {
-  diagnosis: string;
-  confidence: number;
-  causes: string[];
-  treatments: string[];
-  nextActions: string[];
+interface AnalysisResult extends PlantAnalysis {
   error?: string;
   validationError?: {
     reason: string;
@@ -79,11 +76,10 @@ export function AIAssistant() {
         const data = response.data;
         if (data.success && data.data) {
           setResult({
-            diagnosis: "Plant Care Analysis",
-            confidence: 0.8,
-            causes: ["User inquiry about plant care"],
-            treatments: [data.data.response?.content || "Please consult with a local gardening expert for specific advice"],
-            nextActions: ["Monitor your plant's response", "Adjust care based on specific plant needs"]
+            likelyDiseases: [{ name: "General Plant Care Question", confidence: "medium" as const, why: "User inquiry about plant care" }],
+            urgency: "low" as const,
+            careSteps: [data.data.response?.content || "Please consult with a local gardening expert for specific advice"],
+            prevention: ["Monitor your plant's response", "Adjust care based on specific plant needs"]
           });
         } else {
           throw new Error('AI analysis failed');
@@ -93,49 +89,14 @@ export function AIAssistant() {
 
       // Handle image analysis
       if (file) {
-        // First upload the image to get a proper URL
         const formData = new FormData();
-        formData.append('image', file);
-
-        const uploadResponse = await api.post('/disease-detection/upload', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
-
-        if (!uploadResponse.data.success) {
-          throw new Error('Failed to upload image');
+        formData.append('photo', file);
+        if (prompt.trim()) {
+          formData.append('description', prompt);
         }
 
-        const imageUrl = uploadResponse.data.data.imageUrl;
-
-        // Now call disease detection API with the proper URL
-        const response = await api.post('/disease-detection/detect', {
-          imageUrl,
-          originalFileName: file.name,
-          plantId: undefined // Could be selected from user's plants
-        });
-
-        const data = response.data;
-
-        if (data.success && data.data) {
-          const detection = data.data;
-
-          // Transform backend response to frontend format
-          setResult({
-            diagnosis: detection.detectionResults.primaryDisease
-              ? `${detection.detectionResults.primaryDisease.name} (${detection.detectionResults.primaryDisease.category})`
-              : "Analysis completed - no specific disease detected",
-            confidence: detection.detectionResults.confidence,
-            causes: detection.treatmentRecommendations.preventionMeasures || [],
-            treatments: detection.treatmentRecommendations.treatments?.map((t: any) =>
-              `${t.name}: ${t.description} (${t.applicationMethod})`
-            ) || [],
-            nextActions: detection.treatmentRecommendations.immediateActions || []
-          });
-        } else {
-          throw new Error(data.message || 'Analysis failed');
-        }
+        const analysis: PlantAnalysis = await analyzePlant(formData);
+        setResult(analysis);
       }
     } catch (err: any) {
       console.error('Analysis error:', err);
@@ -144,13 +105,14 @@ export function AIAssistant() {
       if (err.response?.status === 400 && err.response?.data?.message?.includes('Invalid image content')) {
         setError(`Please upload a photo of plants, trees, crops, or agricultural content only. Images of cars, people, buildings, or other objects are not accepted.`);
         setResult({
-          diagnosis: "Invalid Image Content",
-          confidence: 0,
-          causes: [],
-          treatments: [],
-          nextActions: ["Please upload a photo showing plants, trees, crops, or agricultural scenes"],
+          likelyDiseases: [],
+          urgency: "low" as const,
+          careSteps: ["Please upload a photo showing plants, trees, crops, or agricultural scenes"],
+          prevention: [],
           validationError: err.response.data.details
         });
+      } else if (err.response?.status === 429) {
+        setError("Our plant AI is getting a lot of love right now 🌱. Please try again in a bit.");
       } else {
         setError(err.response?.data?.message || err.message || 'Analysis failed. Please try again.');
       }
@@ -385,81 +347,14 @@ export function AIAssistant() {
 
               {result && (
                 <div className="space-y-6">
-                  {/* Validation Error */}
-                  {result.validationError && (
-                    <div className="border border-amber-200 bg-amber-50 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-amber-800 mb-1">Image Content Validation</h3>
-                          <p className="text-sm text-amber-700 mb-2">
-                            {result.validationError.reason}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs border-amber-300 text-amber-700">
-                              Category: {result.validationError.category}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs border-amber-300 text-amber-700">
-                              Confidence: {Math.round(result.validationError.confidence * 100)}%
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {/* Analysis Result */}
+                  <PlantAnalysisCard
+                    data={result}
+                    imageUrl={preview}
+                    description={prompt}
+                  />
 
-                  {/* Diagnosis */}
-                  <div className="border border-border rounded-lg p-4 bg-accent/5">
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5" />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-foreground mb-1">Diagnosis</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{result.diagnosis}</p>
-                        <Badge variant="secondary" className="text-xs">
-                          {Math.round(result.confidence * 100)}% confidence
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Causes */}
-                  <div>
-                    <h4 className="font-medium text-foreground mb-3">Likely Causes</h4>
-                    <ul className="space-y-2">
-                      {result.causes.map((cause, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm">
-                          <div className="w-1.5 h-1.5 bg-destructive rounded-full mt-2 flex-shrink-0" />
-                          <span className="text-muted-foreground">{cause}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Treatments */}
-                  <div>
-                    <h4 className="font-medium text-foreground mb-3">Recommended Treatments</h4>
-                    <ul className="space-y-2">
-                      {result.treatments.map((treatment, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm">
-                          <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0" />
-                          <span className="text-muted-foreground">{treatment}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Next Actions */}
-                  <div>
-                    <h4 className="font-medium text-foreground mb-3">Next Actions</h4>
-                    <ul className="space-y-2">
-                      {result.nextActions.map((action, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm">
-                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2 flex-shrink-0" />
-                          <span className="text-muted-foreground">{action}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 pt-4">
