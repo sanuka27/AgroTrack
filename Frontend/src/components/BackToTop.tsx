@@ -56,7 +56,7 @@ export const BackToTop: React.FC<BackToTopProps> = ({
           viewBox="0 0 36 36"
         >
           <path
-            className="text-gray-200"
+            className="text-muted"
             strokeWidth="2"
             fill="none"
             stroke="currentColor"
@@ -65,7 +65,7 @@ export const BackToTop: React.FC<BackToTopProps> = ({
               a 15.9155 15.9155 0 0 1 0 -31.831"
           />
           <path
-            className="text-green-500 transition-all duration-300 ease-out"
+            className="text-primary transition-all duration-300 ease-out"
             strokeWidth="2"
             fill="none"
             stroke="currentColor"
@@ -82,9 +82,9 @@ export const BackToTop: React.FC<BackToTopProps> = ({
           onClick={scrollToTop}
           className={`
             relative h-12 w-12 rounded-full shadow-lg
-            bg-white hover:bg-gray-50 
-            text-green-600 hover:text-green-700
-            border border-gray-200 hover:border-green-300
+            bg-primary hover:bg-primary-hover
+            text-primary-foreground
+            border border-transparent hover:border-primary/30
             transform transition-all duration-300 hover:scale-110
             animate-in slide-in-from-bottom-5 duration-300
             ${className}

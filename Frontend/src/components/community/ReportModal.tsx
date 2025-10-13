@@ -52,16 +52,16 @@ export default function ReportModal({ targetType, targetId, onClose }: ReportMod
   if (success) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 text-center">
-          <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="bg-card rounded-lg shadow-xl max-w-md w-full p-6 text-center">
+          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          <h3 className="text-lg font-semibold text-foreground mb-2">
             Report Submitted
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
+          <p className="text-sm text-muted-foreground">
             Thank you for helping keep our community safe. We'll review this report shortly.
           </p>
         </div>
@@ -71,18 +71,18 @@ export default function ReportModal({ targetType, targetId, onClose }: ReportMod
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+      <div className="bg-card rounded-lg shadow-xl max-w-md w-full">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+  <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-red-600" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-xl font-semibold text-foreground">
               Report {targetType === 'post' ? 'Post' : 'Comment'}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded transition-colors"
+            className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -92,14 +92,14 @@ export default function ReportModal({ targetType, targetId, onClose }: ReportMod
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Reason */}
           <div>
-            <label htmlFor="reason" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="reason" className="block text-sm font-medium text-muted-foreground mb-2">
               Reason for reporting
             </label>
             <select
               id="reason"
               value={reason}
               onChange={(e) => setReason(e.target.value as ReportData['reason'])}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-card text-card-foreground"
               required
             >
               {REPORT_REASONS.map((r) => (
@@ -112,14 +112,14 @@ export default function ReportModal({ targetType, targetId, onClose }: ReportMod
 
           {/* Description */}
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="description" className="block text-sm font-medium text-muted-foreground mb-2">
               Additional details (optional)
             </label>
             <textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+              className="w-full px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-card text-card-foreground resize-none"
               rows={3}
               placeholder="Provide any additional context..."
             />
@@ -127,14 +127,14 @@ export default function ReportModal({ targetType, targetId, onClose }: ReportMod
 
           {/* Error */}
           {error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
 
           {/* Info */}
-          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <p className="text-xs text-blue-800 dark:text-blue-200">
+          <div className="p-3 bg-card border border-border rounded-lg">
+            <p className="text-xs text-muted-foreground">
               Your report will be reviewed by our moderation team. False reports may result in account restrictions.
             </p>
           </div>
@@ -144,14 +144,14 @@ export default function ReportModal({ targetType, targetId, onClose }: ReportMod
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="px-4 py-2 text-muted-foreground hover:bg-card-foreground/5 rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-muted text-white rounded-lg transition-colors"
             >
               {isSubmitting ? 'Submitting...' : 'Submit Report'}
             </button>

@@ -1,3 +1,4 @@
+import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,57 +10,17 @@ import {
   TrendingUp,
   Users,
   ArrowRight,
+  ArrowLeft,
   Leaf,
   Bug
 } from "lucide-react";
+import { communityForumApi } from '../api/communityForum';
+import { CommunityPost } from '../types/community';
+import { formatDistanceToNow } from 'date-fns';
 
-const communityPosts = [
-  {
-    id: 1,
-    author: {
-      name: "Sarah Chen",
-      avatar: "/placeholder.svg",
-      initials: "SC"
-    },
-    title: "My tomato plant recovery journey 🍅",
-    content: "After following the AI's diagnosis for leaf curl disease, my tomatoes are thriving again! Here's what worked...",
-    tags: ["tomatoes", "disease-recovery", "success-story"],
-    likes: 47,
-    comments: 12,
-    timeAgo: "2 hours ago",
-    trending: true
-  },
-  {
-    id: 2,
-    author: {
-      name: "Mike Rodriguez",
-      avatar: "/placeholder.svg",
-      initials: "MR"
-    },
-    title: "Space-saving herb garden setup for apartments",
-    content: "Living in a small apartment doesn't mean you can't have fresh herbs! Check out my vertical garden solution...",
-    tags: ["herbs", "apartment-gardening", "space-saving"],
-    likes: 89,
-    comments: 23,
-    timeAgo: "5 hours ago",
-    trending: false
-  },
-  {
-    id: 3,
-    author: {
-      name: "Emma Thompson",
-      avatar: "/placeholder.svg",
-      initials: "ET"
-    },
-    title: "Help! White spots on my fiddle leaf fig 😰",
-    content: "I noticed these white spots appearing on my fiddle leaf fig's leaves. Has anyone experienced this before?",
-    tags: ["fiddle-leaf-fig", "help-needed", "plant-disease"],
-    likes: 15,
-    comments: 31,
-    timeAgo: "1 day ago",
-    trending: false
-  }
-];
+// We'll fetch recent posts from the API; limit to 3 for this block
+ 
+const POSTS_LIMIT = 3;
 
 const communityStats = [
   { label: "Active Members", value: "12,500+", icon: Users },
@@ -69,6 +30,33 @@ const communityStats = [
 ];
 
 export function Community() {
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const response = await communityForumApi.getPosts({ limit: POSTS_LIMIT, sort: 'top' });
+        if (!mounted) return;
+        // communityForumApi returns the posts under response.data.posts (PostsResponse)
+        setPosts(response.data?.posts || []);
+      } catch (err: any) {
+        console.error('Failed to load community posts', err);
+        if (mounted) setError(err?.message || 'Failed to load posts');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => { mounted = false; };
+  }, []);
+
   return (
     <section className="py-16 lg:py-24 bg-gradient-subtle">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -117,70 +105,117 @@ export function Community() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {communityPosts.map((post) => (
-              <Card key={post.id} className="group hover:shadow-medium transition-all duration-300 border-border/50 hover:border-primary/20 cursor-pointer">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={post.author.avatar} alt={post.author.name} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                          {post.author.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-foreground text-sm">{post.author.name}</p>
-                        <p className="text-xs text-muted-foreground">{post.timeAgo}</p>
-                      </div>
-                    </div>
-                    {post.trending && (
-                      <Badge variant="secondary" className="bg-vibrant/10 text-vibrant-foreground">
-                        <TrendingUp className="w-3 h-3 mr-1" />
-                        Trending
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  <div>
-                    <CardTitle className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-2">
-                      {post.title}
-                    </CardTitle>
-                    <CardDescription className="text-muted-foreground line-clamp-3">
-                      {post.content}
-                    </CardDescription>
-                  </div>
+          <div className="relative">
+            {/* Navigation arrows (desktop) */}
+            <button
+              aria-label="Previous posts"
+              className="hidden lg:flex items-center justify-center absolute left-0 top-1/2 -translate-y-1/2 w-10 h-10 bg-card border border-border rounded-full shadow-sm hover:shadow-md z-20 ml-2"
+              onClick={() => {
+                const container = containerRef.current;
+                if (!container) return;
+                container.scrollBy({ left: -container.clientWidth / 1.5, behavior: 'smooth' });
+              }}
+            >
+              <ArrowLeft className="w-4 h-4 text-foreground" />
+            </button>
 
-                  <div className="flex flex-wrap gap-1">
-                    {post.tags.map((tag, tagIndex) => (
-                      <Badge key={tagIndex} variant="secondary" className="text-xs">
-                        {tag.includes('disease') && <Bug className="w-3 h-3 mr-1" />}
-                        {tag.includes('herb') && <Leaf className="w-3 h-3 mr-1" />}
-                        #{tag}
-                      </Badge>
-                    ))}
-                  </div>
+            <div ref={containerRef} id="recent-posts-grid" className="grid grid-cols-1 lg:flex gap-6 overflow-x-auto scroll-smooth">
+              {loading ? (
+                // show skeletons when loading
+                Array.from({ length: POSTS_LIMIT }).map((_, i) => (
+                  <Card key={`loading-${i}`} className="animate-pulse bg-card rounded-lg p-6" />
+                ))
+              ) : error ? (
+                <div className="text-red-600">{error}</div>
+              ) : (
+                posts.map((post) => {
+                  const authorName = post.author?.name || 'Unknown';
+                  const avatar = post.author?.avatarUrl || '/placeholder.svg';
+                  const initials = (post.author?.name || authorName).split(' ').map(n=>n[0]).slice(0,2).join('');
+                  const title = post.title || '';
+                  const content = (post.bodyMarkdown || '').replace(/\n/g, ' ');
+                  const tags = post.tags || [];
+                  const likes = post.voteScore ?? 0;
+                  const comments = post.commentCount ?? 0;
+                  const timeAgo = post.createdAt ? `${formatDistanceToNow(new Date(post.createdAt))} ago` : '';
 
-                  <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                      <button className="flex items-center space-x-1 hover:text-primary transition-colors cursor-pointer transition-all duration-200 ease-out hover:opacity-95 active:scale-[0.98]">
-                        <Heart className="w-4 h-4" />
-                        <span>{post.likes}</span>
-                      </button>
-                      <button className="flex items-center space-x-1 hover:text-primary transition-colors cursor-pointer transition-all duration-200 ease-out hover:opacity-95 active:scale-[0.98]">
-                        <MessageSquare className="w-4 h-4" />
-                        <span>{post.comments}</span>
-                      </button>
-                    </div>
-                    <button className="text-muted-foreground hover:text-primary transition-colors cursor-pointer transition-all duration-200 ease-out hover:opacity-95 active:scale-[0.98]">
-                      <Share2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  return (
+                    <Card key={post._id} className="group hover:shadow-medium transition-all duration-300 border-border/50 hover:border-primary/20 cursor-pointer lg:min-w-[320px] flex-shrink-0">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="w-10 h-10">
+                              <AvatarImage src={avatar} alt={authorName} />
+                              <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                                {initials}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-foreground text-sm">{authorName}</p>
+                              <p className="text-xs text-muted-foreground">{timeAgo}</p>
+                            </div>
+                          </div>
+                          {post.isSolved && (
+                            <Badge variant="secondary" className="bg-vibrant/10 text-vibrant-foreground">
+                              Solved
+                            </Badge>
+                          )}
+                        </div>
+                      </CardHeader>
+                      
+                      <CardContent className="space-y-4">
+                        <div>
+                          <CardTitle className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-2">
+                            {title}
+                          </CardTitle>
+                          <CardDescription className="text-muted-foreground line-clamp-3">
+                            {content}
+                          </CardDescription>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1">
+                          {tags.map((tag: string, tagIndex: number) => (
+                            <Badge key={tagIndex} variant="secondary" className="text-xs">
+                              {tag.includes('disease') && <Bug className="w-3 h-3 mr-1" />}
+                              {tag.includes('herb') && <Leaf className="w-3 h-3 mr-1" />}
+                              #{tag}
+                            </Badge>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                            <button className="flex items-center space-x-1 hover:text-primary transition-colors cursor-pointer transition-all duration-200 ease-out hover:opacity-95 active:scale-[0.98]">
+                              <Heart className="w-4 h-4" />
+                              <span>{likes}</span>
+                            </button>
+                            <button className="flex items-center space-x-1 hover:text-primary transition-colors cursor-pointer transition-all duration-200 ease-out hover:opacity-95 active:scale-[0.98]">
+                              <MessageSquare className="w-4 h-4" />
+                              <span>{comments}</span>
+                            </button>
+                          </div>
+                          <button className="text-muted-foreground hover:text-primary transition-colors cursor-pointer transition-all duration-200 ease-out hover:opacity-95 active:scale-[0.98]">
+                            <Share2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </div>
+
+            <button
+              aria-label="Next posts"
+              className="hidden lg:flex items-center justify-center absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 bg-card border border-border rounded-full shadow-sm hover:shadow-md z-20 mr-2"
+              onClick={() => {
+                const container = containerRef.current;
+                if (!container) return;
+                container.scrollBy({ left: container.clientWidth / 1.5, behavior: 'smooth' });
+              }}
+            >
+              <ArrowRight className="w-4 h-4 text-foreground" />
+            </button>
           </div>
         </div>
 

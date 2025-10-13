@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { createPortal } from 'react-dom';
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { RoleGuard, PermissionCheck, GuestPrompt } from "@/components/RoleGuard";
+import VoteButton from "@/components/community/VoteButton";
 import { useAuth } from "@/hooks/useAuth";
 import { mockApi } from "@/lib/mockApi";
 import type { CommunityPost, CommunityStats, TrendingTopic } from "@/types/api";
@@ -40,38 +40,6 @@ const Community = () => {
 
     loadCommunityData();
   }, []);
-
-  // Prevent background scroll when guest overlay is visible
-  useEffect(() => {
-    const overlayVisible = !user && posts.length > 3;
-    const previousOverflow = document.body.style.overflow;
-    if (overlayVisible) {
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = previousOverflow || '';
-    };
-  }, [user, posts.length]);
-
-  // For portal rendering (ensure document available)
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const handleLikePost = async (postId: string) => {
-    try {
-      await mockApi.community.likePost(postId);
-      // Update local state
-      setPosts(prevPosts =>
-        prevPosts.map(post =>
-          post._id === postId ? { ...post, likes: post.likes + 1 } : post
-        )
-      );
-    } catch (error) {
-      console.error('Error liking post:', error);
-    }
-  };
 
   const formatTimestamp = (date: Date) => {
     const now = new Date();
@@ -118,49 +86,17 @@ const Community = () => {
           </div>
         </div>
 
-        {/* Guest User Compelling Showcase */}
-        <PermissionCheck permission="post_content" fallback={
+        {/* Guest User Compelling Showcase - Only for actions requiring auth */}
+        <PermissionCheck permission="forum_participate" fallback={
           <div className="mb-8 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl p-8">
             <div className="text-center mb-6">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-full mb-4">
                 <MessageSquare className="w-8 h-8" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">🌱 Join Our Thriving Plant Community!</h2>
-              <p className="text-gray-600 text-lg">Connect with 2,847+ passionate gardeners sharing tips, success stories, and growing together</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">🌱 Join the Conversation!</h2>
+              <p className="text-gray-600 text-lg">Sign in to create posts, comment, and vote on community discussions</p>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-green-100">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <MessageSquare className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Ask & Get Answers</h3>
-                  <p className="text-sm text-gray-600">Post your plant questions and get expert advice from experienced gardeners within hours</p>
-                </div>
-              </div>
-              
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-green-100">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Heart className="w-6 h-6 text-green-600" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Share Success Stories</h3>
-                  <p className="text-sm text-gray-600">Showcase your plant transformations and inspire others with your growing journey</p>
-                </div>
-              </div>
-              
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-green-100">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Users className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Find Local Gardeners</h3>
-                  <p className="text-sm text-gray-600">Connect with gardeners in your area for plant swaps, local tips, and friendship</p>
-                </div>
-              </div>
-            </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button size="lg" asChild className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
                 <Link to="/register">
@@ -260,7 +196,7 @@ const Community = () => {
                   </div>
                 ) : (
                   posts.map((post, index) => (
-                    <Card key={post._id} className={`${post.isPinned ? 'border-yellow-300 bg-yellow-50' : ''} ${!user && index >= 3 ? 'opacity-30 blur-sm pointer-events-none' : ''}`}>
+                    <Card key={post._id} className={`${(post as any).isPinned ? 'border-yellow-300 bg-yellow-50' : ''}`}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center space-x-2">
@@ -275,7 +211,7 @@ const Community = () => {
                             }`}>
                               {post.author.role === 'admin' ? 'Moderator' : 'Member'}
                             </span>
-                            {post.isPinned && (
+                            {(post as any).isPinned && (
                               <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
                                 Pinned
                               </span>
@@ -299,26 +235,49 @@ const Community = () => {
                         
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-4">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-red-500 hover:text-red-600"
-                              onClick={() => handleLikePost(post._id)}
-                            >
-                              <Heart className="w-4 h-4 mr-1" />
-                              {post.likes}
-                            </Button>
-                            <Button variant="ghost" size="sm" className="text-blue-500 hover:text-blue-600">
-                              <MessageCircle className="w-4 h-4 mr-1" />
-                              {post.comments}
-                            </Button>
+                            <div className="flex items-center">
+                              <VoteButton
+                                postId={post._id}
+                                initialScore={post.likes}
+                                initialUserVote={null}
+                                disabled={true} // Disable voting for mock data
+                                onVoteChange={(newScore, newVote) => {
+                                  // Update local state for UI feedback
+                                  setPosts(prevPosts =>
+                                    prevPosts.map(p =>
+                                      p._id === post._id ? { ...p, likes: newScore } : p
+                                    )
+                                  );
+                                }}
+                              />
+                            </div>
+                            <RoleGuard roles={['user', 'admin']} fallback={
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-500 hover:text-blue-600"
+                                onClick={() => alert('Please sign in to comment on posts')}
+                              >
+                                <MessageCircle className="w-4 h-4 mr-1" />
+                                {post.comments}
+                              </Button>
+                            }>
+                              <Button variant="ghost" size="sm" className="text-blue-500 hover:text-blue-600">
+                                <MessageCircle className="w-4 h-4 mr-1" />
+                                {post.comments}
+                              </Button>
+                            </RoleGuard>
                           </div>
                           
-                          <RoleGuard roles={['user', 'admin']}>
-                            <Button variant="ghost" size="sm">
-                              Reply
-                            </Button>
-                          </RoleGuard>
+                            <RoleGuard roles={['user', 'admin']} fallback={
+                              <Button variant="ghost" size="sm" onClick={() => alert('Please sign in to reply to posts')}>
+                                Reply
+                              </Button>
+                            }>
+                              <Button variant="ghost" size="sm">
+                                Reply
+                              </Button>
+                            </RoleGuard>
                         </div>
                       </CardContent>
                     </Card>
@@ -418,26 +377,6 @@ const Community = () => {
           </div>
         </div>
       </main>
-      {mounted && !user && posts.length > 3 && createPortal(
-        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-auto bg-black/40">
-          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full mx-4 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-full mb-4 mx-auto">
-              <MessageSquare className="w-8 h-8" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Want to see more?</h2>
-            <p className="text-gray-600 mb-6">Sign in to view all community posts, share your gardening experiences, vote on topics, and join the conversation!</p>
-
-            <div className="flex justify-center gap-3">
-              <Button size="lg" asChild className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
-                <Link to="/login">Sign In</Link>
-              </Button>
-              <Button variant="outline" size="lg" asChild>
-                <Link to="/register">Sign Up</Link>
-              </Button>
-            </div>
-          </div>
-        </div>, document.body)
-      }
       <Footer />
     </div>
   );

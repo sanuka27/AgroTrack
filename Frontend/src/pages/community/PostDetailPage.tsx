@@ -118,12 +118,12 @@ export default function PostDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="min-h-screen bg-background text-foreground py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-8 bg-muted rounded w-3/4"></div>
+            <div className="h-4 bg-muted rounded w-1/2"></div>
+            <div className="h-64 bg-muted rounded"></div>
           </div>
         </div>
       </div>
@@ -132,18 +132,18 @@ export default function PostDetailPage() {
 
   if (error || !post) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+      <div className="min-h-screen bg-background text-foreground py-8">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-red-800 mb-2">
               Post Not Found
             </h2>
-            <p className="text-red-600 dark:text-red-300 mb-4">
+            <p className="text-red-600 mb-4">
               {error || 'The post you are looking for does not exist or has been deleted.'}
             </p>
             <button
               onClick={() => navigate('/community')}
-              className="flex items-center gap-2 text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100"
+              className="flex items-center gap-2 text-red-700 hover:text-red-900"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Community
@@ -159,19 +159,19 @@ export default function PostDetailPage() {
                           post.author?.role === 'admin';
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-background text-foreground py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back button */}
         <button
           onClick={() => navigate('/community')}
-          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-6 transition-colors"
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Community
         </button>
 
         {/* Post */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <div className="bg-card rounded-lg shadow-sm border border-border p-6 mb-6">
           <div className="flex gap-4">
             {/* Vote buttons */}
             <VoteButton
@@ -187,7 +187,7 @@ export default function PostDetailPage() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <h1 className="text-2xl font-bold text-foreground">
                       {post.title}
                     </h1>
                     {post.isSolved && (
@@ -196,7 +196,7 @@ export default function PostDetailPage() {
                   </div>
 
                   {/* Author & meta */}
-                  <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1.5">
                       {post.author?.avatarUrl ? (
                         <img
@@ -207,16 +207,16 @@ export default function PostDetailPage() {
                       ) : (
                         <User className="w-5 h-5" />
                       )}
-                      <span className="font-medium text-gray-700 dark:text-gray-300">
+                      <span className="font-medium text-foreground">
                         {post.author?.name || 'Unknown'}
                       </span>
                       {post.author?.role === 'mod' && (
-                        <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs font-medium">
+                        <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
                           MOD
                         </span>
                       )}
                       {post.author?.role === 'admin' && (
-                        <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-xs font-medium">
+                        <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">
                           ADMIN
                         </span>
                       )}
@@ -241,8 +241,8 @@ export default function PostDetailPage() {
                       onClick={handleToggleSolved}
                       className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                         post.isSolved
-                          ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                          : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
+                          ? 'bg-muted text-foreground hover:bg-muted/90'
+                          : 'bg-green-100 text-green-700 hover:bg-green-200'
                       }`}
                     >
                       <CheckCircle className="w-4 h-4" />
@@ -252,7 +252,7 @@ export default function PostDetailPage() {
                   {user && (
                     <button
                       onClick={() => setShowReportModal(true)}
-                      className="p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      className="p-2 text-muted-foreground hover:text-red-600 rounded-lg hover:bg-card-foreground/5 transition-colors"
                       aria-label="Report post"
                     >
                       <Flag className="w-4 h-4" />
@@ -269,7 +269,7 @@ export default function PostDetailPage() {
               )}
 
               {/* Body */}
-              <div className="prose dark:prose-invert max-w-none mb-4">
+              <div className="prose max-w-none mb-4 text-card-foreground">
                 <ReactMarkdown>{post.bodyMarkdown}</ReactMarkdown>
               </div>
 
@@ -292,10 +292,10 @@ export default function PostDetailPage() {
         </div>
 
         {/* Comments Section */}
-        <div id="comments" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div id="comments" className="bg-card rounded-lg shadow-sm border border-border p-6">
           <div className="flex items-center gap-2 mb-6">
-            <MessageSquare className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <MessageSquare className="w-5 h-5 text-muted-foreground" />
+            <h2 className="text-xl font-semibold text-foreground">
               Comments ({post.commentCount})
             </h2>
           </div>

@@ -101,14 +101,14 @@ export default function PostEditor() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-background text-foreground py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="bg-card rounded-lg shadow-soft border border-border">
+          <div className="p-6 border-b border-border">
+            <h1 className="text-2xl font-bold text-foreground">
               Create New Post
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Share your questions, insights, or tips with the community. Use hashtags like #pest-control or #organic to categorize your post.
             </p>
           </div>
@@ -116,7 +116,7 @@ export default function PostEditor() {
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             {/* Title */}
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="title" className="block text-sm font-medium text-muted-foreground mb-2">
                 Title
               </label>
               <input
@@ -124,12 +124,12 @@ export default function PostEditor() {
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-card text-card-foreground"
                 placeholder="What's your question or topic?"
                 maxLength={200}
                 required
               />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {title.length}/200 characters
               </p>
             </div>
@@ -137,13 +137,13 @@ export default function PostEditor() {
             {/* Body with Preview Toggle */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label htmlFor="body" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label htmlFor="body" className="block text-sm font-medium text-muted-foreground">
                   Post Body
                 </label>
                 <button
                   type="button"
                   onClick={() => setIsPreview(!isPreview)}
-                  className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
+                  className="flex items-center gap-1 text-sm text-primary hover:text-primary-hover"
                 >
                   {isPreview ? (
                     <>
@@ -160,7 +160,7 @@ export default function PostEditor() {
               </div>
 
               {isPreview ? (
-                <div className="min-h-[200px] p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900/50 prose dark:prose-invert max-w-none">
+                <div className="min-h-[200px] p-4 border border-border rounded-lg bg-card prose max-w-none text-card-foreground">
                   <ReactMarkdown>
                     {bodyMarkdown || '*Nothing to preview yet...*'}
                   </ReactMarkdown>
@@ -170,20 +170,20 @@ export default function PostEditor() {
                   id="body"
                   value={bodyMarkdown}
                   onChange={(e) => setBodyMarkdown(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white font-mono text-sm"
+                  className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-card text-card-foreground font-mono text-sm"
                   placeholder="Describe your question or share your knowledge... (Markdown supported)"
                   rows={12}
                   required
                 />
               )}
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Supports Markdown formatting. Add hashtags like #pest-control to categorize.
               </p>
             </div>
 
             {/* Image Upload */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Images (optional)
               </label>
               <div className="flex flex-wrap gap-3">
@@ -192,7 +192,7 @@ export default function PostEditor() {
                     <img
                       src={img.url}
                       alt={`Upload ${idx + 1}`}
-                      className="w-24 h-24 object-cover rounded-lg border-2 border-gray-300 dark:border-gray-600"
+                      className="w-24 h-24 object-cover rounded-lg border-2 border-border"
                     />
                     <button
                       type="button"
@@ -207,16 +207,16 @@ export default function PostEditor() {
                 
                 {/* Upload progress indicators */}
                 {Object.entries(uploadProgress).map(([index, progress]) => (
-                  <div key={`progress-${index}`} className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-green-300 dark:border-green-600 rounded-lg">
-                    <Loader2 className="w-6 h-6 text-green-600 animate-spin mb-1" />
-                    <span className="text-xs text-green-600">{progress}%</span>
+                  <div key={`progress-${index}`} className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg">
+                    <Loader2 className="w-6 h-6 text-muted-foreground animate-spin mb-1" />
+                    <span className="text-xs text-muted-foreground">{progress}%</span>
                   </div>
                 ))}
                 
                 {images.length < 5 && !isUploading && (
-                  <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-green-500 dark:hover:border-green-400 transition-colors">
-                    <Image className="w-6 h-6 text-gray-400" />
-                    <span className="text-xs text-gray-500 mt-1">Add</span>
+                  <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary transition-colors">
+                    <Image className="w-6 h-6 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground mt-1">Add</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -227,31 +227,31 @@ export default function PostEditor() {
                   </label>
                 )}
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Upload up to 5 images (PNG, JPG, GIF). Images will be compressed automatically.
               </p>
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-800">{error}</p>
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between pt-4 border-t border-border">
               <button
                 type="button"
                 onClick={() => navigate('/community')}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="px-4 py-2 text-foreground hover:bg-card-foreground/5 rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || isUploading}
-                className="flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
+                className="flex items-center gap-2 px-6 py-2 bg-primary hover:bg-primary-hover disabled:bg-muted text-primary-foreground rounded-lg transition-colors"
               >
                 {isSubmitting ? (
                   <>
@@ -270,33 +270,33 @@ export default function PostEditor() {
         </div>
 
         {/* Markdown Guide */}
-        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+        <div className="mt-6 bg-card rounded-lg shadow-sm border border-border p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-3">
             Markdown Formatting Guide
           </h3>
-          <div className="grid grid-cols-2 gap-4 text-xs text-gray-600 dark:text-gray-400">
+          <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
             <div>
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">**bold**</code>
+              <code className="bg-muted px-1 py-0.5 rounded">**bold**</code>
               <span className="ml-2">Bold text</span>
             </div>
             <div>
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">*italic*</code>
+              <code className="bg-muted px-1 py-0.5 rounded">*italic*</code>
               <span className="ml-2">Italic text</span>
             </div>
             <div>
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded"># Heading</code>
+              <code className="bg-muted px-1 py-0.5 rounded"># Heading</code>
               <span className="ml-2">Large heading</span>
             </div>
             <div>
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">- List item</code>
+              <code className="bg-muted px-1 py-0.5 rounded">- List item</code>
               <span className="ml-2">Bullet list</span>
             </div>
             <div>
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">`code`</code>
+              <code className="bg-muted px-1 py-0.5 rounded">`code`</code>
               <span className="ml-2">Inline code</span>
             </div>
             <div>
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">#hashtag</code>
+              <code className="bg-muted px-1 py-0.5 rounded">#hashtag</code>
               <span className="ml-2">Auto-categorize</span>
             </div>
           </div>
