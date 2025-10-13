@@ -2,17 +2,9 @@
 
 <div align="center">
 
-![AgroTrack Logo](https://img.shields.io/badge/AgroTrack-Smart_Gardening-22c55e?style=for-the-badge&logo=react&logoColor=white)
-![Version](https://img.shields.io/badge/version-1.0.0-blue?style=flat-square)
-![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
-![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)
-![React](https://img.shields.io/badge/React-18+-61dafb?style=flat-square&logo=react&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat-square&logo=mongodb&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white)
+**University Project - Full-Stack Web Application**
 
-**Transform your gardening experience with AI-powered plant care, disease detection, and community insights.**
-
-[🚀 Live Demo](#) • [� Documentation](#) • [🐛 Report Bug](https://github.com/sanuka27/AgroTrack/issues) • [✨ Request Feature](https://github.com/sanuka27/AgroTrack/issues)
+*AI-powered plant care, disease detection, and community platform built with React, Node.js, and MongoDB*
 
 ---
 
@@ -125,17 +117,17 @@ AgroTrack/
 ## 🚀 **Quick Start**
 
 ### **Prerequisites**
-- **Node.js** 18+ ([Download](https://nodejs.org/))
-- **MongoDB** Atlas account ([Sign up](https://www.mongodb.com/atlas))
-- **Redis** Cloud account ([Sign up](https://redis.com/try-free/))
-- **Firebase** project ([Console](https://console.firebase.google.com/))
-- **Google AI** API key ([Get key](https://makersuite.google.com/app/apikey))
+- **Node.js** 18+
+- **MongoDB** database
+- **Redis** instance
+- **Firebase** project
+- **Google AI** API key
 
 ### **Installation**
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/sanuka27/AgroTrack.git
+   git clone <repository-url>
    cd AgroTrack
    ```
 
@@ -317,16 +309,12 @@ node test-apis.js
    npm run preview  # Test production build locally
    ```
 
-### **Recommended Hosting**
-
-| Service | Frontend | Backend | Database |
-|---------|----------|---------|----------|
-| **Vercel** | ✅ Excellent | ❌ | ❌ |
-| **Netlify** | ✅ Excellent | ❌ | ❌ |
-| **Railway** | ❌ | ✅ Excellent | ❌ |
-| **Render** | ❌ | ✅ Good | ❌ |
-| **MongoDB Atlas** | ❌ | ❌ | ✅ Excellent |
-| **Redis Cloud** | ❌ | ❌ | ✅ Good |
+### **Deployment Options**
+For university projects, consider deploying to:
+- Local development environment
+- University-provided hosting
+- Free tier cloud services (with instructor approval)
+- Docker containers for portability
 
 ### **Environment Variables for Production**
 - Set `NODE_ENV=production`
@@ -450,30 +438,33 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 ---
 
-## 🙏 **Acknowledgments**
+## 🙏 **Technologies & Libraries**
+
+This project utilizes the following technologies and libraries:
 
 - **Google Gemini AI** for plant analysis capabilities
-- **MongoDB Atlas** for reliable database hosting
-- **Firebase** for authentication and storage
-- **Shadcn/ui** for beautiful UI components
-- **Tailwind CSS** for utility-first styling
+- **MongoDB** for database management
+- **Redis** for caching and session management
+- **Firebase** for authentication and file storage
+- **React & TypeScript** for frontend development
+- **Node.js & Express** for backend API
+- **Tailwind CSS & Shadcn/ui** for UI components
 
 ---
 
-## 📞 **Support**
+## 📞 **Project Information**
 
-- 📧 **Email**: support@agrotrack.com
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/sanuka27/AgroTrack/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/sanuka27/AgroTrack/discussions)
-- 📖 **Documentation**: [Wiki](https://github.com/sanuka27/AgroTrack/wiki)
+**University Project - Full-Stack Development Course**
+
+For questions or support regarding this project, please contact your course instructor or project supervisor.
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for gardeners, by gardeners**
+**AgroTrack - University Project**
 
-⭐ **Star this repo** if you find it helpful!
+*Built for educational purposes*
 
 [⬆️ Back to Top](#-agrotrack---ai-powered-smart-gardening-platform)
 
