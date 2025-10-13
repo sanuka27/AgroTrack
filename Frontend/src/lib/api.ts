@@ -145,4 +145,19 @@ export const clearAuth = () => {
     .forEach(k => localStorage.removeItem(k));
 };
 
+/**
+ * Analyze plant health from image and/or description
+ */
+export const analyzePlant = async (formData: FormData) => {
+  const response = await fetch(`${API_BASE_URL}/ai/plant/analyze`, {
+    method: 'POST',
+    body: formData,
+  });
+  const json = await response.json();
+  if (!json.success) {
+    throw new Error(json.message || 'Analysis failed');
+  }
+  return json.data;
+};
+
 export default api;
