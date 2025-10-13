@@ -13,7 +13,7 @@ interface AddPlantModalProps {
   open: boolean;
   initial?: Partial<Plant>;
   onCancel: () => void;
-  onSubmit: (plant: Plant) => void;
+  onSubmit: (plant: Plant, imageFile?: File | null) => void;
 }
 
 export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPlantModalProps) {
@@ -140,7 +140,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
       growthRatePctThisMonth: parseInt(formData.growthRatePctThisMonth) || 0
     };
 
-    onSubmit(plantData);
+  onSubmit(plantData, imageFile);
     
     // Show success toast
     toast({

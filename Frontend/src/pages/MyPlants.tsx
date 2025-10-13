@@ -15,7 +15,8 @@ import { exportPlantsToCSV, exportPlantsToJSON } from "@/utils/exportUtils";
 import { BulkOperationsBar } from "@/components/BulkOperationsBar";
 import { useSearchDebounce } from "@/hooks/use-search";
 import { Leaf, Plus, Calendar, Droplets, Sun, Bell, TrendingUp, MessageSquare, CheckSquare, Square } from "lucide-react";
-import mockApi from "@/lib/mockApi";
+import api from '@/lib/api';
+import plantsApi from '@/lib/api/plants';
 
 // Helper function to map API category to frontend Category type
 const mapCategory = (apiCategory: string): Category => {
@@ -65,28 +66,28 @@ const MyPlants = () => {
   // Filtered and sorted plants
   const filteredPlants = filterAndSortPlants(plants, filters);
 
-  // Load plants from mock API on mount
+  // Load plants from backend API on mount
   useEffect(() => {
     const loadPlants = async () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await mockApi.plants.getAll();
-        // Convert API plant format to frontend Plant format
-        const convertedPlants: Plant[] = response.plants.map(apiPlant => ({
+        const resp = await api.get('/plants?limit=100');
+        const responsePlants = resp?.data?.data?.plants || resp?.data?.plants || [];
+        const convertedPlants: Plant[] = responsePlants.map((apiPlant: any) => ({
           id: apiPlant._id,
           name: apiPlant.name,
           category: mapCategory(apiPlant.category),
           sunlight: apiPlant.sunlightHours >= 8 ? "Full Sun" : apiPlant.sunlightHours >= 6 ? "Partial Sun" : "Low Light",
-          ageYears: undefined, // Not provided in API
+          ageYears: undefined,
           wateringEveryDays: apiPlant.wateringFrequency,
-          fertilizerEveryWeeks: undefined, // Not provided in API
+          fertilizerEveryWeeks: undefined,
           soil: apiPlant.soilType,
           notes: apiPlant.careInstructions,
           imageUrl: apiPlant.imageUrl,
-          lastWatered: undefined, // Not provided in API
-          health: "Good" as const, // Default health
-          growthRatePctThisMonth: undefined, // Not provided in API
+          lastWatered: apiPlant.lastWatered || undefined,
+          health: apiPlant.health || "Good",
+          growthRatePctThisMonth: apiPlant.growthRatePctThisMonth,
         }));
         setPlants(convertedPlants);
       } catch (err) {
@@ -101,42 +102,52 @@ const MyPlants = () => {
   }, []);
 
   // CRUD operations
-  const handleCreatePlant = async (newPlant: Plant) => {
+  const handleCreatePlant = async (newPlant: Plant, imageFile?: File | null) => {
     try {
-      // Convert frontend Plant to API format
-      const apiPlantData = {
-        name: newPlant.name,
-        scientificName: newPlant.name, // Use name as scientific name for now
-        description: newPlant.notes || '',
-        category: newPlant.category,
-        wateringFrequency: newPlant.wateringEveryDays,
-        sunlightHours: newPlant.sunlight === "Full Sun" ? 8 : newPlant.sunlight === "Partial Sun" ? 6 : 4,
-        temperature: { min: 15, max: 30 }, // Default values
-        humidity: 50, // Default value
-        soilType: newPlant.soil || 'Well-draining soil',
-        fertilizer: 'Balanced fertilizer',
-        commonIssues: [],
-        careInstructions: newPlant.notes || '',
-        imageUrl: newPlant.imageUrl || '/placeholder.svg',
-      };
+      // prepare payload; use FormData if image is present
+      let createdPlant: any = null;
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('name', newPlant.name);
+        formData.append('scientificName', newPlant.name);
+        formData.append('description', newPlant.notes || '');
+        formData.append('category', newPlant.category);
+        formData.append('wateringFrequency', String(newPlant.wateringEveryDays));
+        formData.append('sunlightHours', String(newPlant.sunlight === "Full Sun" ? 8 : newPlant.sunlight === "Partial Sun" ? 6 : 4));
+        formData.append('soilType', newPlant.soil || 'Well-draining soil');
+        formData.append('careInstructions', newPlant.notes || '');
+        formData.append('image', imageFile);
 
-      const createdPlant = await mockApi.plants.create(apiPlantData);
+        createdPlant = await plantsApi.createPlant(formData);
+      } else {
+        const payload = {
+          name: newPlant.name,
+          scientificName: newPlant.name,
+          description: newPlant.notes || '',
+          category: newPlant.category,
+          wateringFrequency: newPlant.wateringEveryDays,
+          sunlightHours: newPlant.sunlight === "Full Sun" ? 8 : newPlant.sunlight === "Partial Sun" ? 6 : 4,
+          soilType: newPlant.soil || 'Well-draining soil',
+          careInstructions: newPlant.notes || '',
+        };
+        createdPlant = await plantsApi.createPlant(payload as any);
+      }
 
-      // Convert back to frontend format and add to state
+      // Convert and add to state
       const frontendPlant: Plant = {
         id: createdPlant._id,
         name: createdPlant.name,
         category: mapCategory(createdPlant.category),
         sunlight: createdPlant.sunlightHours >= 8 ? "Full Sun" : createdPlant.sunlightHours >= 6 ? "Partial Sun" : "Low Light",
-        ageYears: undefined,
+        ageYears: createdPlant.ageYears,
         wateringEveryDays: createdPlant.wateringFrequency,
-        fertilizerEveryWeeks: undefined,
+        fertilizerEveryWeeks: createdPlant.fertilizerEveryWeeks,
         soil: createdPlant.soilType,
         notes: createdPlant.careInstructions,
         imageUrl: createdPlant.imageUrl,
-        lastWatered: undefined,
-        health: "Good" as const,
-        growthRatePctThisMonth: undefined,
+        lastWatered: createdPlant.lastWatered,
+        health: createdPlant.health || 'Good',
+        growthRatePctThisMonth: createdPlant.growthRatePctThisMonth,
       };
 
       setPlants(prev => [frontendPlant, ...prev]);
@@ -147,29 +158,45 @@ const MyPlants = () => {
     }
   };
 
-  const handleUpdatePlant = async (updatedPlant: Plant) => {
+  const handleUpdatePlant = async (updatedPlant: Plant, imageFile?: File | null) => {
     try {
-      // Convert frontend Plant to API format
-      const apiPlantData = {
-        name: updatedPlant.name,
-        scientificName: updatedPlant.name,
-        description: updatedPlant.notes || '',
-        category: updatedPlant.category,
-        wateringFrequency: updatedPlant.wateringEveryDays,
-        sunlightHours: updatedPlant.sunlight === "Full Sun" ? 8 : updatedPlant.sunlight === "Partial Sun" ? 6 : 4,
-        temperature: { min: 15, max: 30 },
-        humidity: 50,
-        soilType: updatedPlant.soil || 'Well-draining soil',
-        fertilizer: 'Balanced fertilizer',
-        commonIssues: [],
-        careInstructions: updatedPlant.notes || '',
-        imageUrl: updatedPlant.imageUrl || '/placeholder.svg',
-      };
+      // Use FormData if image provided
+      let updated: any = null;
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('name', updatedPlant.name);
+        formData.append('scientificName', updatedPlant.name);
+        formData.append('description', updatedPlant.notes || '');
+        formData.append('category', updatedPlant.category);
+        formData.append('wateringFrequency', String(updatedPlant.wateringEveryDays));
+        formData.append('sunlightHours', String(updatedPlant.sunlight === "Full Sun" ? 8 : updatedPlant.sunlight === "Partial Sun" ? 6 : 4));
+        formData.append('soilType', updatedPlant.soil || 'Well-draining soil');
+        formData.append('careInstructions', updatedPlant.notes || '');
+        formData.append('image', imageFile);
 
-      await mockApi.plants.update(updatedPlant.id, apiPlantData);
-      setPlants(prev => prev.map(plant =>
-        plant.id === updatedPlant.id ? updatedPlant : plant
-      ));
+        updated = await plantsApi.updatePlant(updatedPlant.id, formData);
+      } else {
+        const payload = {
+          name: updatedPlant.name,
+          scientificName: updatedPlant.name,
+          description: updatedPlant.notes || '',
+          category: updatedPlant.category,
+          wateringFrequency: updatedPlant.wateringEveryDays,
+          sunlightHours: updatedPlant.sunlight === "Full Sun" ? 8 : updatedPlant.sunlight === "Partial Sun" ? 6 : 4,
+          soilType: updatedPlant.soil || 'Well-draining soil',
+          careInstructions: updatedPlant.notes || '',
+        };
+        updated = await plantsApi.updatePlant(updatedPlant.id, payload as any);
+      }
+
+      setPlants(prev => prev.map(plant => plant.id === updatedPlant.id ? {
+        ...plant,
+        name: updated.name,
+        imageUrl: updated.imageUrl || plant.imageUrl,
+        wateringEveryDays: updated.wateringFrequency,
+        soil: updated.soilType,
+        notes: updated.careInstructions,
+      } : plant));
     } catch (error) {
       console.error('Error updating plant:', error);
       // Fallback to local state update
@@ -181,7 +208,7 @@ const MyPlants = () => {
 
   const handleDeletePlant = async (plantId: string) => {
     try {
-      await mockApi.plants.delete(plantId);
+  await api.delete(`/plants/${plantId}`);
       setPlants(prev => prev.filter(plant => plant.id !== plantId));
     } catch (error) {
       console.error('Error deleting plant:', error);
@@ -206,8 +233,8 @@ const MyPlants = () => {
     if (!confirm(confirmMessage)) return;
 
     try {
-      // Delete each plant from API
-      const deletePromises = selectedItems.map(plant => mockApi.plants.delete(plant.id));
+  // Delete each plant from API
+  const deletePromises = selectedItems.map(plant => api.delete(`/plants/${plant.id}`));
       await Promise.all(deletePromises);
 
       // Remove from local state
@@ -289,11 +316,11 @@ const MyPlants = () => {
     setEditingPlant(null);
   };
 
-  const handleSubmitPlant = (plantData: Plant) => {
+  const handleSubmitPlant = (plantData: Plant, imageFile?: File | null) => {
     if (editingPlant) {
-      handleUpdatePlant(plantData);
+      handleUpdatePlant(plantData, imageFile);
     } else {
-      handleCreatePlant(plantData);
+      handleCreatePlant(plantData, imageFile);
     }
   };
   
