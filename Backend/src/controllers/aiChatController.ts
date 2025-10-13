@@ -13,10 +13,55 @@ import { v4 as uuidv4 } from 'uuid';
 import { ChatMessage } from '../models/ChatMessage';
 import { logger } from '../config/logger';
 import { generatePlantCareAdvice } from '../ai/gemini';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface AuthRequest extends Request {
   user?: any;
 }
+
+const GEMINI_REST_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const MODEL = process.env.GEMINI_MODEL || 'models/gemini-2.5-flash';
+
+/**
+ * GET /api/ai/list-models
+ * List available Gemini models using the REST API (no SDK required)
+ */
+export const listModels = async (_req: Request, res: Response): Promise<void> => {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) {
+    res.status(500).json({ success: false, message: 'GEMINI_API_KEY is missing in .env' });
+    return;
+  }
+
+  try {
+    const url = `${GEMINI_REST_BASE}/models?key=${encodeURIComponent(key)}`;
+    const resp = await fetch(url);
+    const text = await resp.text();
+    if (!resp.ok) {
+      res.status(resp.status).json({ success: false, message: 'Failed to list models from Gemini', details: text });
+      return;
+    }
+
+    const json = JSON.parse(text);
+    const models = (json.models ?? []).map((m: any) => ({
+      name: m?.name,
+      displayName: m?.displayName,
+      version: m?.version,
+      supported: m?.supportedGenerationMethods ?? [],
+      inputTokenLimit: m?.inputTokenLimit,
+      outputTokenLimit: m?.outputTokenLimit,
+    }));
+
+    res.json({ success: true, models, nextPageToken: json.nextPageToken });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err?.message ?? 'Unexpected error while listing models' });
+  }
+};
+
+export const ping = async (_req: Request, res: Response): Promise<void> => {
+  res.json({ success: true, where: '/api/ai/ping' });
+};
 
 /**
  * Send a message to AI assistant
@@ -379,3 +424,116 @@ export const startNewSession = async (req: AuthRequest, res: Response): Promise<
     });
   }
 };
+
+/**
+ * POST /api/ai/plant/analyze
+ * Analyze plant health from image and/or description
+ */
+export const analyzePlant = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const description = (req.body?.description || "").toString().trim();
+    const file = (req as any).file;
+
+    if (!description && !file) {
+      res.status(400).json({ success: false, message: 'Provide a description or a photo.' });
+      return;
+    }
+
+    const parts: any[] = [];
+    if (file) {
+      parts.push({
+        inlineData: {
+          data: file.buffer.toString('base64'),
+          mimeType: file.mimetype || 'image/jpeg',
+        },
+      });
+    }
+    parts.push({
+      text: `Return ONLY pure JSON (no code fences) with this exact shape:
+{
+  "likelyDiseases": [{"name": string, "confidence": "low"|"medium"|"high", "why": string}],
+  "urgency": "low"|"medium"|"high",
+  "careSteps": [string],
+  "prevention": [string]
+}
+If information is missing, return an empty array or a sensible default.
+User description: ${description}`,
+    });
+
+    const model = genAI.getGenerativeModel({ model: MODEL });
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts }],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 2048,
+        responseMimeType: 'application/json',
+      },
+    });
+
+    // --- robust response extraction
+    const resp = result?.response;
+    let text = '';
+    if (resp && typeof resp.text === 'function') {
+      text = resp.text();
+    } else if (resp?.candidates?.length) {
+      text = resp.candidates[0]?.content?.parts?.map((p: any) => p.text).join('') || '';
+    }
+
+    if (!text) {
+      res.status(502).json({ success: false, message: 'No text returned by Gemini.' });
+      return;
+    }
+
+    let data: any;
+    try {
+      data = extractJson(text);
+    } catch (e) {
+      // keep raw text for debugging if parse still fails
+      res.json({ success: true, model: MODEL, data: { rawText: text } });
+      return;
+    }
+
+    res.json({
+      success: true,
+      model: MODEL,
+      data,
+    });
+  } catch (err: any) {
+    logger.error('[plant/analyze] error:', err?.message || err);
+    res.status(500).json({ success: false, message: 'AI analysis failed', error: err?.message });
+  }
+};
+
+// --- helper: scrub + parse JSON text safely
+function toPlainQuotes(s: string) {
+  return s.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+}
+function stripCodeFences(s: string) {
+  return s.replace(/```json\s*([\s\S]*?)```/gi, '$1').replace(/```\s*([\s\S]*?)```/gi, '$1');
+}
+function stripOutsideBraces(s: string) {
+  const first = s.indexOf('{');
+  const last = s.lastIndexOf('}');
+  return first >= 0 && last > first ? s.slice(first, last + 1) : s;
+}
+function stripTrailingCommas(s: string) {
+  // remove trailing commas before } or ]
+  return s.replace(/,\s*([}\]])/g, '$1');
+}
+function parseMaybeDoubleEncoded(s: string) {
+  // If it looks like a quoted JSON string, unquote and parse again
+  const looksStringified = /^\s*"/.test(s.trim());
+  if (looksStringified) {
+    const once = JSON.parse(s);
+    return typeof once === 'string' ? JSON.parse(once) : once;
+  }
+  return JSON.parse(s);
+}
+function extractJson(text: string) {
+  let t = text || '';
+  t = toPlainQuotes(t);
+  t = stripCodeFences(t);
+  t = stripOutsideBraces(t);
+  t = stripTrailingCommas(t);
+  return parseMaybeDoubleEncoded(t);
+}
