@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
+import api from '@/lib/api';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, Upload, Image as ImageIcon } from 'lucide-react';
 import { Plant, Category, Sunlight, Health } from '@/types/plant';
 import { useToast } from '@/hooks/use-toast';
+import { suggestPlantDefaults, PlantSuggestion } from '@/lib/api/agroAi';
 
 interface AddPlantModalProps {
   mode: "create" | "edit";
@@ -37,6 +38,134 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [isValid, setIsValid] = useState(false);
+  // AI suggestion state
+  const [aiSuggestion, setAiSuggestion] = useState<any | null>(null);
+  const [didAutoApply, setDidAutoApply] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const MAX_RETRIES = 2;
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiErr, setAiErr] = useState<string | null>(null);
+
+  // Helpers: normalize common sunlight phrases to our select options
+  const normalizeSunlight = (s?: string | null): Sunlight | undefined => {
+    if (!s) return undefined;
+    const t = s.toLowerCase();
+    if (t.includes('full')) return 'Full Sun' as Sunlight;
+    if (t.includes('partial') || t.includes('bright') || t.includes('indirect')) return 'Partial Sun' as Sunlight;
+    if (t.includes('low')) return 'Low Light' as Sunlight;
+    if (t.includes('shade')) return 'Shade' as Sunlight;
+    return undefined;
+  };
+
+  // simple debounce for name field
+  const [debouncedName, setDebouncedName] = useState(formData.name);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedName(formData.name), 650);
+    return () => clearTimeout(t);
+  }, [formData.name]);
+
+  // Fetch AI suggestion when debounced name changes; moved to useCallback to support retry and manual triggers
+  const fetchSuggestion = React.useCallback(async (name: string, attempt = 0) => {
+    if (!name || name.trim().length < 3) return;
+    if (didAutoApply) return;
+    setAiLoading(true);
+    if (attempt > 0) setRetrying(true);
+    try {
+      console.debug('[AI] Requesting suggestion for:', name, 'attempt', attempt);
+      const response = await api.post('/ai/plant/suggest', { name });
+      const json = response.data;
+      console.debug('[AI] Received response:', json);
+
+      if (json?.success && json.data) {
+        setAiSuggestion(json.data);
+        // Auto-fill ALL fields immediately (user just wants help)
+        setFormData(prev => {
+          const aiSunRaw = (json.data.sunlight ?? json.data.sunlightRequirements) as string | undefined;
+          const normalizedSun = normalizeSunlight(aiSunRaw) ?? (aiSunRaw as Sunlight) ?? prev.sunlight;
+          return ({
+            ...prev,
+            wateringEveryDays: json.data.wateringFrequencyDays !== undefined && json.data.wateringFrequencyDays !== null ? String(json.data.wateringFrequencyDays) : prev.wateringEveryDays,
+            sunlight: normalizedSun,
+            fertilizerEveryWeeks: json.data.fertilizerScheduleWeeks !== undefined && json.data.fertilizerScheduleWeeks !== null ? String(json.data.fertilizerScheduleWeeks) : prev.fertilizerEveryWeeks,
+            soil: json.data.soilType ?? prev.soil,
+            category: (json.data.category as Category) ?? prev.category,
+            notes: json.data.notes ?? prev.notes,
+          });
+        });
+
+        // If key numeric fields are missing, consider retrying
+        const missing = (json.data.wateringFrequencyDays === null || json.data.wateringFrequencyDays === undefined)
+          || (json.data.fertilizerScheduleWeeks === null || json.data.fertilizerScheduleWeeks === undefined)
+          || !json.data.notes || String(json.data.notes).trim().length < 8;
+        if (missing && attempt < MAX_RETRIES) {
+          console.debug('[AI] Response incomplete, retrying...', attempt);
+          await new Promise(r => setTimeout(r, 700 + attempt * 300));
+          return fetchSuggestion(name, attempt + 1);
+        }
+
+      } else if (json?.success && json?.rawText) {
+        // Backend returned rawText (fallback). Try to heuristically parse it.
+        const raw = String(json.rawText || '');
+        const daysMatch = raw.match(/(\d+)\s*(?:day|days)\b/i);
+        const weeksMatch = raw.match(/(\d+)\s*(?:week|weeks)\b/i);
+        const sunlightMatch = raw.match(/(full sun|partial sun|partial shade|low light|shade|bright indirect|bright indirect light|bright light|indirect light)/i);
+        const soilMatch = raw.match(/(well[- ]draining[\w\- ]+|potting mix|loam|sandy|clay|peat|well draining)/i);
+        const categoryMatch = raw.match(/(indoor|outdoor|succulent|herb|flower|tree|houseplant|garden)/i);
+
+        const parsedSuggestion = {
+          wateringFrequencyDays: daysMatch ? Number(daysMatch[1]) : null,
+          sunlightRequirements: sunlightMatch ? sunlightMatch[1] : undefined,
+          fertilizerScheduleWeeks: weeksMatch ? Number(weeksMatch[1]) : null,
+          soilType: soilMatch ? soilMatch[1] : undefined,
+          category: categoryMatch ? categoryMatch[1] : undefined,
+          notes: raw,
+        };
+
+        console.debug('[AI] Parsed fallback suggestion:', parsedSuggestion);
+        setAiSuggestion(parsedSuggestion);
+        // Auto-fill all fields immediately
+        setFormData(prev => {
+          const aiSunRaw = (parsedSuggestion.sunlight ?? parsedSuggestion.sunlightRequirements) as string | undefined;
+          const normalizedSun = normalizeSunlight(aiSunRaw) ?? (aiSunRaw as Sunlight) ?? prev.sunlight;
+          return ({
+            ...prev,
+            wateringEveryDays: parsedSuggestion.wateringFrequencyDays !== undefined && parsedSuggestion.wateringFrequencyDays !== null ? String(parsedSuggestion.wateringFrequencyDays) : prev.wateringEveryDays,
+            sunlight: normalizedSun,
+            fertilizerEveryWeeks: parsedSuggestion.fertilizerScheduleWeeks !== undefined && parsedSuggestion.fertilizerScheduleWeeks !== null ? String(parsedSuggestion.fertilizerScheduleWeeks) : prev.fertilizerEveryWeeks,
+            soil: parsedSuggestion.soilType ?? prev.soil,
+            category: (parsedSuggestion.category as Category) ?? prev.category,
+            notes: parsedSuggestion.notes ?? prev.notes,
+          });
+        });
+
+        // If parsed values are missing (e.g., raw was truncated), retry
+        const missing = (parsedSuggestion.wateringFrequencyDays === null || parsedSuggestion.wateringFrequencyDays === undefined)
+          || (parsedSuggestion.fertilizerScheduleWeeks === null || parsedSuggestion.fertilizerScheduleWeeks === undefined)
+          || !parsedSuggestion.notes || String(parsedSuggestion.notes).trim().length < 8;
+        if (missing && attempt < MAX_RETRIES) {
+          console.debug('[AI] Parsed fallback incomplete, retrying...', attempt);
+          await new Promise(r => setTimeout(r, 700 + attempt * 300));
+          return fetchSuggestion(name, attempt + 1);
+        }
+      }
+
+    } catch (err) {
+      console.warn('[AI] Suggestion request failed', err);
+      toast({
+        title: 'AI suggestion failed',
+        description: 'Unable to fetch suggestions. See console for details.',
+      });
+    } finally {
+      setRetrying(false);
+      setAiLoading(false);
+    }
+  }, [didAutoApply, toast]);
+
+  // Call AI suggestions when modal is open (create or edit)
+  useEffect(() => {
+    if (open) fetchSuggestion(debouncedName, 0);
+  }, [debouncedName, open, fetchSuggestion]);
 
   // Initialize form with initial data when modal opens
   useEffect(() => {
@@ -77,9 +206,11 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
   React.useEffect(() => {
     const isFormValid = 
       formData.name.trim() !== '' &&
-      formData.category !== '' &&
-      formData.sunlight !== '' &&
-      parseInt(formData.wateringEveryDays) >= 1;
+      formData.category.trim() !== '' &&
+      formData.sunlight.trim() !== '' &&
+      formData.wateringEveryDays.trim() !== '' &&
+      !isNaN(Number(formData.wateringEveryDays)) &&
+      Number(formData.wateringEveryDays) >= 1;
     setIsValid(isFormValid);
   }, [formData]);
 
@@ -127,17 +258,17 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
     const plantData: Plant = {
       id: mode === 'edit' && initial?.id ? initial.id : crypto.randomUUID(),
       name: formData.name.trim(),
-      category: formData.category as Category,
-      sunlight: formData.sunlight as Sunlight,
-      ageYears: formData.ageYears ? parseInt(formData.ageYears) : undefined,
-      wateringEveryDays: parseInt(formData.wateringEveryDays),
-      fertilizerEveryWeeks: formData.fertilizerEveryWeeks ? parseInt(formData.fertilizerEveryWeeks) : undefined,
+      category: formData.category.trim() as Category,
+      sunlight: formData.sunlight.trim() as Sunlight,
+      ageYears: formData.ageYears && !isNaN(Number(formData.ageYears)) ? Number(formData.ageYears) : undefined,
+      wateringEveryDays: Number(formData.wateringEveryDays),
+      fertilizerEveryWeeks: formData.fertilizerEveryWeeks && !isNaN(Number(formData.fertilizerEveryWeeks)) ? Number(formData.fertilizerEveryWeeks) : undefined,
       soil: formData.soil.trim() || undefined,
       notes: formData.notes.trim() || undefined,
       imageUrl: imagePreview || (mode === 'edit' && initial?.imageUrl ? initial.imageUrl : undefined),
       lastWatered: mode === 'edit' && initial?.lastWatered ? initial.lastWatered : null,
       health: formData.health as Health,
-      growthRatePctThisMonth: parseInt(formData.growthRatePctThisMonth) || 0
+      growthRatePctThisMonth: formData.growthRatePctThisMonth && !isNaN(Number(formData.growthRatePctThisMonth)) ? Number(formData.growthRatePctThisMonth) : 0
     };
 
   onSubmit(plantData, imageFile);
@@ -206,6 +337,23 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
               className="w-full"
               required
             />
+              <div className="mt-2">
+                {aiLoading && (
+                  <div className="text-sm text-emerald-600 flex items-center gap-2">
+                    <span className="inline-block w-4 h-4 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></span>
+                    AI is analyzing and filling suggestions...
+                  </div>
+                )}
+                {!aiLoading && aiSuggestion && (
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm text-emerald-600">✓ Fields auto-filled by AI based on "{formData.name}"</div>
+                    <Button size="sm" variant="outline" onClick={() => fetchSuggestion(formData.name, 0)} disabled={aiLoading || retrying}>
+                      {retrying ? 'Retrying...' : 'Regenerate AI suggestion'}
+                    </Button>
+                  </div>
+                )}
+                {/* Debug JSON panel removed to simplify UI for end users */}
+              </div>
           </div>
 
           {/* Category and Sunlight */}
@@ -214,36 +362,28 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
               <Label htmlFor="plant-category" className="text-sm font-medium text-gray-700">
                 Category *
               </Label>
-              <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value as Category)}>
-                <SelectTrigger id="plant-category">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Indoor">Indoor</SelectItem>
-                  <SelectItem value="Outdoor">Outdoor</SelectItem>
-                  <SelectItem value="Succulent">Succulent</SelectItem>
-                  <SelectItem value="Herb">Herb</SelectItem>
-                  <SelectItem value="Flower">Flower</SelectItem>
-                  <SelectItem value="Tree">Tree</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="plant-category"
+                value={formData.category}
+                onChange={(e) => handleInputChange('category', e.target.value)}
+                placeholder="e.g., Indoor, Outdoor, Herb"
+                className="w-full bg-gray-50"
+                readOnly={aiLoading}
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="plant-sunlight" className="text-sm font-medium text-gray-700">
                 Sunlight Requirements *
               </Label>
-              <Select value={formData.sunlight} onValueChange={(value) => handleInputChange('sunlight', value as Sunlight)}>
-                <SelectTrigger id="plant-sunlight">
-                  <SelectValue placeholder="Select sunlight needs" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Full Sun">Full Sun</SelectItem>
-                  <SelectItem value="Partial Sun">Partial Sun</SelectItem>
-                  <SelectItem value="Low Light">Low Light</SelectItem>
-                  <SelectItem value="Shade">Shade</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="plant-sunlight"
+                value={formData.sunlight}
+                onChange={(e) => handleInputChange('sunlight', e.target.value)}
+                placeholder="e.g., Full Sun, Partial Sun"
+                className="w-full bg-gray-50"
+                readOnly={aiLoading}
+              />
             </div>
           </div>
 
@@ -255,12 +395,12 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
               </Label>
               <Input
                 id="plant-age"
-                type="number"
-                min="0"
-                step="0.5"
+                type="text"
                 value={formData.ageYears}
                 onChange={(e) => handleInputChange('ageYears', e.target.value)}
                 placeholder="e.g., 2"
+                className="w-full bg-gray-50"
+                readOnly={aiLoading}
               />
             </div>
 
@@ -270,11 +410,12 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
               </Label>
               <Input
                 id="watering-days"
-                type="number"
-                min="1"
+                type="text"
                 value={formData.wateringEveryDays}
                 onChange={(e) => handleInputChange('wateringEveryDays', e.target.value)}
-                placeholder="7"
+                placeholder="e.g., 7"
+                className="w-full bg-gray-50"
+                readOnly={aiLoading}
                 required
               />
             </div>
@@ -288,11 +429,12 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
               </Label>
               <Input
                 id="fertilizer-weeks"
-                type="number"
-                min="1"
+                type="text"
                 value={formData.fertilizerEveryWeeks}
                 onChange={(e) => handleInputChange('fertilizerEveryWeeks', e.target.value)}
                 placeholder="e.g., 4"
+                className="w-full bg-gray-50"
+                readOnly={aiLoading}
               />
             </div>
 
@@ -305,6 +447,8 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
                 value={formData.soil}
                 onChange={(e) => handleInputChange('soil', e.target.value)}
                 placeholder="e.g., Well-draining potting mix"
+                className="w-full bg-gray-50"
+                readOnly={aiLoading}
               />
             </div>
           </div>
@@ -315,18 +459,13 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
               <Label htmlFor="plant-health" className="text-sm font-medium text-gray-700">
                 Health Status
               </Label>
-              <Select value={formData.health} onValueChange={(value) => handleInputChange('health', value as Health)}>
-                <SelectTrigger id="plant-health">
-                  <SelectValue placeholder="Select health status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Excellent">Excellent</SelectItem>
-                  <SelectItem value="Good">Good</SelectItem>
-                  <SelectItem value="Needs light">Needs light</SelectItem>
-                  <SelectItem value="Needs water">Needs water</SelectItem>
-                  <SelectItem value="Attention">Attention</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="plant-health"
+                value={formData.health}
+                onChange={(e) => handleInputChange('health', e.target.value)}
+                placeholder="e.g., Good"
+                className="w-full bg-gray-50"
+              />
             </div>
 
             <div className="space-y-2">
@@ -335,10 +474,11 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
               </Label>
               <Input
                 id="growth-rate"
-                type="number"
+                type="text"
                 value={formData.growthRatePctThisMonth}
                 onChange={(e) => handleInputChange('growthRatePctThisMonth', e.target.value)}
                 placeholder="0"
+                className="w-full bg-gray-50"
               />
             </div>
           </div>
