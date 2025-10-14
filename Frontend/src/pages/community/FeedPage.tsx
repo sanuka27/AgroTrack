@@ -10,7 +10,7 @@ import PostCard from '../../components/community/PostCard';
 import TrendingTags from '../../components/community/TrendingTags';
 
 export default function FeedPage() {
-  const { user } = useAuth();
+  const { user, role, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
@@ -44,14 +44,20 @@ export default function FeedPage() {
           tag,
           cursor: undefined,
           limit: 20,
-          includeTeaser: !user,
+          includeTeaser: !isAuthenticated,
         });
 
         setPosts(response.data.posts);
-        setHasMore(response.data.hasMore);
-        setCursor(response.data.nextCursor);
-        setIsGuest(response.data.isGuest);
-        setIsTeaser(response.data.isTeaser);
+        // If the client is not authenticated, don't allow loading more posts beyond the teaser
+        if (!isAuthenticated) {
+          setHasMore(false);
+          setCursor(null);
+        } else {
+          setHasMore(response.data.hasMore);
+          setCursor(response.data.nextCursor);
+        }
+  setIsGuest(response.data.isGuest);
+  setIsTeaser(response.data.isTeaser);
       } catch (error) {
         console.error('Failed to load posts:', error);
       } finally {
@@ -60,15 +66,17 @@ export default function FeedPage() {
     };
     
     loadInitialPosts();
-  }, [sort, tag, user]);
+  }, [sort, tag, user, isAuthenticated]);
 
   // Infinite scroll observer
   useEffect(() => {
-    if (!observerTarget.current || loading || !hasMore || !cursor) return;
+  // Do not enable infinite scroll for guests — prevent loading hidden posts when they scroll
+  if (!isAuthenticated) return;
+  if (!observerTarget.current || loading || !hasMore || !cursor) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loading && hasMore && cursor) {
+              if (entries[0].isIntersecting && !loading && hasMore && cursor) {
           // Load more posts
           const loadMorePosts = async () => {
             try {
@@ -78,7 +86,7 @@ export default function FeedPage() {
                 tag,
                 cursor,
                 limit: 20,
-                includeTeaser: !user,
+                includeTeaser: !isAuthenticated,
               });
 
               setPosts((prev) => [...prev, ...response.data.posts]);
@@ -100,7 +108,7 @@ export default function FeedPage() {
     observer.observe(observerTarget.current);
 
     return () => observer.disconnect();
-  }, [loading, hasMore, cursor, sort, tag, user]);
+  }, [loading, hasMore, cursor, sort, tag, user, isAuthenticated]);
 
   // Keyboard shortcuts (j/k navigation, a/z voting, c for new post)
   useEffect(() => {
@@ -270,7 +278,7 @@ export default function FeedPage() {
                 <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
                   <p className="text-sm text-green-800">
                     <button
-                      onClick={() => navigate('/signin')}
+                        onClick={() => navigate('/login')}
                       className="font-semibold underline hover:no-underline hover:text-green-900 transition-colors"
                     >
                       Sign in
@@ -303,59 +311,74 @@ export default function FeedPage() {
                 </div>
               ) : (
                 <>
-                  {posts.map((post, index) => (
+                  {/* Top 3 posts (fully visible) */}
+                  {posts.slice(0, 3).map((post, index) => (
                     <div key={post._id}>
-                      {/* Show sign-in message after 3rd post for guests */}
-                      {isGuest && index === 3 && (
-                        <div className="bg-white rounded-2xl shadow-[0_8px_32px_hsl(120_100%_25%_/_0.16)] border-2 border-green-300 p-8 mb-4 text-center relative overflow-hidden">
-                          <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full blur-3xl opacity-40 -z-10" />
-                          <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-green-50 to-emerald-50 rounded-full blur-2xl opacity-50 -z-10" />
-                          
-                          <div className="relative">
-                            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-[0_0_24px_hsl(85_100%_44%_/_0.3)] mx-auto mb-4 flex items-center justify-center">
-                              <Lock className="w-8 h-8 text-white" />
-                            </div>
-                            
-                            <h3 className="text-2xl font-bold bg-gradient-to-r from-green-800 to-emerald-700 bg-clip-text text-transparent mb-3">
-                              Want to see more?
-                            </h3>
-                            
-                            <p className="text-gray-700 mb-6 leading-relaxed">
-                              Sign in to view all community posts, share your gardening experiences, vote on topics, and join the conversation!
-                            </p>
-                            
-                            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                              <button
-                                onClick={() => navigate('/signin')}
-                                className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-[0_4px_16px_hsl(120_100%_25%_/_0.12)] hover:shadow-[0_8px_32px_hsl(120_100%_25%_/_0.16)] hover:-translate-y-0.5 flex items-center justify-center gap-2"
-                              >
-                                <Sparkles className="w-4 h-4" />
-                                Sign In
-                              </button>
-                              <button
-                                onClick={() => navigate('/signup')}
-                                className="px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-800 rounded-xl font-semibold transition-all duration-300 border border-gray-300 hover:shadow-sm"
-                              >
-                                Sign Up
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                      
                       <div
                         ref={(el) => (postRefs.current[index] = el)}
                         className={`transition-all duration-300 ${
                           selectedPostIndex === index ? 'ring-2 ring-green-500 rounded-2xl shadow-[0_0_24px_hsl(85_100%_44%_/_0.3)]' : ''
-                        } ${isGuest && index >= 3 ? 'opacity-30 blur-sm pointer-events-none' : ''}`}
+                        }`}
                       >
-                        <PostCard
-                          post={post}
-                          onVoteChange={handleVoteChange}
-                        />
+                        <PostCard post={post} onVoteChange={handleVoteChange} />
                       </div>
                     </div>
                   ))}
+
+                  {/* Teaser card shown to guests after top 3 */}
+                  {!isAuthenticated && (
+                    <div className="bg-white rounded-2xl shadow-[0_8px_32px_hsl(120_100%_25%_/_0.16)] border-2 border-green-300 p-8 mb-4 text-center relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full blur-3xl opacity-40 -z-10" />
+                      <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-green-50 to-emerald-50 rounded-full blur-2xl opacity-50 -z-10" />
+                      
+                      <div className="relative">
+                        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-[0_0_24px_hsl(85_100%_44%_/_0.3)] mx-auto mb-4 flex items-center justify-center">
+                          <Lock className="w-8 h-8 text-white" />
+                        </div>
+                        
+                        <h3 className="text-2xl font-bold bg-gradient-to-r from-green-800 to-emerald-700 bg-clip-text text-transparent mb-3">
+                          Want to see more?
+                        </h3>
+                        
+                        <p className="text-gray-700 mb-6 leading-relaxed">
+                          Sign in to view all community posts, share your gardening experiences, vote on topics, and join the conversation!
+                        </p>
+                        
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                          <button
+                            onClick={() => navigate('/login')}
+                            className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-[0_4px_16px_hsl(120_100%_25%_/_0.12)] hover:shadow-[0_8px_32px_hsl(120_100%_25%_/_0.16)] hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            Sign In
+                          </button>
+                          <button
+                            onClick={() => navigate('/signup')}
+                            className="px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-800 rounded-xl font-semibold transition-all duration-300 border border-gray-300 hover:shadow-sm"
+                          >
+                            Sign Up
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Remaining posts (faded for guests) */}
+                  {posts.slice(3).map((post, i) => {
+                    const idx = i + 3;
+                    return (
+                      <div key={post._id}>
+                        <div
+                          ref={(el) => (postRefs.current[idx] = el)}
+                          className={`transition-all duration-300 ${
+                            selectedPostIndex === idx ? 'ring-2 ring-green-500 rounded-2xl shadow-[0_0_24px_hsl(85_100%_44%_/_0.3)]' : ''
+                          } ${(!isAuthenticated) ? 'opacity-30 blur-sm' : ''}`}
+                        >
+                          <PostCard post={post} onVoteChange={handleVoteChange} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </>
               )}
 
