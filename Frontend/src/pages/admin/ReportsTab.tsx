@@ -22,8 +22,11 @@ export function ReportsTab() {
     const loadReports = async () => {
       try {
         setLoading(true);
-        const response = await adminApi.getReports();
-        setReports(response.reports);
+        const params: any = { limit: 50 };
+        if (filter && filter !== 'all') params.status = filter;
+        if (searchTerm && searchTerm.trim().length > 0) params.search = searchTerm.trim();
+        const response = await adminApi.getReports(params);
+        setReports(response.reports || []);
       } catch (error) {
         console.error('Error loading reports:', error);
         toast({
@@ -37,7 +40,7 @@ export function ReportsTab() {
     };
 
     loadReports();
-  }, [toast]);
+  }, [toast, filter, searchTerm]);
 
   // Apply filters
   const filteredReports = reports.filter(report => {

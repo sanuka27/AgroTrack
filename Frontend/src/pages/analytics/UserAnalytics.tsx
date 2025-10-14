@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { analyticsApi } from '@/lib/api/analytics';
+import { realtime } from '@/realtime';
 
 interface SimpleDashboard {
   totalPlants: number;
@@ -36,6 +37,18 @@ const UserAnalytics: React.FC = () => {
     };
 
     load();
+
+    // Subscribe to realtime analytics updates if available
+    const unsubscribe = realtime.subscribe((event) => {
+      if (event.type === 'metrics') {
+        // Re-fetch the dashboard analytics to ensure latest counts
+        load();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   if (loading) return <div className="p-6">Loading analytics...</div>;

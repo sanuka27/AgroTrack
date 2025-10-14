@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,11 @@ export function UsersTab() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<UserFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [suggestions, setSuggestions] = useState<User[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -37,7 +42,7 @@ export function UsersTab() {
         const response = await adminApi.getUsers({
           page: 1,
           limit: 50,
-          search: searchTerm || undefined,
+          search: debouncedSearch || undefined,
           status: filter !== 'all' ? filter : undefined,
         });
         setUsers(response.users);
@@ -59,10 +64,69 @@ export function UsersTab() {
     };
 
     loadUsers();
-  }, [toast, filter, searchTerm]);
+  }, [toast, filter, debouncedSearch]);
+
+  // Debounce searchTerm to avoid firing API on every keystroke
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
+
+  // Fetch lightweight suggestions for the dropdown (limit small)
+  useEffect(() => {
+    let cancelled = false;
+    const fetchSuggestions = async () => {
+      try {
+        if (!debouncedSearch || debouncedSearch.length === 0) {
+          setSuggestions([]);
+          setShowSuggestions(false);
+          setActiveIndex(-1);
+          return;
+        }
+
+        const resp = await adminApi.getUsers({ search: debouncedSearch, limit: 6 });
+        if (cancelled) return;
+        setSuggestions(resp.users || []);
+        setShowSuggestions((resp.users || []).length > 0);
+        setActiveIndex(-1);
+      } catch (e) {
+        // ignore suggestion failures silently
+        setSuggestions([]);
+        setShowSuggestions(false);
+        setActiveIndex(-1);
+      }
+    };
+
+    fetchSuggestions();
+    return () => { cancelled = true; };
+  }, [debouncedSearch]);
+
+  // Keep the input focused while the user is typing so they don't need to click again
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [searchTerm]);
 
   // Apply filters (now handled by API, but keep for display)
   const filteredUsers = users;
+
+  // Helper to highlight the matched portion of a string
+  const highlightMatch = (text: string, term: string) => {
+    if (!term) return text;
+    const idx = text.toLowerCase().indexOf(term.toLowerCase());
+    if (idx === -1) return text;
+    const before = text.slice(0, idx);
+    const match = text.slice(idx, idx + term.length);
+    const after = text.slice(idx + term.length);
+    return (
+      <>
+        {before}
+        <span className="bg-yellow-100 text-yellow-800 rounded px-1">{match}</span>
+        {after}
+      </>
+    );
+  };
 
   const getStatusBadge = (user: User) => {
     if (!user.isActive) {
@@ -146,12 +210,15 @@ export function UsersTab() {
       {/* Header with filters */}
       <Card className="rounded-2xl ring-1 ring-slate-200 shadow-sm">
         <CardHeader>
-          <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-xl font-semibold">Users Management</CardTitle>
               <CardDescription>
                 {filteredUsers.length} of {users.length} users
                 {filter !== 'all' && ` (filtered by ${filter})`}
+                {debouncedSearch && (
+                  <span className="ml-3 inline-block text-sm text-gray-600">Searching "{debouncedSearch}"</span>
+                )}
               </CardDescription>
             </div>
             <Badge variant="outline" className="text-lg px-3 py-1">
@@ -169,7 +236,68 @@ export function UsersTab() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
+                ref={inputRef}
+                onKeyDown={(e) => {
+                  // Prevent Enter from causing focus loss or form submission
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    // If a suggestion is active, select it
+                    if (showSuggestions && activeIndex >= 0 && suggestions[activeIndex]) {
+                      const sel = suggestions[activeIndex];
+                      setSearchTerm(sel.name);
+                      setDebouncedSearch(sel.name);
+                      setShowSuggestions(false);
+                      setActiveIndex(-1);
+                      setTimeout(() => inputRef.current?.focus(), 0);
+                      return;
+                    }
+                    // keep focus in the input so user can continue typing
+                    setTimeout(() => inputRef.current?.focus(), 0);
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (!showSuggestions) {
+                      setShowSuggestions(true);
+                    }
+                    setActiveIndex((idx) => Math.min(idx + 1, suggestions.length - 1));
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setActiveIndex((idx) => Math.max(idx - 1, 0));
+                  } else if (e.key === 'Escape') {
+                    setShowSuggestions(false);
+                    setActiveIndex(-1);
+                  }
+                }}
               />
+              {/* Suggestion dropdown */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div
+                  role="listbox"
+                  aria-label="User suggestions"
+                  className="absolute z-50 mt-1 w-full rounded-md bg-white ring-1 ring-black/5 shadow-lg overflow-hidden"
+                >
+                  {suggestions.map((s, i) => (
+                    <div
+                      key={s._id}
+                      role="option"
+                      aria-selected={i === activeIndex}
+                      onMouseDown={(ev) => {
+                        // Use mouseDown to avoid losing focus before click
+                        ev.preventDefault();
+                        setSearchTerm(s.name);
+                        setDebouncedSearch(s.name);
+                        setShowSuggestions(false);
+                        setActiveIndex(-1);
+                        setTimeout(() => inputRef.current?.focus(), 0);
+                      }}
+                      onMouseEnter={() => setActiveIndex(i)}
+                      className={`px-3 py-2 cursor-pointer hover:bg-gray-50 flex flex-col ${i === activeIndex ? 'bg-gray-50' : ''}`}
+                    >
+                      <span className="font-medium text-sm text-gray-900">{highlightMatch(s.name, debouncedSearch)}</span>
+                      <span className="text-xs text-gray-500">{highlightMatch(s.email, debouncedSearch)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             
             {/* Filter buttons */}
@@ -215,10 +343,10 @@ export function UsersTab() {
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <td className="py-4 px-6">
-                      <div className="font-medium text-gray-900">{user.name}</div>
+                      <div className="font-medium text-gray-900">{highlightMatch(user.name, debouncedSearch)}</div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-600">{user.email}</div>
+                      <div className="text-gray-600">{highlightMatch(user.email, debouncedSearch)}</div>
                     </td>
                     <td className="py-4 px-6">
                       {getRoleBadge(user.role)}

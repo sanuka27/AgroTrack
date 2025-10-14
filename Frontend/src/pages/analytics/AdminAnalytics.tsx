@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { adminApi } from '@/api/admin';
 import { Button } from '@/components/ui/button';
+import { realtime } from '@/realtime';
 
 const AdminAnalytics: React.FC = () => {
   const [overview, setOverview] = useState<any>(null);
@@ -23,6 +24,15 @@ const AdminAnalytics: React.FC = () => {
     };
 
     load();
+    const unsubscribe = realtime.subscribe((event) => {
+      if (event.type === 'metrics') {
+        load();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   if (loading) return <div className="p-6">Loading admin analytics...</div>;

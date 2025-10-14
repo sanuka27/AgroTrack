@@ -78,26 +78,27 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
       console.debug('[AI] Received response:', json);
 
       if (json?.success && json.data) {
-        setAiSuggestion(json.data);
+        const aiData: any = json.data;
+        setAiSuggestion(aiData);
         // Auto-fill ALL fields immediately (user just wants help)
         setFormData(prev => {
-          const aiSunRaw = (json.data.sunlight ?? json.data.sunlightRequirements) as string | undefined;
+          const aiSunRaw = (aiData.sunlight ?? aiData.sunlightRequirements) as string | undefined;
           const normalizedSun = normalizeSunlight(aiSunRaw) ?? (aiSunRaw as Sunlight) ?? prev.sunlight;
           return ({
             ...prev,
-            wateringEveryDays: json.data.wateringFrequencyDays !== undefined && json.data.wateringFrequencyDays !== null ? String(json.data.wateringFrequencyDays) : prev.wateringEveryDays,
+            wateringEveryDays: aiData.wateringFrequencyDays !== undefined && aiData.wateringFrequencyDays !== null ? String(aiData.wateringFrequencyDays) : prev.wateringEveryDays,
             sunlight: normalizedSun,
-            fertilizerEveryWeeks: json.data.fertilizerScheduleWeeks !== undefined && json.data.fertilizerScheduleWeeks !== null ? String(json.data.fertilizerScheduleWeeks) : prev.fertilizerEveryWeeks,
-            soil: json.data.soilType ?? prev.soil,
-            category: (json.data.category as Category) ?? prev.category,
-            notes: json.data.notes ?? prev.notes,
+            fertilizerEveryWeeks: aiData.fertilizerScheduleWeeks !== undefined && aiData.fertilizerScheduleWeeks !== null ? String(aiData.fertilizerScheduleWeeks) : prev.fertilizerEveryWeeks,
+            soil: aiData.soilType ?? prev.soil,
+            category: (aiData.category as Category) ?? prev.category,
+            notes: aiData.notes ?? prev.notes,
           });
         });
 
         // If key numeric fields are missing, consider retrying
-        const missing = (json.data.wateringFrequencyDays === null || json.data.wateringFrequencyDays === undefined)
-          || (json.data.fertilizerScheduleWeeks === null || json.data.fertilizerScheduleWeeks === undefined)
-          || !json.data.notes || String(json.data.notes).trim().length < 8;
+        const missing = (aiData.wateringFrequencyDays === null || aiData.wateringFrequencyDays === undefined)
+          || (aiData.fertilizerScheduleWeeks === null || aiData.fertilizerScheduleWeeks === undefined)
+          || !aiData.notes || String(aiData.notes).trim().length < 8;
         if (missing && attempt < MAX_RETRIES) {
           console.debug('[AI] Response incomplete, retrying...', attempt);
           await new Promise(r => setTimeout(r, 700 + attempt * 300));
@@ -115,6 +116,8 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
 
         const parsedSuggestion = {
           wateringFrequencyDays: daysMatch ? Number(daysMatch[1]) : null,
+          // include both keys so callers can read either `sunlight` or `sunlightRequirements`
+          sunlight: sunlightMatch ? sunlightMatch[1] : undefined,
           sunlightRequirements: sunlightMatch ? sunlightMatch[1] : undefined,
           fertilizerScheduleWeeks: weeksMatch ? Number(weeksMatch[1]) : null,
           soilType: soilMatch ? soilMatch[1] : undefined,
