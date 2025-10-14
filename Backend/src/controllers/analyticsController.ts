@@ -602,7 +602,7 @@ export const updateDashboardWidget = async (req: AuthenticatedRequest, res: Resp
 };
 
 // Helper functions
-async function generateUserAnalytics(userId: mongoose.Types.ObjectId, period: string) {
+export async function generateUserAnalytics(userId: mongoose.Types.ObjectId, period: string) {
   const analytics = {
     plantOverview: {},
     careActivity: {},

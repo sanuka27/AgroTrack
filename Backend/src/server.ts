@@ -54,6 +54,7 @@ import contactRoutes from './routes/contactRoutes';
 import aiChatRoutes from './routes/aiChatRoutes';
 import communityForumRoutes from './routes/communityForumRoutes';
 import devAuthRoutes from './routes/devAuth';
+import realtimeRoutes from './routes/realtimeRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -137,6 +138,7 @@ app.use('/api/bug-reports', bugReportRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/ai', aiChatRoutes);
 app.use('/api/community/forum', communityForumRoutes);
+app.use('/api/realtime', realtimeRoutes);
 // Development-only routes
 if (process.env.NODE_ENV === 'development') {
   app.use('/api/dev', devAuthRoutes);

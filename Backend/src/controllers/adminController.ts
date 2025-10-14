@@ -7,6 +7,11 @@ import { CareLog } from '../models/CareLog';
 import { Reminder } from '../models/Reminder';
 import { UserAnalytics, AnalyticsEventType } from '../models/UserAnalytics';
 
+// Escape regex special characters in user input to avoid unintended patterns
+function escapeRegex(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export class AdminController {
   // Dashboard overview with system statistics
   async getDashboard(req: Request, res: Response): Promise<void> {
@@ -92,14 +97,36 @@ export class AdminController {
       const query: any = {};
       
       if (search) {
-        query.$or = [
-          { username: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } }
-        ];
+        const s = String(search).trim();
+        // Only apply search if there's something after trimming
+        if (s.length > 0) {
+          // If search is 2+ chars, prefer prefix matching on name for a "typeahead" feel
+          // e.g. 'Sa' matches names starting with 'Sa'. For single-char searches use contains.
+          const nameRegex = s.length >= 2 ? new RegExp('^' + escapeRegex(s), 'i') : new RegExp(escapeRegex(s), 'i');
+          const emailRegex = new RegExp(escapeRegex(s), 'i');
+
+          query.$or = [
+            { name: { $regex: nameRegex } },
+            { email: { $regex: emailRegex } }
+          ];
+        }
       }
 
       if (role) query.role = role;
-      if (status) query.isActive = status === 'active';
+      // Map status filters: frontend may send 'active'|'pending'|'banned'|'inactive'
+      if (status) {
+        const s = String(status);
+        if (s === 'active') {
+          query.isActive = true;
+        } else if (s === 'inactive') {
+          query.isActive = false;
+        } else if (s === 'banned') {
+          // Frontend marks banned users by setting isActive=false, so filter by that
+          query.isActive = false;
+        } else if (s === 'pending') {
+          query.isEmailVerified = false;
+        }
+      }
 
       const sortOptions: any = {};
       sortOptions[sortBy as string] = sortOrder === 'asc' ? 1 : -1;
@@ -108,15 +135,48 @@ export class AdminController {
       const limitNum = parseInt(limit as string);
       const skip = (pageNum - 1) * limitNum;
 
-      const [users, totalUsers] = await Promise.all([
-        User.find(query)
-          .select('-password -refreshTokens')
-          .sort(sortOptions)
-          .skip(skip)
-          .limit(limitNum)
-          .lean(),
-        User.countDocuments(query)
-      ]);
+      let users: any[] = [];
+      let totalUsers = 0;
+
+      // If we have an active search, use aggregation to prioritize prefix matches for name
+      if (query.$or) {
+        const s = String(search).trim();
+        const prefixRegex = new RegExp('^' + escapeRegex(s), 'i');
+        const containsRegex = new RegExp(escapeRegex(s), 'i');
+
+        const matchStage: any = { $match: query };
+
+        const addFieldsStage = {
+          $addFields: {
+            prefixMatch: { $regexMatch: { input: '$name', regex: prefixRegex } }
+          }
+        };
+
+        const sortStage: any = { $sort: Object.assign({ prefixMatch: -1 }, sortOptions) };
+
+        const projectStage = { $project: { password: 0, refreshTokens: 0 } };
+
+        const pipeline = [matchStage, addFieldsStage, sortStage, { $skip: skip }, { $limit: limitNum }, projectStage];
+
+        const [aggResults, count] = await Promise.all([
+          User.aggregate(pipeline),
+          User.countDocuments(Object.assign({}, query))
+        ]);
+
+        users = aggResults;
+        totalUsers = count;
+      } else {
+        // No search term: regular find with pagination
+        [users, totalUsers] = await Promise.all([
+          User.find(query)
+            .select('-password -refreshTokens')
+            .sort(sortOptions)
+            .skip(skip)
+            .limit(limitNum)
+            .lean(),
+          User.countDocuments(query)
+        ]);
+      }
 
       res.json({
         success: true,
@@ -261,8 +321,8 @@ export class AdminController {
   // Delete user (soft delete)
   async deleteUser(req: Request, res: Response): Promise<void> {
     try {
-      const { userId } = req.params;
-      const { reason, hardDelete = false } = req.body;
+  const { userId } = req.params;
+  const { reason, hardDelete = false } = req.body || {};
 
       if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
         res.status(400).json({
