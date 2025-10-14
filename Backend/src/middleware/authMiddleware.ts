@@ -24,9 +24,17 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
     }
 
     try {
+      // Ensure secret is configured
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+        const cfgError = new Error('Server misconfiguration: JWT_SECRET not set') as CustomError;
+        cfgError.statusCode = 500;
+        return next(cfgError);
+      }
+
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret') as { userId: string };
-      
+      const decoded = jwt.verify(token, secret) as { userId: string };
+
       // Get user from database
       const user = await User.findById(decoded.userId).select('-password');
       
@@ -64,12 +72,20 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
       return next();
     }
 
-    try {
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret') as { userId: string };
 
-      // Get user from database
-      const user = await User.findById(decoded.userId).select('-password');
+      try {
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+          // If secret missing, treat as server error and continue as guest to avoid breaking flows in some environments
+          req.user = null;
+          return next();
+        }
+
+        // Verify token
+        const decoded = jwt.verify(token, secret) as { userId: string };
+
+        // Get user from database
+        const user = await User.findById(decoded.userId).select('-password');
 
       if (!user) {
         // Invalid token, but continue as guest
