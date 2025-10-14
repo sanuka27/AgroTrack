@@ -58,7 +58,7 @@ export default function TeaserOverlay({ onClose }: TeaserOverlayProps) {
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
-              onClick={() => navigate('/signin')}
+              onClick={() => navigate('/login')}
               className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-[0_4px_16px_hsl(120_100%_25%_/_0.12)] hover:shadow-[0_8px_32px_hsl(120_100%_25%_/_0.16)] hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >
               <Sparkles className="w-4 h-4" />

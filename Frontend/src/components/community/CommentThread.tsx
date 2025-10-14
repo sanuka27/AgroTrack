@@ -87,7 +87,7 @@ export default function CommentThread({
       ) : (
         <div className="p-4 bg-card border border-border rounded-lg text-center">
           <p className="text-sm text-muted-foreground">
-            <a href="/signin" className="font-medium underline hover:no-underline">
+            <a href="/login" className="font-medium underline hover:no-underline">
               Sign in
             </a>
             {' '}to join the discussion

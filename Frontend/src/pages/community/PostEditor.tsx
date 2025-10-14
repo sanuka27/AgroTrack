@@ -21,7 +21,7 @@ export default function PostEditor() {
   const [error, setError] = useState('');
 
   if (!user) {
-    navigate('/signin');
+  navigate('/login');
     return null;
   }
 
