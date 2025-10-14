@@ -13,6 +13,7 @@ import {
   startNewSession,
   listModels,
   ping,
+  suggestPlantDefaults,
   analyzePlant,
 } from '../controllers/aiChatController';
 import { protect as authenticate, optionalAuth } from '../middleware/authMiddleware';
@@ -76,5 +77,11 @@ router.post(
   upload.single('photo'),
   analyzePlant
 );
+
+/**
+ * Suggest plant defaults by name
+ * POST /api/ai/plant/suggest
+ */
+router.post('/plant/suggest', authenticate, suggestPlantDefaults);
 
 export default router;

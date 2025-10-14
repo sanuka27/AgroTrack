@@ -53,6 +53,7 @@ import bugReportRoutes from './routes/bugReportRoutes';
 import contactRoutes from './routes/contactRoutes';
 import aiChatRoutes from './routes/aiChatRoutes';
 import communityForumRoutes from './routes/communityForumRoutes';
+import devAuthRoutes from './routes/devAuth';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -136,6 +137,10 @@ app.use('/api/bug-reports', bugReportRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/ai', aiChatRoutes);
 app.use('/api/community/forum', communityForumRoutes);
+// Development-only routes
+if (process.env.NODE_ENV === 'development') {
+  app.use('/api/dev', devAuthRoutes);
+}
 
 // Serve uploaded files (now using Firebase Storage instead of local files)
 // app.use('/uploads', express.static('uploads'));
