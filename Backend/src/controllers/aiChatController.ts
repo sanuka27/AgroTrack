@@ -64,6 +64,136 @@ export const ping = async (_req: Request, res: Response): Promise<void> => {
 };
 
 /**
+ * Suggest plant defaults based on name using Gemini AI
+ * POST /api/ai/plant/suggest
+ */
+export const suggestPlantDefaults = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const plantName = String(req.body?.plantName || req.body?.name || '').trim();
+    if (!plantName) {
+      res.status(400).json({ success: false, message: 'plantName is required' });
+      return;
+    }
+
+    const makePrompt = (name: string) => ({
+      role: 'user',
+      parts: [
+        {
+          text:
+`You are a horticulture assistant. Return ONLY valid JSON (no prose, no fences).
+Schema:
+{
+  "category": string,                  // e.g., "Indoor", "Outdoor", "Herb", "Shrub", "Tree", "Houseplant"
+  "sunlight": "Full Sun" | "Partial Sun" | "Indirect Light" | "Shade",
+  "wateringFrequencyDays": number|null, // days between typical watering
+  "fertilizerScheduleWeeks": number|null, // weeks between fertilizing
+  "soilType": string,                  // e.g., "Well-draining potting mix"
+  "notes": string                      // short practical notes
+}
+Rules:
+- If uncertain, use null for the numeric fields and still fill the rest sensibly.
+- Tailor to typical home gardening care (not commercial farming).
+- For succulents, expect long watering intervals and well-draining mix.
+- For tropical houseplants, prefer bright indirect light and well-draining mix.
+
+Plant name: ${name}`
+        }
+      ]
+    });
+
+    const model = genAI.getGenerativeModel({ model: MODEL });
+
+    // Try generating up to N attempts if output is incomplete/truncated
+    const MAX_ATTEMPTS = 2;
+    let lastRaw = '';
+    let parsed: any = null;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const result = await model.generateContent({
+        contents: [makePrompt(plantName)],
+        generationConfig: {
+          temperature: 0.25,
+          maxOutputTokens: 512,
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const resp = await result.response;
+      let text = '';
+      if (resp && typeof (resp as any).text === 'function') text = (resp as any).text();
+      else if ((resp as any)?.candidates?.length) text = (resp as any).candidates[0]?.content?.parts?.map((p: any) => p.text).join('') || '';
+
+      text = stripCodeFences(text || '');
+      lastRaw = text;
+
+      try {
+        parsed = extractJson(text);
+      } catch (e) {
+        // try parse fallback or continue to next attempt
+        parsed = null;
+      }
+
+      // If parsed and has at least some non-null fields, break
+      const hasSome = parsed && (
+        (parsed.wateringFrequencyDays != null && parsed.wateringFrequencyDays !== '') ||
+        (parsed.fertilizerScheduleWeeks != null && parsed.fertilizerScheduleWeeks !== '') ||
+        (parsed.notes && String(parsed.notes).trim().length > 5)
+      );
+
+      if (parsed && hasSome) {
+        break;
+      }
+
+      // If not last attempt, continue to retry
+      if (attempt < MAX_ATTEMPTS) {
+        logger.warn(`AI suggest attempt ${attempt} incomplete for "${plantName}", retrying...`);
+        await new Promise((r) => setTimeout(r, 400)); // small backoff
+        continue;
+      }
+    }
+
+    // If parse failed entirely, return safe defaults + raw text for debugging
+    if (!parsed) {
+      const fallback = {
+        category: '',
+        sunlight: 'Indirect Light',
+        wateringFrequencyDays: null,
+        fertilizerScheduleWeeks: null,
+        soilType: '',
+        notes: lastRaw || '',
+      };
+  res.status(200).json({ success: true, data: fallback, _raw: lastRaw });
+  return;
+    }
+
+    // Normalize parsed -> suggestion with sensible defaults when missing
+    const suggestion = {
+      category: String(parsed.category ?? '').trim() || '',
+      sunlight: String(parsed.sunlight ?? '').trim() || 'Indirect Light',
+      wateringFrequencyDays: typeof parsed.wateringFrequencyDays === 'number' ? parsed.wateringFrequencyDays : (parsed.wateringFrequencyDays ? Number(parsed.wateringFrequencyDays) : null),
+      fertilizerScheduleWeeks: typeof parsed.fertilizerScheduleWeeks === 'number' ? parsed.fertilizerScheduleWeeks : (parsed.fertilizerScheduleWeeks ? Number(parsed.fertilizerScheduleWeeks) : null),
+      soilType: String(parsed.soilType ?? parsed.soil ?? '').trim() || '',
+      notes: String(parsed.notes ?? '').trim() || lastRaw || '',
+    };
+
+    // If numeric fields are still null, provide conservative defaults for common categories
+    if (suggestion.wateringFrequencyDays == null) {
+      if ((suggestion.category || '').toLowerCase().includes('succulent')) suggestion.wateringFrequencyDays = 21;
+      else suggestion.wateringFrequencyDays = 7; // safe default weekly
+    }
+    if (suggestion.fertilizerScheduleWeeks == null) {
+      suggestion.fertilizerScheduleWeeks = 12; // quarterly as conservative default
+    }
+
+  res.json({ success: true, data: suggestion, _raw: lastRaw });
+  return;
+  } catch (error: any) {
+    logger.error('suggestPlantDefaults error', error);
+    res.status(500).json({ success: false, message: error?.message || 'AI error' });
+  }
+};
+
+/**
  * Send a message to AI assistant
  * POST /api/ai/chat
  */
