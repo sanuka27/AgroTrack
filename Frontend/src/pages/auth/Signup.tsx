@@ -24,7 +24,7 @@ const Signup = () => {
 
   // Redirect if already logged in
   if (isAuthenticated) {
-    navigate('/dashboard');
+  navigate('/plants');
     return null;
   }
 
@@ -91,7 +91,7 @@ const Signup = () => {
         
         // Show success message for 2 seconds before redirecting
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate('/plants');
         }, 2000);
       } else {
         setErrors({ general: "Registration failed. Please try again." });

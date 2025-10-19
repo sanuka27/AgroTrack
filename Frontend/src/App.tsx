@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DemoProvider } from "@/contexts/DemoContext";
@@ -19,7 +19,6 @@ const Register = lazy(() => import("./pages/auth/Register"));
 const Signup = lazy(() => import("./pages/auth/Signup"));
 const PasswordResetPage = lazy(() => import("./pages/auth/PasswordResetPage"));
 const EmailVerificationPage = lazy(() => import("./pages/auth/EmailVerificationPage"));
-const UserDashboard = lazy(() => import("./pages/UserDashboard"));
 const MyPlants = lazy(() => import("./pages/MyPlants"));
 const Community = lazy(() => import("./pages/Community"));
 const Analytics = lazy(() => import("./pages/Analytics"));
@@ -88,11 +87,8 @@ const App = () => {
               <Route path="/signup" element={<Signup />} />
               <Route path="/reset-password" element={<PasswordResetPage />} />
               <Route path="/verify-email" element={<EmailVerificationPage />} />
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <UserDashboard />
-                </ProtectedRoute>
-              } />
+              {/* /dashboard is deprecated - redirect to /plants (plants is the new dashboard) */}
+              <Route path="/dashboard" element={<Navigate to="/plants" replace />} />
               <Route path="/my-plants" element={
                 <ProtectedRoute>
                   <MyPlants />

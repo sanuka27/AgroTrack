@@ -11,7 +11,7 @@ export function Hero() {
 
   const handleStartGrowing = () => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate('/plants');
     } else {
       navigate('/signup');
     }

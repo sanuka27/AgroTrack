@@ -74,7 +74,8 @@ The following models and controllers were removed or stubbed with 501 responses:
 - ✅ GET `/stats` - Community statistics
 
 #### Analytics (`/api/analytics`)
-- ✅ GET `/dashboard` - Get user dashboard
+// Note: frontend dashboard route `/dashboard` is deprecated and redirects to `/plants` (the Plants page is the canonical dashboard).
+- ✅ GET `/dashboard` - Get user dashboard (backend analytics endpoint)
 - ✅ GET `/dashboard/simple` - Simple dashboard stats
 - ✅ POST `/dashboard` - Create dashboard
 - ✅ GET `/dashboard/widgets/:widgetId` - Get widget data

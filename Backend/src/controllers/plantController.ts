@@ -303,7 +303,7 @@ export class PlantController {
         }) as any;
       }
 
-      const { plantId } = req.params;
+  const { id: plantId } = req.params as { id?: string };
       const userId = new mongoose.Types.ObjectId((req.user as any)._id.toString());
 
       // Check if plantId is valid MongoDB ObjectId
@@ -363,7 +363,7 @@ export class PlantController {
         }) as any;
       }
 
-      const { plantId } = req.params;
+  const { id: plantId } = req.params as { id?: string };
       const userId = new mongoose.Types.ObjectId((req.user as any)._id.toString());
       
       // Handle image upload if file is provided
@@ -485,7 +485,8 @@ export class PlantController {
         }) as any;
       }
 
-      const { plantId } = req.params;
+      // Route is defined as DELETE /api/plants/:id
+      const { id: plantId } = req.params as { id?: string };
       const userId = new mongoose.Types.ObjectId((req.user as any)._id.toString());
 
       // Check if plantId is valid MongoDB ObjectId

@@ -16,6 +16,8 @@ interface PlantCardProps {
   isSelected?: boolean;
   onSelectionChange?: (plantId: string, selected: boolean) => void;
   selectionMode?: boolean;
+  showViewAll?: boolean;
+  onViewAll?: () => void;
 }
 
 export function PlantCard({ 
@@ -26,6 +28,7 @@ export function PlantCard({
   isSelected = false, 
   onSelectionChange, 
   selectionMode = false 
+  , showViewAll = true, onViewAll
 }: PlantCardProps) {
   const { toast } = useToast();
 
@@ -51,8 +54,8 @@ export function PlantCard({
   const growthColor = getGrowthRateColor(plant.growthRatePctThisMonth || 0);
   
   return (
-    <Card className={`relative overflow-hidden border-2 transition-shadow hover:shadow-lg ${healthColor.border} ${
-      isSelected ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
+    <Card className={`relative overflow-hidden transition-all duration-200 hover:shadow-lg ${healthColor.border} ${
+      isSelected ? 'ring-2 ring-blue-500 ring-opacity-50 shadow-lg' : ''
     }`}>
       {/* Selection Checkbox */}
       {selectionMode && (
@@ -65,15 +68,16 @@ export function PlantCard({
         </div>
       )}
       
-      <div className="flex">
+      <div className="flex relative">
         {/* Plant Image */}
         {plant.imageUrl && (
-          <div className="w-20 h-20 flex-shrink-0">
+          <div className="w-20 h-20 flex-shrink-0 relative overflow-hidden rounded-l-lg">
             <img
               src={plant.imageUrl}
               alt={plant.name}
               className="w-full h-full object-cover"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </div>
         )}
         
@@ -94,7 +98,7 @@ export function PlantCard({
                 variant="ghost"
                 size="sm"
                 onClick={handleWatered}
-                className="h-8 w-8 p-0 hover:bg-blue-50"
+                className="h-8 w-8 p-0 hover:bg-blue-100 hover:scale-110 transition-all duration-200"
                 title="Mark as watered"
               >
                 <Droplets className="w-4 h-4 text-blue-600" />
@@ -103,7 +107,7 @@ export function PlantCard({
                 variant="ghost"
                 size="sm"
                 onClick={() => onEdit(plant)}
-                className="h-8 w-8 p-0 hover:bg-emerald-50"
+                className="h-8 w-8 p-0 hover:bg-emerald-100 hover:scale-110 transition-all duration-200"
                 title="Edit plant"
               >
                 <Edit className="w-4 h-4 text-emerald-600" />
@@ -112,11 +116,21 @@ export function PlantCard({
                 variant="ghost"
                 size="sm"
                 onClick={handleDelete}
-                className="h-8 w-8 p-0 hover:bg-rose-50"
+                className="h-8 w-8 p-0 hover:bg-rose-100 hover:scale-110 transition-all duration-200"
                 title="Delete plant"
               >
                 <Trash2 className="w-4 h-4 text-rose-600" />
               </Button>
+              {/* View All Plants button (green) */}
+              {showViewAll && (
+                <Button
+                  size="sm"
+                  onClick={() => onViewAll ? onViewAll() : window.location.assign('/plants')}
+                  className="ml-1 bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700 h-8 px-3 shadow-md hover:shadow-lg transition-all duration-200"
+                >
+                  View All ✨
+                </Button>
+              )}
             </div>
           </div>
 
@@ -144,10 +158,7 @@ export function PlantCard({
             
             <div className="flex justify-between items-center">
               <span>Light needs:</span>
-              <div className="flex items-center space-x-1">
-                <Sun className="w-3 h-3 text-yellow-500" />
-                <span className="text-yellow-700 font-medium">{plant.sunlight}</span>
-              </div>
+              <span className="text-yellow-700 font-medium">{plant.sunlight}</span>
             </div>
           </div>
         </CardContent>

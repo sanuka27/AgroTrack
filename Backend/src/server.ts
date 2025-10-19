@@ -52,6 +52,7 @@ import cacheRoutes from './routes/cacheRoutes';
 import bugReportRoutes from './routes/bugReportRoutes';
 import contactRoutes from './routes/contactRoutes';
 import aiChatRoutes from './routes/aiChatRoutes';
+import aiSuggestionsRoutes from './routes/aiSuggestionsRoutes';
 import communityForumRoutes from './routes/communityForumRoutes';
 import devAuthRoutes from './routes/devAuth';
 import realtimeRoutes from './routes/realtimeRoutes';
@@ -137,6 +138,7 @@ app.use('/api/cache', cacheRoutes);
 app.use('/api/bug-reports', bugReportRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/ai', aiChatRoutes);
+app.use('/api/ai/suggestions', aiSuggestionsRoutes);
 app.use('/api/community/forum', communityForumRoutes);
 app.use('/api/realtime', realtimeRoutes);
 // Development-only routes
