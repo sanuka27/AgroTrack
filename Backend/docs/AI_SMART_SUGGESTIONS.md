@@ -145,7 +145,7 @@ Features:
 - Shows plant name and suggestion type badge
 
 ### Integration
-Added to UserDashboard in right column above reminders.
+Added to Plants page (MyPlants) in right column above reminders. The standalone `UserDashboard` page has been deprecated — the Plants page (`/plants`) now serves as the canonical user dashboard.
 
 ## Configuration
 
