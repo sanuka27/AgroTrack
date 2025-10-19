@@ -14,9 +14,11 @@ import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { exportPlantsToCSV, exportPlantsToJSON } from "@/utils/exportUtils";
 import { BulkOperationsBar } from "@/components/BulkOperationsBar";
 import { useSearchDebounce } from "@/hooks/use-search";
-import { Leaf, Plus, Calendar, Droplets, Sun, Bell, TrendingUp, MessageSquare, CheckSquare, Square, AlertTriangle } from "lucide-react";
+import { Leaf, Plus, Calendar, Droplets, Sun, Bell, TrendingUp, MessageSquare, CheckSquare, Square, AlertTriangle, Activity } from "lucide-react";
 import api from '@/lib/api';
 import plantsApi from '@/lib/api/plants';
+import { analyticsApi } from '@/lib/api/analytics';
+import { remindersApi, Reminder as ReminderType } from '@/lib/api/reminders';
 
 // Helper function to map API category to frontend Category type
 const mapCategory = (apiCategory: string): Category => {
@@ -35,10 +37,23 @@ const mapCategory = (apiCategory: string): Category => {
 const MyPlants = () => {
   const { user } = useAuth();
   const [plants, setPlants] = useState<Plant[]>([]);
+  const LOCAL_STORAGE_PLANTS_KEY = 'agrotrack:plants';
+
+  const savePlantsToLocalStorage = (list: Plant[]) => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_PLANTS_KEY, JSON.stringify(list));
+    } catch (e) {
+      // ignore storage errors
+      console.warn('Failed to save plants to localStorage', e);
+    }
+  };
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlant, setEditingPlant] = useState<Plant | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [analyticsData, setAnalyticsData] = useState<any | null>(null);
+  const [upcomingReminders, setUpcomingReminders] = useState<ReminderType[]>([]);
+  const [overdueReminders, setOverdueReminders] = useState<ReminderType[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Filters state
@@ -89,7 +104,8 @@ const MyPlants = () => {
           health: apiPlant.health || "Good",
           growthRatePctThisMonth: apiPlant.growthRatePctThisMonth,
         }));
-        setPlants(convertedPlants);
+  setPlants(convertedPlants);
+  savePlantsToLocalStorage(convertedPlants);
       } catch (err) {
         console.error('Error loading plants:', err);
         setError('Failed to load plants. Please try again.');
@@ -99,6 +115,42 @@ const MyPlants = () => {
     };
 
     loadPlants();
+    // load analytics for dashboard-style stats
+    const loadAnalytics = async () => {
+      try {
+        const analytics = await analyticsApi.getDashboardAnalytics();
+        setAnalyticsData({
+          dashboard: {
+            totalPlants: analytics.totalPlants || 0,
+            healthScore: Math.round(((analytics.healthyPlants || 0) / Math.max(1, analytics.totalPlants || 1)) * 100) || 0,
+            // keep analytics values as fallback, but primary source for reminders is remindersApi
+            activeReminders: analytics.upcomingReminders || 0,
+            overdueReminders: analytics.overdueReminders || 0,
+            recentCareLogs: analytics.careThisWeek || 0,
+          }
+        });
+        // fetch real reminders
+        try {
+          const [upcoming, overdue] = await Promise.all([
+            remindersApi.getUpcomingReminders(),
+            remindersApi.getOverdueReminders()
+          ]);
+          setUpcomingReminders(upcoming || []);
+          setOverdueReminders(overdue || []);
+        } catch (remErr) {
+          console.warn('Failed to load reminders from API', remErr);
+          setUpcomingReminders([]);
+          setOverdueReminders([]);
+        }
+      } catch (err) {
+        // ignore analytics failure
+        setAnalyticsData(null);
+        setUpcomingReminders([]);
+        setOverdueReminders([]);
+      }
+    };
+
+    loadAnalytics();
   }, []);
 
   // CRUD operations
@@ -150,11 +202,19 @@ const MyPlants = () => {
         growthRatePctThisMonth: createdPlant.growthRatePctThisMonth,
       };
 
-      setPlants(prev => [frontendPlant, ...prev]);
+      setPlants(prev => {
+        const next = [frontendPlant, ...prev];
+        savePlantsToLocalStorage(next);
+        return next;
+      });
     } catch (error) {
       console.error('Error creating plant:', error);
       // For now, just add to local state as fallback
-      setPlants(prev => [newPlant, ...prev]);
+      setPlants(prev => {
+        const next = [newPlant, ...prev];
+        savePlantsToLocalStorage(next);
+        return next;
+      });
     }
   };
 
@@ -189,14 +249,18 @@ const MyPlants = () => {
         updated = await plantsApi.updatePlant(updatedPlant.id, payload as any);
       }
 
-      setPlants(prev => prev.map(plant => plant.id === updatedPlant.id ? {
-        ...plant,
-        name: updated.name,
-        imageUrl: updated.imageUrl || plant.imageUrl,
-        wateringEveryDays: updated.wateringFrequency,
-        soil: updated.soilType,
-        notes: updated.careInstructions,
-      } : plant));
+      setPlants(prev => {
+        const next = prev.map(plant => plant.id === updatedPlant.id ? {
+          ...plant,
+          name: updated.name,
+          imageUrl: updated.imageUrl || plant.imageUrl,
+          wateringEveryDays: updated.wateringFrequency,
+          soil: updated.soilType,
+          notes: updated.careInstructions,
+        } : plant);
+        savePlantsToLocalStorage(next);
+        return next;
+      });
     } catch (error) {
       console.error('Error updating plant:', error);
       // Fallback to local state update
@@ -209,7 +273,11 @@ const MyPlants = () => {
   const handleDeletePlant = async (plantId: string) => {
     try {
   await api.delete(`/plants/${plantId}`);
-      setPlants(prev => prev.filter(plant => plant.id !== plantId));
+      setPlants(prev => {
+        const next = prev.filter(plant => plant.id !== plantId);
+        savePlantsToLocalStorage(next);
+        return next;
+      });
     } catch (error) {
       console.error('Error deleting plant:', error);
       // Fallback to local state update
@@ -218,11 +286,15 @@ const MyPlants = () => {
   };
 
   const handleWateredPlant = (plantId: string) => {
-    setPlants(prev => prev.map(plant => 
-      plant.id === plantId 
-        ? { ...plant, lastWatered: new Date().toISOString() }
-        : plant
-    ));
+    setPlants(prev => {
+      const next = prev.map(plant => 
+        plant.id === plantId 
+          ? { ...plant, lastWatered: new Date().toISOString() }
+          : plant
+      );
+      savePlantsToLocalStorage(next);
+      return next;
+    });
   };
 
   // Bulk operation handlers
@@ -239,14 +311,22 @@ const MyPlants = () => {
 
       // Remove from local state
       const selectedIds = selectedItems.map(plant => plant.id);
-      setPlants(prev => prev.filter(plant => !selectedIds.includes(plant.id)));
+      setPlants(prev => {
+        const next = prev.filter(plant => !selectedIds.includes(plant.id));
+        savePlantsToLocalStorage(next);
+        return next;
+      });
       clearSelection();
       setSelectionMode(false);
     } catch (error) {
       console.error('Error deleting plants:', error);
       // Fallback to local state update
       const selectedIds = selectedItems.map(plant => plant.id);
-      setPlants(prev => prev.filter(plant => !selectedIds.includes(plant.id)));
+      setPlants(prev => {
+        const next = prev.filter(plant => !selectedIds.includes(plant.id));
+        savePlantsToLocalStorage(next);
+        return next;
+      });
       clearSelection();
       setSelectionMode(false);
     }
@@ -258,11 +338,15 @@ const MyPlants = () => {
     const now = new Date().toISOString();
     const selectedIds = selectedItems.map(plant => plant.id);
     
-    setPlants(prev => prev.map(plant => 
-      selectedIds.includes(plant.id) 
-        ? { ...plant, lastWatered: now }
-        : plant
-    ));
+    setPlants(prev => {
+      const next = prev.map(plant => 
+        selectedIds.includes(plant.id) 
+          ? { ...plant, lastWatered: now }
+          : plant
+      );
+      savePlantsToLocalStorage(next);
+      return next;
+    });
     clearSelection();
     setSelectionMode(false);
   };
@@ -272,11 +356,15 @@ const MyPlants = () => {
     
     const selectedIds = selectedItems.map(plant => plant.id);
     
-    setPlants(prev => prev.map(plant => 
-      selectedIds.includes(plant.id) 
-        ? { ...plant, health: 'Excellent' as const }
-        : plant
-    ));
+    setPlants(prev => {
+      const next = prev.map(plant => 
+        selectedIds.includes(plant.id) 
+          ? { ...plant, health: 'Excellent' as const }
+          : plant
+      );
+      savePlantsToLocalStorage(next);
+      return next;
+    });
     clearSelection();
     setSelectionMode(false);
   };
@@ -328,15 +416,87 @@ const MyPlants = () => {
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
       <Header />
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Modern Header with Gradient */}
-        <div className="mb-8 relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl opacity-10"></div>
-          <div className="relative p-8 rounded-2xl">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-green-700 to-emerald-600 bg-clip-text text-transparent mb-2">
-              Your Plant Collection �
-            </h1>
-            <p className="text-lg text-gray-600">Track care history and manage multiple plants</p>
-          </div>
+        {/* Welcome Header (same as Dashboard) */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">
+            Welcome back, {user?.name?.split(' ')[0] || 'there'} 👋
+          </h1>
+          <p className="text-gray-600">Here's everything happening with your garden</p>
+        </div>
+
+        {/* Stats Overview - show dashboard-style cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Plants</p>
+                  <p className="text-3xl font-bold text-gray-900">{plants.length}</p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Leaf className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center text-sm">
+                <span className="text-green-600 font-medium">{analyticsData?.dashboard.healthScore || 0}% healthy</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Health Score</p>
+                  <p className="text-3xl font-bold text-gray-900">{analyticsData?.dashboard.healthScore || 0}%</p>
+                </div>
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${ (analyticsData?.dashboard.healthScore || 0) >= 80 ? 'bg-green-100' : (analyticsData?.dashboard.healthScore || 0) >= 50 ? 'bg-yellow-100' : 'bg-red-100' }`}>
+                  <TrendingUp className={`w-6 h-6 ${ (analyticsData?.dashboard.healthScore || 0) >= 80 ? 'text-green-600' : (analyticsData?.dashboard.healthScore || 0) >= 50 ? 'text-yellow-600' : 'text-red-600' }`} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-green-500 to-emerald-500" style={{ width: `${analyticsData?.dashboard.healthScore || 0}%` }} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Active Reminders</p>
+                  <p className="text-3xl font-bold text-gray-900">{analyticsData?.dashboard.activeReminders || 0}</p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Bell className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center text-sm">
+                {analyticsData?.dashboard.overdueReminders > 0 ? (
+                  <span className="text-red-600 font-medium">⚠️ {analyticsData?.dashboard.overdueReminders} overdue</span>
+                ) : (
+                  <span className="text-gray-500">All up to date</span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Care Actions</p>
+                  <p className="text-3xl font-bold text-gray-900">{analyticsData?.dashboard.recentCareLogs || 0}</p>
+                </div>
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Activity className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center text-sm text-gray-500">This week</div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Loading State */}
@@ -365,8 +525,8 @@ const MyPlants = () => {
           </div>
         )}
 
-        {/* Modern Action Cards - Eye-catching with gradients */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+  {/* Modern Action Cards - Eye-catching with gradients */}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* AI Plant Analysis - Primary Action */}
           <Link to="/plant-analysis" className="group">
             <Card className="border-2 border-green-200 hover:border-green-400 transition-all duration-300 hover:shadow-xl cursor-pointer bg-gradient-to-br from-green-50 to-emerald-50">
@@ -416,6 +576,37 @@ const MyPlants = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Quick access: Reminders Center */}
+        <div className="mb-8">
+          <Link to="/reminder-test" className="group">
+            <Card className="border-2 border-orange-200 hover:border-orange-400 transition-all duration-300 hover:shadow-xl cursor-pointer bg-gradient-to-br from-orange-50 to-amber-50">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl shadow-md group-hover:scale-110 transition-transform">
+                      <Bell className="w-7 h-7 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-orange-800 group-hover:text-orange-900">
+                        Reminders Center
+                      </h3>
+                      <p className="text-sm text-orange-700">
+                        {`${analyticsData?.dashboard?.activeReminders ?? 0} active`}
+                        {typeof analyticsData?.dashboard?.overdueReminders === 'number' && analyticsData?.dashboard?.overdueReminders > 0
+                          ? ` • ${analyticsData.dashboard.overdueReminders} overdue`
+                          : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
+                    Open
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         {/* Modern Stats Dashboard with Gradients */}
@@ -596,47 +787,105 @@ const MyPlants = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <Card className="lg:col-span-2 border-t-4 border-t-orange-400">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Bell className="w-5 h-5 text-orange-500" />
-                <span>Today's Care Reminders</span>
-              </CardTitle>
-              <CardDescription>Smart adaptive notifications for your plants</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Bell className="w-5 h-5 text-orange-500" />
+                    <span>Today's Care Reminders</span>
+                  </CardTitle>
+                  <CardDescription>Smart adaptive notifications for your plants</CardDescription>
+                </div>
+                <Button asChild size="sm" variant="outline" className="border-orange-300 text-orange-700 hover:bg-orange-50">
+                  <Link to="/reminder-test">
+                    View all
+                  </Link>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100/50 rounded-xl border-l-4 border-blue-400 hover:shadow-md transition-shadow">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-blue-500 rounded-lg">
-                    <Droplets className="w-5 h-5 text-white" />
+              {
+                // Prefer showing upcoming reminders first, then overdue
+                (upcomingReminders.length + overdueReminders.length) === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-gray-600">No reminders scheduled. Create one from a plant or view the Reminders Center.</p>
+                    <div className="mt-4">
+                      <Link to="/reminder-test">
+                        <Button size="sm" className="bg-orange-600 text-white">Open Reminders</Button>
+                      </Link>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-blue-800">Water your Monstera</p>
-                    <p className="text-sm text-blue-600">Soil moisture is getting low</p>
+                ) : (
+                  <div className="space-y-3">
+                    {upcomingReminders.map(rem => (
+                      <div key={rem._id} className="flex items-center justify-between p-4 bg-gradient-to-r from-white to-blue-50 rounded-xl border-l-4 border-blue-400 hover:shadow-md transition-shadow">
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-blue-500 rounded-lg">
+                            <Droplets className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-blue-800">{rem.title}</p>
+                            <p className="text-sm text-blue-600">{rem.description || rem.reminderType}</p>
+                            <p className="text-xs text-gray-500">Due: {new Date(rem.nextDueDate).toLocaleString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={async () => {
+                            try {
+                              await remindersApi.completeReminder(rem._id);
+                              setUpcomingReminders(prev => prev.filter(r => r._id !== rem._id));
+                              setAnalyticsData((ad:any) => ({
+                                ...ad,
+                                dashboard: {
+                                  ...ad?.dashboard,
+                                  recentCareLogs: (ad?.dashboard?.recentCareLogs || 0) + 1
+                                }
+                              }));
+                            } catch (err) {
+                              console.error('Failed to complete reminder', err);
+                            }
+                          }}>Done</Button>
+                          <Button size="sm" variant="ghost" asChild>
+                            <Link to="/reminder-test">View</Link>
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {overdueReminders.map(rem => (
+                      <div key={rem._id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <div className="flex items-center space-x-3">
+                          <Sun className="w-4 h-4 text-yellow-500" />
+                          <div>
+                            <p className="font-medium text-yellow-800">{rem.title}</p>
+                            <p className="text-sm text-yellow-600">{rem.description || rem.reminderType}</p>
+                            <p className="text-xs text-gray-500">Overdue since: {new Date(rem.nextDueDate).toLocaleString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline" onClick={async () => {
+                            try {
+                              await remindersApi.completeReminder(rem._id);
+                              setOverdueReminders(prev => prev.filter(r => r._id !== rem._id));
+                              setAnalyticsData((ad:any) => ({
+                                ...ad,
+                                dashboard: {
+                                  ...ad?.dashboard,
+                                  recentCareLogs: (ad?.dashboard?.recentCareLogs || 0) + 1
+                                }
+                              }));
+                            } catch (err) {
+                              console.error('Failed to complete reminder', err);
+                            }
+                          }}>Done</Button>
+                          <Button size="sm" variant="ghost" asChild>
+                            <Link to="/reminder-test">View</Link>
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-                <Button variant="outline" size="sm">Done</Button>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                <div className="flex items-center space-x-3">
-                  <Sun className="w-4 h-4 text-yellow-500" />
-                  <div>
-                    <p className="font-medium text-yellow-800">Move Snake Plant to brighter spot</p>
-                    <p className="text-sm text-yellow-600">AI detected insufficient light</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">Done</Button>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                <div className="flex items-center space-x-3">
-                  <Calendar className="w-4 h-4 text-green-500" />
-                  <div>
-                    <p className="font-medium text-green-800">Fertilize Tomato plants</p>
-                    <p className="text-sm text-green-600">Weekly feeding schedule</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">Done</Button>
-              </div>
+                )
+              }
             </CardContent>
           </Card>
 

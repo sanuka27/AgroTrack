@@ -22,7 +22,7 @@ export function Header() {
 
   // User-specific navigation items
   const userNavItems = [
-    { label: "Dashboard", href: "/dashboard", icon: Leaf, permission: "view_plants" },
+  { label: "Dashboard", href: "/plants", icon: Leaf, permission: "view_plants" },
     { label: "My Plants", href: "/plants", icon: Leaf, permission: "view_plants" },
     { label: "AI Assistant", href: "/assistant", icon: Bot, permission: "view_assistant" },
     { label: "Analytics", href: "/analytics", icon: BarChart3, permission: "view_analytics" },

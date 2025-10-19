@@ -12,16 +12,22 @@ export const AISmartSuggestionsCard: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const { toast } = useToast();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    loadSuggestions();
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('agrotrack_token') || localStorage.getItem('token')) : null;
+    setIsAuthenticated(!!token);
+    if (token) {
+      loadSuggestions();
+    }
   }, []);
 
   const loadSuggestions = async () => {
     try {
       setLoading(true);
-      const response = await getAISuggestions({ limit: 3 });
-      setSuggestions(response.data?.suggestions || []);
+      const resp = await getAISuggestions({ limit: 3 });
+      // resp: { suggestions, grouped, total }
+      setSuggestions(resp.suggestions || []);
     } catch (error: any) {
       console.error('Error loading AI suggestions:', error);
       // Silently fail - suggestions are optional
@@ -31,10 +37,15 @@ export const AISmartSuggestionsCard: React.FC = () => {
   };
 
   const handleGenerate = async () => {
+    if (!isAuthenticated) {
+      toast({ title: 'Please sign in', description: 'Sign in to generate personalized AI suggestions', variant: 'default' });
+      return;
+    }
     try {
       setGenerating(true);
       const response = await generateAISuggestions();
-      const count = response.data?.count || 0;
+      // response: { suggestions, count }
+      const count = response?.count ?? (response?.suggestions?.length ?? 0);
       toast({
         title: '✨ AI Analysis Complete',
         description: `Generated ${count} new suggestions`,
@@ -42,9 +53,28 @@ export const AISmartSuggestionsCard: React.FC = () => {
       await loadSuggestions();
     } catch (error: any) {
       console.error('Error generating suggestions:', error);
-      const errorMessage = typeof error.response?.data?.error === 'string' 
-        ? error.response.data.error 
-        : 'Failed to generate suggestions';
+
+      // Try to extract a friendly error message from various shapes
+      const respData = error?.response?.data;
+      let errorMessage = 'Failed to generate suggestions';
+
+      if (typeof respData === 'string') {
+        errorMessage = respData;
+      } else if (respData) {
+        if (typeof respData.error === 'string') errorMessage = respData.error;
+        else if (typeof respData.message === 'string') errorMessage = respData.message;
+        else if (respData.error && typeof respData.error.message === 'string') errorMessage = respData.error.message;
+        else {
+          try {
+            errorMessage = JSON.stringify(respData).slice(0, 300);
+          } catch (e) {
+            errorMessage = String(respData);
+          }
+        }
+      } else if (error?.message) {
+        errorMessage = String(error.message);
+      }
+
       toast({
         title: 'Error',
         description: errorMessage,
@@ -152,15 +182,20 @@ export const AISmartSuggestionsCard: React.FC = () => {
             </CardTitle>
             <p className="text-sm text-gray-500 mt-1">Personalized care tips</p>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleGenerate}
-            disabled={generating}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 border-none"
-          >
-            {generating ? 'Analyzing...' : 'Generate'}
-          </Button>
+          <div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleGenerate}
+              disabled={generating || !isAuthenticated}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 border-none"
+            >
+              {generating ? 'Analyzing...' : 'Generate'}
+            </Button>
+            {!isAuthenticated && (
+              <p className="text-xs text-gray-500 mt-1">Sign in to enable AI suggestions</p>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-4">

@@ -12,9 +12,12 @@ const api = axios.create({
 
 // Add auth token to requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  // Some parts of the app store token under 'agrotrack_token'
+  const token = localStorage.getItem('agrotrack_token') || localStorage.getItem('token');
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    // cast to any to avoid Axios header typing differences
+    (config.headers as any) = config.headers || {};
+    (config.headers as any).Authorization = `Bearer ${token}`;
   }
   return config;
 });
@@ -52,7 +55,8 @@ export interface GroupedSuggestions {
  */
 export const generateAISuggestions = async (plantId?: string) => {
   const response = await api.post('/ai/suggestions/generate', { plantId });
-  return response.data;
+  // backend returns { success: true, data: { suggestions, count }, ... }
+  return response.data?.data || { suggestions: [], count: 0 };
 };
 
 /**
@@ -69,7 +73,8 @@ export const getAISuggestions = async (options?: {
   if (options?.limit) params.append('limit', options.limit.toString());
 
   const response = await api.get(`/ai/suggestions?${params.toString()}`);
-  return response.data;
+  // backend returns { success: true, data: { suggestions, grouped, total } }
+  return response.data?.data || { suggestions: [], grouped: {}, total: 0 };
 };
 
 /**
