@@ -36,6 +36,9 @@ import {
   User,
   Activity
 } from 'lucide-react';
+import { PlantCard } from '@/components/PlantCard';
+import { AISmartSuggestionsCard } from '@/components/AISmartSuggestionsCard';
+import { useNavigate } from 'react-router-dom';
 
 // Type converters to transform API types to component types
 const convertAPIPlantToPlant = (apiPlant: APIPlant): Plant => ({
@@ -73,6 +76,7 @@ const UserDashboard = () => {
   });
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -146,6 +150,28 @@ const UserDashboard = () => {
     loadDashboardData();
   }, [loadDashboardData]);
 
+  // Plant CRUD helpers for the dashboard (minimal, keep functionality)
+  const handleEditPlant = (plant: Plant) => {
+    // Navigate to plants management page (user can edit there)
+    navigate('/plants');
+  };
+
+  const handleDeletePlant = async (plantId: string) => {
+    if (!confirm('Are you sure you want to delete this plant?')) return;
+    try {
+      await api.delete(`/plants/${plantId}`);
+      setPlants(prev => prev.filter(p => p.id !== plantId));
+    } catch (err) {
+      console.error('Failed to delete plant:', err);
+      // Do not crash dashboard; show toast or fallback in future
+    }
+  };
+
+  const handleMarkWatered = (plantId: string) => {
+    // Optimistic UI update: set lastWatered locally; backend care-log can be added separately
+    setPlants(prev => prev.map(p => p.id === plantId ? { ...p, lastWatered: new Date().toISOString() } : p));
+  };
+
   const getActivityIcon = (type: RecentActivity['type']) => {
     switch (type) {
       case 'plant_added': return <Plus className="w-4 h-4 text-green-500" />;
@@ -182,179 +208,223 @@ const UserDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
+        {/* Modern Welcome Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                Welcome back, {user?.name?.split(' ')[0] || 'Gardener'}! 🌱
-              </h1>
-              <p className="text-muted-foreground mt-2">
-                Here's what's happening with your plants today
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <Button asChild>
-                <Link to="/plants">
-                  <Leaf className="w-4 h-4 mr-2" />
-                  View All Plants
-                </Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link to="/settings">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
-                </Link>
-              </Button>
-            </div>
-          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-1">
+            Welcome back, {user?.name?.split(' ')[0] || 'there'} 👋
+          </h1>
+          <p className="text-gray-600">
+            Here's everything happening with your garden
+          </p>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Plants</CardTitle>
-              <Leaf className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{analyticsData?.dashboard.totalPlants || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {analyticsData?.dashboard.healthScore || 0}% healthy
-              </p>
-              <Progress value={analyticsData?.dashboard.healthScore || 0} className="mt-2" />
+        {/* Stats Overview - Modern Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Total Plants</p>
+                  <p className="text-3xl font-bold text-gray-900">{plants.length}</p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Leaf className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center text-sm">
+                <span className="text-green-600 font-medium">
+                  {analyticsData?.dashboard.healthScore || 0}% healthy
+                </span>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Reminders</CardTitle>
-              <Bell className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{analyticsData?.dashboard.activeReminders || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {analyticsData?.dashboard.overdueReminders || 0} overdue
-              </p>
-              {analyticsData?.dashboard.overdueReminders > 0 && (
-                <Badge variant="destructive" className="mt-2">
-                  <AlertTriangle className="w-3 h-3 mr-1" />
-                  Action needed
-                </Badge>
-              )}
+          <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Health Score</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {analyticsData?.dashboard.healthScore || 0}%
+                  </p>
+                </div>
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                  (analyticsData?.dashboard.healthScore || 0) >= 80 ? 'bg-green-100' :
+                  (analyticsData?.dashboard.healthScore || 0) >= 50 ? 'bg-yellow-100' : 'bg-red-100'
+                }`}>
+                  <TrendingUp className={`w-6 h-6 ${
+                    (analyticsData?.dashboard.healthScore || 0) >= 80 ? 'text-green-600' :
+                    (analyticsData?.dashboard.healthScore || 0) >= 50 ? 'text-yellow-600' : 'text-red-600'
+                  }`} />
+                </div>
+              </div>
+              <Progress value={analyticsData?.dashboard.healthScore || 0} className="mt-3 h-2" />
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{analyticsData?.dashboard.recentCareLogs || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                Care actions this week
-              </p>
+          <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Active Reminders</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {analyticsData?.dashboard.activeReminders || 0}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Bell className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center text-sm">
+                {analyticsData?.dashboard.overdueReminders > 0 ? (
+                  <span className="text-red-600 font-medium">
+                    ⚠️ {analyticsData?.dashboard.overdueReminders} overdue
+                  </span>
+                ) : (
+                  <span className="text-gray-500">All up to date</span>
+                )}
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Health Score</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{analyticsData?.dashboard.healthScore || 0}%</div>
-              <p className="text-xs text-muted-foreground">
-                Plant health average
-              </p>
-              <Progress value={analyticsData?.dashboard.healthScore || 0} className="mt-2" />
+          <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Care Actions</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {analyticsData?.dashboard.recentCareLogs || 0}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Activity className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center text-sm text-gray-500">
+                This week
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Active Reminders */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
+        {/* Quick Add Plant Button */}
+        <div className="mb-6">
+          <Button 
+            size="lg" 
+            className="bg-green-600 hover:bg-green-700"
+            asChild
+          >
+            <Link to="/plants">
+              <Plus className="w-5 h-5 mr-2" />
+              Add New Plant
+            </Link>
+          </Button>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Plants (2/3 width) */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* My Plants Section */}
+            <Card className="border-none shadow-sm">
+              <CardHeader className="border-b">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Bell className="w-5 h-5" />
-                      Active Reminders
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      <Leaf className="w-5 h-5 text-green-600" />
+                      My Plants
                     </CardTitle>
-                    <CardDescription>
-                      Upcoming care tasks for your plants
+                    <CardDescription className="mt-1">
+                      {plants.length} {plants.length === 1 ? 'plant' : 'plants'} in your garden
                     </CardDescription>
                   </div>
-                  <Button asChild variant="outline" size="sm">
-                    <Link to="/reminder-test">
-                      View All
-                    </Link>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/plants">View All</Link>
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
-                {activeReminders.length === 0 ? (
-                  <div className="text-center py-8">
-                    <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                    <p className="text-muted-foreground">All caught up! No pending reminders.</p>
+              <CardContent className="pt-6">
+                {plants.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Leaf className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-gray-600 mb-4">No plants yet</p>
+                    <Button asChild>
+                      <Link to="/plants">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Your First Plant
+                      </Link>
+                    </Button>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {activeReminders.map((reminder) => {
-                      const plant = plants.find(p => p.id === reminder.plantId);
-                      const isOverdue = reminder.status === 'overdue';
+                  <div className="space-y-3">
+                    {plants.slice(0, 5).map((plant) => (
+                      <div
+                        key={plant.id}
+                        className="flex items-center gap-4 p-4 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50/50 transition-all group"
+                      >
+                        {/* Plant Image */}
+                        <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                          {plant.imageUrl ? (
+                            <img 
+                              src={plant.imageUrl} 
+                              alt={plant.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-2xl">
+                              🌿
+                            </div>
+                          )}
+                        </div>
 
-                      return (
-                        <div
-                          key={reminder.id}
-                          className={`flex items-center justify-between p-4 rounded-lg border ${
-                            isOverdue
-                              ? 'border-red-200 bg-red-50'
-                              : 'border-gray-200 bg-gray-50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-full ${
-                              isOverdue ? 'bg-red-100' : 'bg-blue-100'
-                            }`}>
-                              {reminder.type === 'watering' && <Droplets className={`w-4 h-4 ${isOverdue ? 'text-red-600' : 'text-blue-600'}`} />}
-                              {reminder.type === 'fertilizing' && <Sun className={`w-4 h-4 ${isOverdue ? 'text-red-600' : 'text-blue-600'}`} />}
-                              {reminder.type === 'pruning' && <Leaf className={`w-4 h-4 ${isOverdue ? 'text-red-600' : 'text-blue-600'}`} />}
-                              <Calendar className={`w-4 h-4 ${isOverdue ? 'text-red-600' : 'text-blue-600'}`} />
-                            </div>
-                            <div>
-                              <p className="font-medium">
-                                {reminder.title}
-                                {isOverdue && <Badge variant="destructive" className="ml-2 text-xs">Overdue</Badge>}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {plant?.name || 'Unknown Plant'} • Due {new Date(reminder.dueDate).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
-                              Snooze
-                            </Button>
-                            <Button size="sm">
-                              Complete
-                            </Button>
+                        {/* Plant Info */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-gray-900 mb-1">{plant.name}</h4>
+                          <div className="flex items-center gap-3 text-sm text-gray-600">
+                            <span className="flex items-center gap-1">
+                              <Sun className="w-4 h-4" />
+                              {plant.sunlight}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Droplets className="w-4 h-4" />
+                              Every {plant.wateringEveryDays}d
+                            </span>
                           </div>
                         </div>
-                      );
-                    })}
-                    {activeReminders.length >= 5 && (
-                      <div className="text-center pt-4">
-                        <Button variant="outline" asChild>
-                          <Link to="/reminders">
-                            View All Reminders
+
+                        {/* Quick Actions */}
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8"
+                            onClick={() => handleMarkWatered(plant.id)}
+                          >
+                            <Droplets className="w-4 h-4 mr-1" />
+                            Water
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8"
+                            onClick={() => handleEditPlant(plant)}
+                          >
+                            Edit
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    {plants.length > 5 && (
+                      <div className="text-center pt-2">
+                        <Button variant="link" asChild>
+                          <Link to="/plants">
+                            View all {plants.length} plants →
                           </Link>
                         </Button>
                       </div>
@@ -365,207 +435,118 @@ const UserDashboard = () => {
             </Card>
           </div>
 
-          {/* Recent Activity */}
-          <div>
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Activity className="w-5 h-5" />
-                      Recent Activity
-                    </CardTitle>
-                    <CardDescription>
-                      Latest updates from your garden
-                    </CardDescription>
+          {/* Right Column - AI Suggestions & Reminders (1/3 width) */}
+          <div className="space-y-6">
+            {/* AI Smart Suggestions */}
+            <AISmartSuggestionsCard />
+
+            {/* Active Reminders */}
+            <Card className="border-none shadow-sm">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-blue-600" />
+                  Reminders
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {activeReminders.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                    <p className="text-sm text-gray-600">All caught up! ✨</p>
                   </div>
-                  <Button asChild variant="outline" size="sm">
-                    <Link to="/care-test">
-                      View Timeline
+                ) : (
+                  <div className="space-y-3">
+                    {activeReminders.slice(0, 3).map((reminder) => {
+                      const plant = plants.find(p => p.id === reminder.plantId);
+                      const isOverdue = reminder.status === 'overdue';
+
+                      return (
+                        <div
+                          key={reminder.id}
+                          className={`p-3 rounded-lg border ${
+                            isOverdue 
+                              ? 'border-red-200 bg-red-50' 
+                              : 'border-gray-200 bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2 mb-2">
+                            <div className={`p-1.5 rounded ${
+                              isOverdue ? 'bg-red-100' : 'bg-blue-100'
+                            }`}>
+                              {reminder.type === 'watering' && <Droplets className={`w-4 h-4 ${isOverdue ? 'text-red-600' : 'text-blue-600'}`} />}
+                              {reminder.type === 'fertilizing' && <Sun className={`w-4 h-4 ${isOverdue ? 'text-red-600' : 'text-blue-600'}`} />}
+                              {reminder.type === 'pruning' && <Leaf className={`w-4 h-4 ${isOverdue ? 'text-red-600' : 'text-blue-600'}`} />}
+                              {!['watering', 'fertilizing', 'pruning'].includes(reminder.type) && <Calendar className={`w-4 h-4 ${isOverdue ? 'text-red-600' : 'text-blue-600'}`} />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm text-gray-900 mb-1">
+                                {plant?.name || 'Unknown Plant'}
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                {reminder.title}
+                              </p>
+                              {isOverdue && (
+                                <Badge variant="destructive" className="mt-1 text-xs">
+                                  Overdue
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <Button size="sm" className="w-full h-7 text-xs">
+                            Mark Done
+                          </Button>
+                        </div>
+                      );
+                    })}
+                    {activeReminders.length > 3 && (
+                      <Button variant="outline" size="sm" className="w-full" asChild>
+                        <Link to="/reminder-test">
+                          View all {activeReminders.length} reminders
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Links */}
+            <Card className="border-none shadow-sm">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="space-y-2">
+                  <Button variant="outline" className="w-full justify-start" asChild>
+                    <Link to="/community">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Community
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start" asChild>
+                    <Link to="/reminder-test">
+                      <Bell className="w-4 h-4 mr-2" />
+                      All Reminders
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start" asChild>
+                    <Link to="/settings">
+                      <Settings className="w-4 h-4 mr-2" />
+                      Settings
                     </Link>
                   </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {analyticsData?.recentActivity.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-muted-foreground">No recent activity</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {analyticsData?.recentActivity.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className={`flex gap-3 p-3 rounded-lg border ${getActivityColor(activity.type)}`}
-                      >
-                        <div className="flex-shrink-0 mt-1">
-                          {getActivityIcon(activity.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">
-                            {activity.title}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            {activity.description}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {new Date(activity.timestamp).toLocaleDateString()} at{' '}
-                            {new Date(activity.timestamp).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
         </div>
 
-        {/* Feature Access Section */}
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Plant Care Systems</CardTitle>
-              <CardDescription>
-                Access your implemented plant care features
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="flex items-start gap-4 p-4 rounded-lg border bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
-                  <div className="p-3 rounded-full bg-blue-500">
-                    <Bell className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-blue-900">Smart Reminders</h3>
-                    <p className="text-sm text-blue-700 mb-3">
-                      Intelligent plant care scheduling with seasonal adjustments
-                    </p>
-                    <Button asChild size="sm" variant="outline">
-                      <Link to="/reminder-test" className="text-blue-700 border-blue-300 hover:bg-blue-50">
-                        Manage Reminders
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 p-4 rounded-lg border bg-gradient-to-r from-green-50 to-green-100 border-green-200">
-                  <div className="p-3 rounded-full bg-green-500">
-                    <Droplets className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-green-900">Care Logging</h3>
-                    <p className="text-sm text-green-700 mb-3">
-                      Track watering, fertilizing, and all plant care activities
-                    </p>
-                    <Button asChild size="sm" variant="outline">
-                      <Link to="/care-test" className="text-green-700 border-green-300 hover:bg-green-50">
-                        Log Care
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 p-4 rounded-lg border bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
-                  <div className="p-3 rounded-full bg-purple-500">
-                    <Leaf className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-purple-900">Plant Management</h3>
-                    <p className="text-sm text-purple-700 mb-3">
-                      Advanced plant filtering, bulk operations, and care tracking
-                    </p>
-                    <Button asChild size="sm" variant="outline">
-                      <Link to="/plants" className="text-purple-700 border-purple-300 hover:bg-purple-50">
-                        Manage Plants
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>
-                Access all your plant care features
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <Button asChild className="h-20 flex-col gap-2">
-                  <Link to="/plants">
-                    <Plus className="w-6 h-6" />
-                    Add Plant
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="h-20 flex-col gap-2">
-                  <Link to="/plants">
-                    <Leaf className="w-6 h-6" />
-                    My Plants
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="h-20 flex-col gap-2">
-                  <Link to="/reminder-test">
-                    <Bell className="w-6 h-6" />
-                    Reminders
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="h-20 flex-col gap-2">
-                  <Link to="/care-test">
-                    <Droplets className="w-6 h-6" />
-                    Care Logs
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="h-20 flex-col gap-2">
-                  <Link to="/analytics">
-                    <BarChart3 className="w-6 h-6" />
-                    Analytics
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="h-20 flex-col gap-2">
-                  <Link to="/assistant">
-                    <MessageSquare className="w-6 h-6" />
-                    AI Assistant
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="h-20 flex-col gap-2">
-                  <Link to="/community">
-                    <User className="w-6 h-6" />
-                    Community
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="h-20 flex-col gap-2">
-                  <Link to="/profile">
-                    <User className="w-6 h-6" />
-                    Profile
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="h-20 flex-col gap-2">
-                  <Link to="/settings">
-                    <Settings className="w-6 h-6" />
-                    Settings
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </main>
 
       <Footer />
     </div>
   );
 };
+
 
 export default UserDashboard;

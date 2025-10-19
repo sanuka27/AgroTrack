@@ -158,10 +158,7 @@ export function PlantCard({
             
             <div className="flex justify-between items-center">
               <span>Light needs:</span>
-              <div className="flex items-center space-x-1">
-                <Sun className="w-3 h-3 text-yellow-500" />
-                <span className="text-yellow-700 font-medium">{plant.sunlight}</span>
-              </div>
+              <span className="text-yellow-700 font-medium">{plant.sunlight}</span>
             </div>
           </div>
         </CardContent>
