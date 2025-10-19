@@ -1,21 +1,31 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICommunityPost extends Document {
-  authorUid: string;
+  authorId: mongoose.Types.ObjectId; // Changed from authorUid (string) to authorId (ObjectId)
+  author: mongoose.Types.ObjectId; // Alias for authorId (backward compatibility)
+  authorName: string; // Display name of the author
+  authorUsername?: string; // Optional username of the author
   title: string;
-  bodyMarkdown: string;
+  body: string; // Changed from bodyMarkdown
+  content?: string; // Alias for body
+  category?: string;
   images: Array<{
     url: string;
     width: number;
     height: number;
   }>;
   tags: string[];
-  voteScore: number; // Denormalized count
-  commentCount: number; // Denormalized count
+  score: number; // Changed from voteScore
+  voteScore: number; // Alias for score (for compatibility)
+  commentsCount: number; // Changed from commentCount
   isSolved: boolean;
-  isDeleted: boolean; // Soft delete
+  status: 'visible' | 'hidden' | 'deleted'; // Changed from isDeleted (boolean)
   deletedAt?: Date;
   deletedBy?: string;
+  allowComments?: boolean;
+  editCount?: number;
+  expertiseLevel?: string;
+  plantId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
   extractHashtags(): string[];
@@ -23,9 +33,23 @@ export interface ICommunityPost extends Document {
 
 const communityPostSchema = new Schema<ICommunityPost>(
   {
-    authorUid: {
+    authorId: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: 'User',
+      index: true,
+    },
+    authorName: {
       type: String,
       required: true,
+      trim: true,
+      maxlength: 100,
+      index: true,
+    },
+    authorUsername: {
+      type: String,
+      trim: true,
+      maxlength: 50,
       index: true,
     },
     title: {
@@ -36,9 +60,10 @@ const communityPostSchema = new Schema<ICommunityPost>(
       maxlength: 200,
       index: 'text',
     },
-    bodyMarkdown: {
+    body: {
       type: String,
-      required: true,
+      required: false,
+      default: '',
       maxlength: 10000,
       index: 'text',
     },
@@ -54,12 +79,12 @@ const communityPostSchema = new Schema<ICommunityPost>(
       default: [],
       index: true,
     },
-    voteScore: {
+    score: {
       type: Number,
       default: 0,
       index: true,
     },
-    commentCount: {
+    commentsCount: {
       type: Number,
       default: 0,
     },
@@ -68,34 +93,60 @@ const communityPostSchema = new Schema<ICommunityPost>(
       default: false,
       index: true,
     },
-    isDeleted: {
-      type: Boolean,
-      default: false,
+    status: {
+      type: String,
+      enum: ['visible', 'hidden', 'deleted'],
+      default: 'visible',
       index: true,
     },
     deletedAt: Date,
     deletedBy: String,
+    category: { type: String },
+    allowComments: { type: Boolean, default: true },
+    editCount: { type: Number, default: 0 },
+    expertiseLevel: { type: String },
+    plantId: { type: Schema.Types.ObjectId, ref: 'Plant' }
   },
   {
+    collection: 'posts',
     timestamps: true,
   }
 );
 
 // Compound indexes for performance
 communityPostSchema.index({ createdAt: -1 });
-communityPostSchema.index({ voteScore: -1, createdAt: -1 });
+communityPostSchema.index({ score: -1, createdAt: -1 });
 communityPostSchema.index({ tags: 1, createdAt: -1 });
-communityPostSchema.index({ authorUid: 1, createdAt: -1 });
-communityPostSchema.index({ isDeleted: 1, createdAt: -1 });
+communityPostSchema.index({ authorId: 1, createdAt: -1 });
+communityPostSchema.index({ status: 1, createdAt: -1 });
 
 // Virtual for excerpt
 communityPostSchema.virtual('excerpt').get(function () {
-  return this.bodyMarkdown.substring(0, 200) + (this.bodyMarkdown.length > 200 ? '...' : '');
+  return this.body.substring(0, 200) + (this.body.length > 200 ? '...' : '');
+});
+
+// Virtual for voteScore as alias for score
+communityPostSchema.virtual('voteScore').get(function () {
+  return this.score;
+}).set(function (value: number) {
+  this.score = value;
+});
+
+// Virtual for author as alias for authorId
+communityPostSchema.virtual('author').get(function () {
+  return this.authorId;
+});
+
+// Virtual for content as alias for body
+communityPostSchema.virtual('content').get(function () {
+  return this.body;
+}).set(function (value: string) {
+  this.body = value;
 });
 
 // Method to extract hashtags from title and body
 communityPostSchema.methods.extractHashtags = function (): string[] {
-  const text = `${this.title} ${this.bodyMarkdown}`;
+  const text = `${this.title} ${this.body}`;
   const hashtagRegex = /#([a-zA-Z0-9_-]+)/g;
   const matches = text.match(hashtagRegex);
   if (!matches) return [];
@@ -106,7 +157,7 @@ communityPostSchema.methods.extractHashtags = function (): string[] {
 
 // Pre-save hook to auto-extract tags
 communityPostSchema.pre('save', function (next) {
-  if (this.isModified('title') || this.isModified('bodyMarkdown')) {
+  if (this.isModified('title') || this.isModified('body')) {
     this.tags = this.extractHashtags();
   }
   next();
