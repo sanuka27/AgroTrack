@@ -198,7 +198,7 @@ export class CommunityController {
   static async getPostById(req: Request, res: Response): Promise<void> {
     try {
       const { postId } = req.params;
-      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+      const userId = (req.user as any)?._id ? new mongoose.Types.ObjectId((req.user as any)._id.toString()) : null;
 
       const post = await CommunityPost.findById(postId)
         .populate('authorId', 'username profilePicture bio expertiseLevel')
@@ -224,8 +224,10 @@ export class CommunityController {
         message: 'Forum post retrieved successfully',
         data: {
           post: {
-            ...post.toObject(),
-            hasLiked
+            ...post,
+            hasLiked,
+            // Include embedded comments in response
+            comments: post.comments || []
           }
         }
       });

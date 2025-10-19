@@ -14,7 +14,8 @@
     "test:watch": "jest --watch",
     "seed": "node dist/scripts/seed.js",
     "docs:generate": "ts-node src/scripts/generateDocs.ts",
-    "docs:serve": "npm run build && npm start"
+    "docs:serve": "npm run build && npm start",
+    "db:cleanup": "ts-node scripts/database-cleanup-master.ts"
   },
   "keywords": [
     "plant",

@@ -291,14 +291,13 @@ export class CommunityForumController {
       res.json({
         success: true,
         data: {
-          post: {
-            ...post,
-            author: {
-              uid: author?.firebaseUid || '',
-              name: displayName,
-              avatarUrl: author?.avatar || '',
-              role: author?.role || 'user',
-            },
+          ...post,
+          author: {
+            _id: author?._id || post.authorId,
+            uid: author?.firebaseUid || '',
+            name: displayName,
+            avatarUrl: author?.avatar || '',
+            role: author?.role || 'user',
           },
           userVote,
         },
