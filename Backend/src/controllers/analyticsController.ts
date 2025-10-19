@@ -3,14 +3,12 @@ import { body, query, param, validationResult } from 'express-validator';
 import mongoose from 'mongoose';
 import { DashboardAnalytics, DashboardWidgetType, RefreshFrequency } from '../models/DashboardAnalytics';
 import { UserAnalytics } from '../models/UserAnalytics';
-import { PlantCareAnalytics } from '../models/PlantCareAnalytics';
-import { SystemMetrics } from '../models/SystemMetrics';
 import { User } from '../models/User';
 import { Plant } from '../models/Plant';
-import { CareLog, CareType } from '../models/CareLog';
-import { Reminder } from '../models/Reminder';
-import { Post } from '../models/Post';
-import { Notification } from '../models/Notification';
+import { CommunityPost } from '../models/CommunityPost';
+import { CommunityComment } from '../models/CommunityComment';
+import { CommunityVote } from '../models/CommunityVote';
+import { CommunityReport } from '../models/CommunityReport';
 import { logger } from '../config/logger';
 
 // Interfaces for request types
@@ -25,6 +23,88 @@ interface AnalyticsFilters {
   category?: string;
   plantId?: string;
 }
+
+// Get simple dashboard analytics (flat structure for frontend compatibility)
+export const getSimpleDashboardAnalytics = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user!._id.toString());
+
+    // Get all counts in parallel for performance
+    const [
+      totalPlants,
+      healthyPlants,
+      needsAttention,
+      communityPosts,
+      postsThisMonth
+    ] = await Promise.all([
+      // Total plants
+      Plant.countDocuments({ userId }),
+      
+      // Healthy plants (Excellent or Good health)
+      Plant.countDocuments({ 
+        userId,
+        $or: [
+          { health: { $in: ['Excellent', 'Good'] } },
+          { healthStatus: { $in: ['Excellent', 'Good'] } }
+        ]
+      }),
+      
+      // Plants needing attention (not Excellent/Good)
+      Plant.countDocuments({ 
+        userId,
+        $or: [
+          { health: { $nin: ['Excellent', 'Good'] } },
+          { healthStatus: { $nin: ['Excellent', 'Good'] } }
+        ]
+      }),
+      
+      // Community posts by user
+      CommunityPost.countDocuments({ authorId: userId }),
+      
+      // Posts this month
+      CommunityPost.countDocuments({
+        authorId: userId,
+        createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
+      })
+    ]);
+
+    // Calculate critical plants (those needing urgent attention)
+    const criticalPlants = await Plant.countDocuments({
+      userId,
+      $or: [
+        { health: 'Critical' },
+        { healthStatus: 'Critical' }
+      ]
+    });
+
+    // Build simple analytics response matching frontend interface
+    const analytics = {
+      userId: userId.toString(),
+      totalPlants,
+      healthyPlants,
+      needsAttention,
+      criticalPlants,
+      communityPosts,
+      postsThisMonth,
+      lastUpdated: new Date().toISOString()
+    };
+
+    return res.json({
+      success: true,
+      data: {
+        analytics
+      }
+    });
+
+  } catch (error) {
+    logger.error('Error fetching simple dashboard analytics:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch dashboard analytics',
+      error: process.env.NODE_ENV === 'development' ? error : undefined
+    });
+  }
+};
 
 // Get comprehensive user analytics dashboard
 export const getUserDashboard = async (req: AuthenticatedRequest, res: Response) => {
@@ -119,25 +199,17 @@ export const getPlantHealthAnalytics = async (req: AuthenticatedRequest, res: Re
     const plants = await Plant.find(plantFilter).select('name species healthStatus healthScore category');
     
     // Get care logs for health correlation
-    const careLogsFilter: any = { userId };
-    if (Object.keys(dateFilter).length > 0) {
-      careLogsFilter.careDate = dateFilter;
-    }
-    if (plantId) careLogsFilter.plantId = new mongoose.Types.ObjectId(plantId as string);
-
-    const careLogs = await CareLog.find(careLogsFilter)
-      .populate('plantId', 'name species')
-      .sort({ careDate: -1 });
+    // Note: CareLog collection was removed. Skipping care log aggregation.
 
     // Calculate health analytics
     const healthAnalytics = {
       totalPlants: plants.length,
       healthDistribution: {
-        excellent: plants.filter(p => p.health === 'Excellent').length,
-        good: plants.filter(p => p.health === 'Good').length,
-        needsLight: plants.filter(p => p.health === 'Needs light').length,
-        needsWater: plants.filter(p => p.health === 'Needs water').length,
-        attention: plants.filter(p => p.health === 'Attention').length
+        excellent: plants.filter(p => (p as any).health === 'Excellent' || (p as any).healthStatus === 'Excellent').length,
+        good: plants.filter(p => (p as any).health === 'Good' || (p as any).healthStatus === 'Good').length,
+        fair: plants.filter(p => (p as any).health === 'Fair' || (p as any).healthStatus === 'Fair').length,
+        poor: plants.filter(p => (p as any).health === 'Poor' || (p as any).healthStatus === 'Poor').length,
+        critical: plants.filter(p => (p as any).health === 'Critical' || (p as any).healthStatus === 'Critical').length
       },
       averageHealthScore: plants.reduce((sum, p) => sum + (p.healthScore || 0), 0) / plants.length || 0,
       healthByCategory: {} as Record<string, {
@@ -146,7 +218,7 @@ export const getPlantHealthAnalytics = async (req: AuthenticatedRequest, res: Re
         unhealthy: number;
         averageScore: number;
       }>,
-      careImpactAnalysis: {},
+      careImpactAnalysis: {}, // Not available without care logs
       healthTrends: {},
       riskFactors: [],
       recommendations: []
@@ -165,27 +237,12 @@ export const getPlantHealthAnalytics = async (req: AuthenticatedRequest, res: Re
       }
       
       healthAnalytics.healthByCategory[category].total += 1;
-      if (['Excellent', 'Good'].includes(plant.health)) {
+      const health = (plant as any).health || (plant as any).healthStatus;
+      if (['Excellent', 'Good'].includes(health)) {
         healthAnalytics.healthByCategory[category].healthy += 1;
       } else {
         healthAnalytics.healthByCategory[category].unhealthy += 1;
       }
-    });
-
-    // Analyze care impact on health
-    const careImpactMap = new Map();
-    careLogs.forEach(log => {
-      const plantId = log.plantId.toString();
-      if (!careImpactMap.has(plantId)) {
-        careImpactMap.set(plantId, {
-          careCount: 0,
-          careTypes: new Set<string>()
-        });
-      }
-      
-      const plantData = careImpactMap.get(plantId);
-      plantData.careCount += 1;
-      plantData.careTypes.add(log.careType);
     });
 
     // Generate recommendations based on analytics
@@ -197,7 +254,7 @@ export const getPlantHealthAnalytics = async (req: AuthenticatedRequest, res: Re
         ...healthAnalytics,
         recommendations,
         plantDetails: plants,
-        recentCareLogs: careLogs.slice(0, 20)
+        recentCareLogs: []
       }
     });
 
@@ -212,136 +269,12 @@ export const getPlantHealthAnalytics = async (req: AuthenticatedRequest, res: Re
 };
 
 // Get care effectiveness analytics
-export const getCareEffectivenessAnalytics = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
-
-    const userId = new mongoose.Types.ObjectId(req.user!._id.toString());
-    const { startDate, endDate, careType } = req.query;
-
-    // Build filters
-    const dateFilter: any = {};
-    if (startDate) dateFilter.$gte = new Date(startDate as string);
-    if (endDate) dateFilter.$lte = new Date(endDate as string);
-
-    const careFilter: any = { userId };
-    if (Object.keys(dateFilter).length > 0) {
-      careFilter.careDate = dateFilter;
-    }
-    if (careType) careFilter.careType = careType;
-
-    // Get care logs with plant health data
-    const careLogs = await CareLog.find(careFilter)
-      .populate('plantId', 'name species category')
-      .sort({ careDate: -1 });
-
-    // Get reminders to analyze completion rates
-    const reminderFilter: any = { userId };
-    if (Object.keys(dateFilter).length > 0) {
-      reminderFilter.scheduledDate = dateFilter;
-    }
-
-    const reminders = await Reminder.find(reminderFilter);
-
-    // Calculate effectiveness metrics
-    const effectiveness = {
-      totalCareActions: careLogs.length,
-      careTypeDistribution: {} as Record<CareType, number>,
-      healthImpactByType: {} as Record<CareType, {
-        totalImpact: number;
-        positiveImpact: number;
-        negativeImpact: number;
-        averageImpact: number;
-      }>,
-      consistencyScore: 0,
-      timeliness: {
-        onTime: 0,
-        early: 0,
-        late: 0
-      },
-      reminderCompletion: {
-        total: reminders.length,
-        completed: reminders.filter(r => r.status === 'completed').length,
-        overdue: reminders.filter(r => r.status === 'overdue').length,
-        snoozed: reminders.filter(r => r.status === 'snoozed').length
-      },
-      plantResponseRates: {},
-      careQualityMetrics: {},
-      improvementSuggestions: []
-    };
-
-    // Analyze care type distribution and effectiveness
-    careLogs.forEach(log => {
-      const type = log.careType;
-      if (!effectiveness.careTypeDistribution[type]) {
-        effectiveness.careTypeDistribution[type] = 0;
-      }
-      effectiveness.careTypeDistribution[type] += 1;
-
-      // Analyze health impact (simplified - using health-check logs)
-      if (log.careType === 'health-check' && log.metadata?.overallHealth) {
-        if (!effectiveness.healthImpactByType[type]) {
-          effectiveness.healthImpactByType[type] = {
-            totalImpact: 0,
-            positiveImpact: 0,
-            negativeImpact: 0,
-            averageImpact: 0
-          };
-        }
-        // Simplified: just count health checks as positive impact
-        effectiveness.healthImpactByType[type].positiveImpact += 1;
-      }
-
-      // Analyze timeliness (mock implementation)
-      const timeliness = Math.random(); // In real implementation, compare with recommended timing
-      if (timeliness > 0.8) effectiveness.timeliness.onTime += 1;
-      else if (timeliness > 0.5) effectiveness.timeliness.early += 1;
-      else effectiveness.timeliness.late += 1;
-    });
-
-    // Calculate averages
-    Object.keys(effectiveness.healthImpactByType).forEach(type => {
-      const typeData = effectiveness.healthImpactByType[type as CareType];
-      const totalActions = effectiveness.careTypeDistribution[type as CareType];
-      // Simplified average calculation
-      typeData.averageImpact = totalActions > 0 ? typeData.positiveImpact / totalActions : 0;
-    });
-
-    // Calculate consistency score
-    const totalActions = careLogs.length;
-    const onTimeActions = effectiveness.timeliness.onTime;
-    effectiveness.consistencyScore = totalActions > 0 ? (onTimeActions / totalActions) * 100 : 0;
-
-    // Generate improvement suggestions
-    const suggestions = generateCareImprovementSuggestions(effectiveness);
-
-    return res.json({
-      success: true,
-      data: {
-        ...effectiveness,
-        improvementSuggestions: suggestions,
-        period: {
-          start: startDate || 'N/A',
-          end: endDate || 'N/A'
-        }
-      }
-    });
-
-  } catch (error) {
-    logger.error('Error fetching care effectiveness analytics:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch care effectiveness analytics',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
-    });
-  }
+export const getCareEffectivenessAnalytics = async (_req: AuthenticatedRequest, res: Response) => {
+  // CareLog and Reminder collections are not part of the current schema.
+  return res.status(501).json({
+    success: false,
+    message: 'Care effectiveness analytics are not available in the current deployment.'
+  });
 };
 
 // Get growth tracking analytics
@@ -421,7 +354,7 @@ export const getGrowthAnalytics = async (req: AuthenticatedRequest, res: Respons
             // Track fastest/slowest
             if (!growthAnalytics.fastestGrowing || growthRate > growthAnalytics.fastestGrowing.rate) {
               growthAnalytics.fastestGrowing = {
-                plantId: plant._id,
+                plantId: plant._id as mongoose.Types.ObjectId,
                 name: plant.name,
                 rate: growthRate
               };
@@ -429,7 +362,7 @@ export const getGrowthAnalytics = async (req: AuthenticatedRequest, res: Respons
 
             if (!growthAnalytics.slowestGrowing || growthRate < growthAnalytics.slowestGrowing.rate) {
               growthAnalytics.slowestGrowing = {
-                plantId: plant._id,
+                plantId: plant._id as mongoose.Types.ObjectId,
                 name: plant.name,
                 rate: growthRate
               };
@@ -466,69 +399,15 @@ export const getGrowthAnalytics = async (req: AuthenticatedRequest, res: Respons
 
 // Get system metrics
 export const getSystemMetrics = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { period = 'daily' } = req.query;
-    
-    // Get latest system metrics
-    const metrics = await SystemMetrics.findOne()
-      .sort({ timestamp: -1 })
-      .lean();
-
-    if (!metrics) {
-      return res.json({
-        success: true,
-        data: {
-          message: 'No system metrics available',
-          period
-        }
-      });
+  // SystemMetrics collection is not part of the current schema.
+  const { period = 'daily' } = req.query as { period?: string };
+  return res.json({
+    success: true,
+    data: {
+      message: 'System metrics are not available in the current deployment.',
+      period
     }
-
-    // Get user-specific usage stats
-    const userId = new mongoose.Types.ObjectId(req.user!._id.toString());
-    const userAnalytics = await UserAnalytics.findOne({ userId }).lean();
-
-    const systemAnalytics = {
-      system: {
-        uptime: metrics.value || 0, // Simplified - using value field
-        memory: metrics.metadata?.memory || {},
-        cpu: metrics.metadata?.cpu || {},
-        storage: metrics.metadata?.storage || {}
-      },
-      database: {
-        connections: metrics.count || 0,
-        responseTime: metrics.average || 0,
-        operations: metrics.maximum || 0
-      },
-      api: {
-        totalRequests: metrics.dataPoints || 0,
-        errorRate: metrics.changePercentage || 0,
-        averageResponseTime: metrics.average || 0,
-        activeUsers: metrics.count || 0
-      },
-      user: {
-        totalSessions: 0, // Simplified - would need aggregation
-        averageSessionDuration: 0,
-        lastActiveDate: null,
-        featuresUsed: {}
-      },
-      period,
-      lastUpdated: metrics.timestamp
-    };
-
-    return res.json({
-      success: true,
-      data: systemAnalytics
-    });
-
-  } catch (error) {
-    logger.error('Error fetching system metrics:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch system metrics',
-      error: process.env.NODE_ENV === 'development' ? error : undefined
-    });
-  }
+  });
 };
 
 // Create or update dashboard widget
@@ -612,36 +491,33 @@ export async function generateUserAnalytics(userId: mongoose.Types.ObjectId, per
     system: {}
   };
 
-  // Get basic counts
-  const [plantCount, careLogCount, reminderCount, postCount, notificationCount] = await Promise.all([
+  // Get basic counts (limited to supported collections)
+  const [plantCount, postCount, commentCount, voteCount] = await Promise.all([
     Plant.countDocuments({ userId }),
-    CareLog.countDocuments({ userId }),
-    Reminder.countDocuments({ userId }),
-    Post.countDocuments({ authorId: userId }),
-    Notification.countDocuments({ userId })
+    CommunityPost.countDocuments({ authorId: userId }),
+    CommunityComment.countDocuments({ authorId: userId }),
+    CommunityVote.countDocuments({ userId })
   ]);
 
   analytics.plantOverview = {
     totalPlants: plantCount,
-    recentActivity: careLogCount
+    recentActivity: 0
   };
 
   analytics.careActivity = {
-    totalLogs: careLogCount,
-    thisWeek: await CareLog.countDocuments({
-      userId,
-      careDate: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-    })
+    totalLogs: 0,
+    thisWeek: 0
   };
 
   analytics.reminders = {
-    total: reminderCount,
-    pending: await Reminder.countDocuments({ userId, status: 'pending' })
+    total: 0,
+    pending: 0
   };
 
   analytics.community = {
     posts: postCount,
-    notifications: notificationCount
+    comments: commentCount,
+    votes: voteCount
   };
 
   return analytics;
@@ -719,7 +595,7 @@ async function createDefaultDashboard(userId: mongoose.Types.ObjectId) {
 function generateHealthRecommendations(analytics: any, plants: any[]) {
   const recommendations = [];
 
-  if (analytics.healthDistribution.critical > 0) {
+  if ((analytics.healthDistribution.critical || 0) > 0) {
     recommendations.push('Immediate attention needed for critical plants');
   }
 
@@ -727,7 +603,7 @@ function generateHealthRecommendations(analytics: any, plants: any[]) {
     recommendations.push('Consider reviewing your care routine');
   }
 
-  if (analytics.healthDistribution.poor > analytics.totalPlants * 0.3) {
+  if ((analytics.healthDistribution.poor || 0) > analytics.totalPlants * 0.3) {
     recommendations.push('30% of plants need improved care');
   }
 

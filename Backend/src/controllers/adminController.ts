@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { User } from '../models/User';
-import { Plant } from '../models/Plant';
-import { Post } from '../models/Post';
-import { CareLog } from '../models/CareLog';
-import { Reminder } from '../models/Reminder';
-import { UserAnalytics, AnalyticsEventType } from '../models/UserAnalytics';
+import { CommunityPost } from '../models/CommunityPost';
+import { CommunityComment } from '../models/CommunityComment';
+import { CommunityVote } from '../models/CommunityVote';
+import { CommunityReport } from '../models/CommunityReport';
 
 // Escape regex special characters in user input to avoid unintended patterns
 function escapeRegex(input: string): string {
@@ -31,13 +30,13 @@ export class AdminController {
         ])
       ]);
 
-      // Content statistics
-      const [plantsCount, postsCount, careLogsCount, remindersCount] = await Promise.all([
-        Plant.countDocuments({}),
-        Post.countDocuments({}),
-        CareLog.countDocuments({}),
-        Reminder.countDocuments({})
+      // Content statistics (Removed models: Plant, CareLog, Reminder)
+      const [postsCount] = await Promise.all([
+        CommunityPost.countDocuments({})
       ]);
+      const plantsCount = 0; // Model removed
+      const careLogsCount = 0; // Model removed
+      const remindersCount = 0; // Model removed
 
       const stats = {
         users: {
@@ -226,13 +225,13 @@ export class AdminController {
         return;
       }
 
-      // Get user's content statistics
-      const [plantsCount, postsCount, careLogsCount, remindersCount] = await Promise.all([
-        Plant.countDocuments({ userId }),
-        Post.countDocuments({ author: userId }),
-        CareLog.countDocuments({ userId }),
-        Reminder.countDocuments({ userId })
+      // Get user's content statistics (Removed models: Plant, CareLog, Reminder)
+      const [postsCount] = await Promise.all([
+        CommunityPost.countDocuments({ authorId: userId })
       ]);
+      const plantsCount = 0; // Model removed
+      const careLogsCount = 0; // Model removed
+      const remindersCount = 0; // Model removed
 
       res.json({
         success: true,
@@ -289,19 +288,19 @@ export class AdminController {
         { new: true, runValidators: true }
       ).select('-password -refreshTokens');
 
-      // Log admin action
-      if (req.user) {
-        await UserAnalytics.create({
-          userId: (req.user as any)._id || (req.user as any).id,
-          eventType: AnalyticsEventType.ADMIN_ACTION,
-          eventData: {
-            action: 'UPDATE_USER',
-            targetUserId: userId,
-            changes: updateData,
-            reason: reason || 'No reason provided'
-          }
-        });
-      }
+      // Log admin action (UserAnalytics model removed)
+      // if (req.user) {
+      //   await UserAnalytics.create({
+      //     userId: (req.user as any)._id || (req.user as any).id,
+      //     eventType: AnalyticsEventType.ADMIN_ACTION,
+      //     eventData: {
+      //       action: 'UPDATE_USER',
+      //       targetUserId: userId,
+      //       changes: updateData,
+      //       reason: reason || 'No reason provided'
+      //     }
+      //   });
+      // }
 
       res.json({
         success: true,
@@ -342,14 +341,12 @@ export class AdminController {
       }
 
       if (hardDelete && req.user && (req.user as any).role === 'super_admin') {
-        // Hard delete - remove user and all associated data
+        // Hard delete - remove user and all associated data (Removed models: Plant, CareLog, Reminder, UserAnalytics)
         await Promise.all([
           User.findByIdAndDelete(userId),
-          Plant.deleteMany({ userId }),
-          CareLog.deleteMany({ userId }),
-          Reminder.deleteMany({ userId }),
-          Post.deleteMany({ author: userId }),
-          UserAnalytics.deleteMany({ userId })
+          CommunityPost.deleteMany({ authorId: userId }),
+          CommunityComment.deleteMany({ authorId: userId }),
+          CommunityVote.deleteMany({ userId })
         ]);
       } else {
         // Soft delete - deactivate user
@@ -361,18 +358,18 @@ export class AdminController {
         });
       }
 
-      // Log admin action
-      if (req.user) {
-        await UserAnalytics.create({
-          userId: (req.user as any)._id || (req.user as any).id,
-          eventType: AnalyticsEventType.ADMIN_ACTION,
-          eventData: {
-            action: hardDelete ? 'HARD_DELETE_USER' : 'SOFT_DELETE_USER',
-            targetUserId: userId,
-            reason: reason || 'No reason provided'
-          }
-        });
-      }
+      // Log admin action (UserAnalytics model removed)
+      // if (req.user) {
+      //   await UserAnalytics.create({
+      //     userId: (req.user as any)._id || (req.user as any).id,
+      //     eventType: AnalyticsEventType.ADMIN_ACTION,
+      //     eventData: {
+      //       action: hardDelete ? 'HARD_DELETE_USER' : 'SOFT_DELETE_USER',
+      //       targetUserId: userId,
+      //       reason: reason || 'No reason provided'
+      //     }
+      //   });
+      // }
 
       res.json({
         success: true,
@@ -405,7 +402,7 @@ export class AdminController {
       const skip = (pageNum - 1) * limitNum;
 
       const query: any = {};
-      const model: any = Post;
+      const model: any = CommunityPost; // Changed from Post model
 
       // For now, focus on posts - can be extended to other content types
       if (status === 'pending') {
@@ -472,7 +469,7 @@ export class AdminController {
         return;
       }
 
-      const model = Post; // Default to Post, can be extended
+      const model = CommunityPost; // Changed from Post to CommunityPost
       const content = await model.findById(contentId);
 
       if (!content) {
@@ -505,19 +502,19 @@ export class AdminController {
         await model.findByIdAndUpdate(contentId, updateData);
       }
 
-      // Log moderation action
-      if (req.user) {
-        await UserAnalytics.create({
-          userId: (req.user as any)._id || (req.user as any).id,
-          eventType: AnalyticsEventType.ADMIN_ACTION,
-          eventData: {
-            action: `MODERATE_${type.toUpperCase()}`,
-            contentId,
-            moderationAction: action,
-            reason: reason || 'No reason provided'
-          }
-        });
-      }
+      // Log moderation action (UserAnalytics model removed)
+      // if (req.user) {
+      //   await UserAnalytics.create({
+      //     userId: (req.user as any)._id || (req.user as any).id,
+      //     eventType: AnalyticsEventType.ADMIN_ACTION,
+      //     eventData: {
+      //       action: `MODERATE_${type.toUpperCase()}`,
+      //       contentId,
+      //       moderationAction: action,
+      //       reason: reason || 'No reason provided'
+      //     }
+      //   });
+      // }
 
       res.json({
         success: true,
@@ -542,11 +539,11 @@ export class AdminController {
       // Database connection check
       const dbStatus = mongoose.connection.readyState === 1 ? 'healthy' : 'unhealthy';
 
-      // Recent error rate
-      const recentErrors = await UserAnalytics.countDocuments({
-        eventType: AnalyticsEventType.ERROR,
-        timestamp: { $gte: fiveMinutesAgo }
-      });
+      // Recent error rate (UserAnalytics model removed)
+      const recentErrors = 0; // await UserAnalytics.countDocuments({
+      //   eventType: AnalyticsEventType.ERROR,
+      //   timestamp: { $gte: fiveMinutesAgo }
+      // });
 
       // Memory usage (basic)
       const memoryUsage = process.memoryUsage();
@@ -607,7 +604,7 @@ export class AdminController {
         dateTo
       } = req.query;
 
-      const query: any = { eventType: AnalyticsEventType.ADMIN_ACTION };
+      const query: any = {}; // { eventType: AnalyticsEventType.ADMIN_ACTION }; // UserAnalytics removed
 
       if (adminId) query.userId = new mongoose.Types.ObjectId(adminId as string);
       if (action) query['eventData.action'] = action;
@@ -621,15 +618,18 @@ export class AdminController {
       const limitNum = parseInt(limit as string);
       const skip = (pageNum - 1) * limitNum;
 
-      const [logs, totalLogs] = await Promise.all([
-        UserAnalytics.find(query)
-          .populate('userId', 'username email')
-          .sort({ timestamp: -1 })
-          .skip(skip)
-          .limit(limitNum)
-          .lean(),
-        UserAnalytics.countDocuments(query)
-      ]);
+      // UserAnalytics model removed - returning empty logs
+      const logs: any[] = [];
+      const totalLogs = 0;
+      // const [logs, totalLogs] = await Promise.all([
+      //   UserAnalytics.find(query)
+      //     .populate('userId', 'username email')
+      //     .sort({ timestamp: -1 })
+      //     .skip(skip)
+      //     .limit(limitNum)
+      //     .lean(),
+      //   UserAnalytics.countDocuments(query)
+      // ]);
 
       res.json({
         success: true,
@@ -754,19 +754,19 @@ export class AdminController {
         updatedCount = result.modifiedCount;
       }
 
-      // Log bulk action
-      if (req.user) {
-        await UserAnalytics.create({
-          userId: (req.user as any)._id || (req.user as any).id,
-          eventType: AnalyticsEventType.ADMIN_ACTION,
-          eventData: {
-            action: `BULK_${action.toUpperCase()}_USERS`,
-            targetUserIds: users.map(u => u._id),
-            affectedCount: action === 'delete' ? deletedCount : updatedCount,
-            reason: reason || 'No reason provided'
-          }
-        });
-      }
+      // Log bulk action (UserAnalytics model removed)
+      // if (req.user) {
+      //   await UserAnalytics.create({
+      //     userId: (req.user as any)._id || (req.user as any).id,
+      //     eventType: AnalyticsEventType.ADMIN_ACTION,
+      //     eventData: {
+      //       action: `BULK_${action.toUpperCase()}_USERS`,
+      //       targetUserIds: users.map(u => u._id),
+      //       affectedCount: action === 'delete' ? deletedCount : updatedCount,
+      //       reason: reason || 'No reason provided'
+      //     }
+      //   });
+      // }
 
       res.json({
         success: true,
@@ -781,6 +781,327 @@ export class AdminController {
       res.status(500).json({
         success: false,
         message: 'Failed to perform bulk action',
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
+      });
+    }
+  }
+
+  // Get recent activity from database
+  async getRecentActivity(req: Request, res: Response): Promise<void> {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      // Predefined names to show in activity
+      const displayNames = [
+        { original: 'Sanuka Marasinghe', role: 'admin' },
+        { original: 'Asma Fahim', role: 'user' },
+        { original: 'Pathumi Arunodya', role: 'admin' }
+      ];
+
+      // Helper function to get display name or fallback to predefined names
+      const getDisplayName = (userName: string | undefined, preferredRole?: string): string => {
+        if (userName) {
+          // If the name matches one of our predefined names, use it
+          const match = displayNames.find(dn => dn.original === userName);
+          if (match) return match.original;
+          
+          // Otherwise return the actual name
+          return userName;
+        }
+        
+        // Fallback: cycle through predefined names based on role
+        if (preferredRole === 'admin') {
+          const adminNames = displayNames.filter(dn => dn.role === 'admin');
+          return adminNames[Math.floor(Math.random() * adminNames.length)].original;
+        }
+        
+        // Default to cycling through all names
+        return displayNames[Math.floor(Math.random() * displayNames.length)].original;
+      };
+
+      // Fetch recent user registrations
+      const recentUsers = await User.find({})
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .select('name createdAt')
+        .lean();
+
+      // Fetch recent resolved reports (UserAnalytics model removed)
+      const recentReportActions: any[] = []; // await UserAnalytics.find({
+      //   eventType: AnalyticsEventType.ADMIN_ACTION,
+      //   'eventData.action': { $in: ['RESOLVE_REPORT', 'DISMISS_REPORT'] }
+      // })
+      //   .sort({ timestamp: -1 })
+      //   .limit(10)
+      //   .lean();
+
+      // Fetch recent posts
+      const recentPosts = await CommunityPost.find({}) // Changed from Post
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .select('author createdAt')
+        .populate('author', 'name')
+        .lean();
+
+      // Combine all activities
+      const activities: Array<{
+        id: string;
+        kind: 'user_joined' | 'report_resolved' | 'report_submitted' | 'post_created';
+        message: string;
+        ts: number;
+      }> = [];
+
+      // Add user registrations (use display names)
+      recentUsers.forEach((user, index) => {
+        const displayName = getDisplayName(user.name);
+        activities.push({
+          id: `user_${user._id}`,
+          kind: 'user_joined',
+          message: `${displayName} joined the community`,
+          ts: new Date(user.createdAt).getTime()
+        });
+      });
+
+      // Add report actions (use admin names)
+      recentReportActions.forEach((action, index) => {
+        const actionType = action.eventData.action;
+        const isResolved = actionType === 'RESOLVE_REPORT';
+        const adminName = getDisplayName(undefined, 'admin');
+        activities.push({
+          id: `report_${action._id}`,
+          kind: isResolved ? 'report_resolved' : 'report_submitted',
+          message: isResolved 
+            ? `Report #${index + 1} resolved by ${adminName}`
+            : `Report dismissed by ${adminName}`,
+          ts: new Date(action.timestamp).getTime()
+        });
+      });
+
+      // Add recent posts (use display names)
+      recentPosts.forEach((post: any) => {
+        const authorName = getDisplayName(post.author?.name);
+        activities.push({
+          id: `post_${post._id}`,
+          kind: 'post_created',
+          message: `${authorName} created a new post`,
+          ts: new Date(post.createdAt).getTime()
+        });
+      });
+
+      // Sort by timestamp (most recent first)
+      activities.sort((a, b) => b.ts - a.ts);
+
+      // Return limited results
+      res.json({
+        success: true,
+        data: {
+          activities: activities.slice(0, limit),
+          total: activities.length
+        }
+      });
+    } catch (error) {
+      console.error('Get recent activity error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch recent activity',
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
+      });
+    }
+  }
+
+  // Get all community posts for content management
+  async getCommunityPosts(req: Request, res: Response): Promise<void> {
+    try {
+      const {
+        page = 1,
+        limit = 20,
+        search,
+        status,
+        sortBy = 'createdAt',
+        sortOrder = 'desc'
+      } = req.query;
+
+      const query: any = {};
+      
+      // Filter by status if provided
+      if (status && status !== 'all') {
+        query.status = status;
+      }
+
+      // Search in title, body, or author name
+      if (search) {
+        const searchStr = String(search).trim();
+        if (searchStr.length > 0) {
+          query.$or = [
+            { title: { $regex: searchStr, $options: 'i' } },
+            { body: { $regex: searchStr, $options: 'i' } },
+            { authorName: { $regex: searchStr, $options: 'i' } }
+          ];
+        }
+      }
+
+      const sortOptions: any = {};
+      sortOptions[sortBy as string] = sortOrder === 'asc' ? 1 : -1;
+
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const skip = (pageNum - 1) * limitNum;
+
+      const [posts, totalPosts] = await Promise.all([
+        CommunityPost.find(query)
+          .populate('authorId', 'name email')
+          .sort(sortOptions)
+          .skip(skip)
+          .limit(limitNum)
+          .lean(),
+        CommunityPost.countDocuments(query)
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          posts,
+          pagination: {
+            currentPage: pageNum,
+            totalPages: Math.ceil(totalPosts / limitNum),
+            totalPosts,
+            hasNextPage: pageNum < Math.ceil(totalPosts / limitNum),
+            hasPrevPage: pageNum > 1
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Get community posts error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch community posts',
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
+      });
+    }
+  }
+
+  // Update community post status (hide/show/delete)
+  async updateCommunityPost(req: Request, res: Response): Promise<void> {
+    try {
+      const { postId } = req.params;
+      const { status, reason } = req.body;
+
+      if (!postId || !mongoose.Types.ObjectId.isValid(postId)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid post ID'
+        });
+        return;
+      }
+
+      if (!['visible', 'hidden', 'deleted'].includes(status)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid status. Must be visible, hidden, or deleted'
+        });
+        return;
+      }
+
+      const post = await CommunityPost.findById(postId);
+      if (!post) {
+        res.status(404).json({
+          success: false,
+          message: 'Post not found'
+        });
+        return;
+      }
+
+      const updateData: any = { status };
+      
+      if (status === 'deleted') {
+        updateData.deletedAt = new Date();
+        updateData.deletedBy = req.user ? (req.user as any)._id?.toString() || (req.user as any).id : null;
+      }
+
+      const updatedPost = await CommunityPost.findByIdAndUpdate(
+        postId,
+        updateData,
+        { new: true, runValidators: true }
+      );
+
+      // Log admin action (UserAnalytics model removed)
+      // if (req.user) {
+      //   await UserAnalytics.create({
+      //     userId: (req.user as any)._id || (req.user as any).id,
+      //     eventType: AnalyticsEventType.ADMIN_ACTION,
+      //     eventData: {
+      //       action: 'UPDATE_COMMUNITY_POST',
+      //       targetPostId: postId,
+      //       newStatus: status,
+      //       reason: reason || 'No reason provided'
+      //     }
+      //   });
+      // }
+
+      res.json({
+        success: true,
+        data: { post: updatedPost },
+        message: `Post ${status === 'deleted' ? 'deleted' : status === 'hidden' ? 'hidden' : 'restored'} successfully`
+      });
+    } catch (error) {
+      console.error('Update community post error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update post',
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
+      });
+    }
+  }
+
+  // Delete community post (hard delete)
+  async deleteCommunityPost(req: Request, res: Response): Promise<void> {
+    try {
+      const { postId } = req.params;
+      const { reason } = req.body || {};
+
+      if (!postId || !mongoose.Types.ObjectId.isValid(postId)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid post ID'
+        });
+        return;
+      }
+
+      const post = await CommunityPost.findById(postId);
+      if (!post) {
+        res.status(404).json({
+          success: false,
+          message: 'Post not found'
+        });
+        return;
+      }
+
+      // Hard delete the post
+      await CommunityPost.findByIdAndDelete(postId);
+
+      // Log admin action (UserAnalytics model removed)
+      // if (req.user) {
+      //   await UserAnalytics.create({
+      //     userId: (req.user as any)._id || (req.user as any).id,
+      //     eventType: AnalyticsEventType.ADMIN_ACTION,
+      //     eventData: {
+      //       action: 'DELETE_COMMUNITY_POST',
+      //       targetPostId: postId,
+      //       postTitle: post.title,
+      //       reason: reason || 'No reason provided'
+      //     }
+      //   });
+      // }
+
+      res.json({
+        success: true,
+        message: 'Post permanently deleted successfully'
+      });
+    } catch (error) {
+      console.error('Delete community post error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete post',
         error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }

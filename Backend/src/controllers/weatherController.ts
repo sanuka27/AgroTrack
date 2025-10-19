@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { Plant } from '../models/Plant';
 import { User } from '../models/User';
-import { Reminder } from '../models/Reminder';
 import { UserAnalytics } from '../models/UserAnalytics';
 import mongoose from 'mongoose';
 import { logger } from '../config/logger';
@@ -806,63 +805,11 @@ export class WeatherController {
   }
 
   /**
-   * Adjust plant care schedule based on weather
+   * Adjust plant care schedule based on weather (disabled - no reminders)
    */
-  private static async adjustPlantSchedule(plant: any, weatherData: WeatherData): Promise<any[]> {
-    const adjustments = [];
-
-    // Find plant's reminders
-    const reminders = await Reminder.find({ 
-      plantId: plant._id,
-      status: 'pending',
-      scheduledDate: { $gte: new Date() }
-    });
-
-    for (const reminder of reminders) {
-      let adjustmentMade = false;
-      const newDate = new Date(reminder.scheduledDate);
-
-      // Watering adjustments
-      if (reminder.careType === 'watering') {
-        // Delay watering if heavy rain expected
-        const upcomingRain = weatherData.forecast.slice(0, 3).some(day => day.rainfall > 10);
-        if (upcomingRain) {
-          newDate.setDate(newDate.getDate() + 2);
-          adjustmentMade = true;
-          adjustments.push({
-            reminderId: reminder._id,
-            careType: reminder.careType,
-            originalDate: reminder.scheduledDate,
-            newDate,
-            reason: 'Delayed due to expected rainfall'
-          });
-        }
-        
-        // Advance watering if very hot and dry
-        else if (weatherData.current.temperature > 30 && weatherData.current.humidity < 40) {
-          newDate.setHours(newDate.getHours() - 12);
-          adjustmentMade = true;
-          adjustments.push({
-            reminderId: reminder._id,
-            careType: reminder.careType,
-            originalDate: reminder.scheduledDate,
-            newDate,
-            reason: 'Advanced due to hot, dry conditions'
-          });
-        }
-      }
-
-      // Update reminder if adjustment was made
-      if (adjustmentMade && reminder._id && adjustments.length > 0) {
-        await Reminder.findByIdAndUpdate(reminder._id, {
-          scheduledDate: newDate,
-          weatherAdjusted: true,
-          weatherAdjustmentReason: adjustments[adjustments.length - 1]?.reason || 'Weather adjustment'
-        });
-      }
-    }
-
-    return adjustments;
+  private static async adjustPlantSchedule(_plant: any, _weatherData: WeatherData): Promise<any[]> {
+    // Reminders feature is disabled
+    return [];
   }
 
   /**

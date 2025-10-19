@@ -10,7 +10,6 @@
 
 import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { ChatMessage } from '../models/ChatMessage';
 import { logger } from '../config/logger';
 import { generatePlantCareAdvice } from '../ai/gemini';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -202,7 +201,7 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
     const isGuest = !req.user;
     
     if (isGuest) {
-      // Handle guest user - skip database operations
+      // Handle guest user - skip persistence
       const { content, careType } = req.body;
 
       if (!content || content.trim().length === 0) {
@@ -213,10 +212,9 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
         return;
       }
 
-      // Get AI response for guest user
       const aiResponse = await generatePlantCareAdvice(content, {
         careType,
-        chatHistory: [], // No chat history for guests
+        chatHistory: [],
       });
 
       logger.info('Guest AI chat message processed', {
@@ -240,8 +238,8 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    // Handle authenticated user - existing logic
-    const { content, sessionId, plantId, careType } = req.body;
+    // Handle authenticated user - stateless (no DB persistence)
+    const { content, plantId, careType } = req.body;
 
     if (!content || content.trim().length === 0) {
       res.status(400).json({
@@ -251,70 +249,15 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    // Generate or use existing session ID
-    const actualSessionId = sessionId || uuidv4();
-
-    // Save user message
-    const userMessage = new ChatMessage({
-      userId: req.user._id,
-      sessionId: actualSessionId,
-      role: 'user',
-      content: content.trim(),
-      metadata: {
-        plantId,
-        careType,
-      },
-      model: 'gemini-pro',
-    });
-
-    await userMessage.save();
-
-    // Get recent chat history for context (last 10 messages)
-    const recentMessages = await ChatMessage.find({
-      userId: req.user._id,
-      sessionId: actualSessionId,
-    })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .select('role content');
-
-    // Format chat history for Gemini
-    const chatHistory = recentMessages
-      .reverse()
-      .map((msg: any) => ({
-        role: msg.role as 'user' | 'model',
-        parts: [{ text: msg.content }],
-      }));
-
-    // Get AI response
     try {
       const aiResponse = await generatePlantCareAdvice(content, {
         plantId,
         careType,
-        chatHistory,
+        chatHistory: [],
       });
 
-      // Save AI response
-      const assistantMessage = new ChatMessage({
+      logger.info('AI chat message processed (stateless)', {
         userId: req.user._id,
-        sessionId: actualSessionId,
-        role: 'assistant',
-        content: aiResponse.text,
-        metadata: {
-          plantId,
-          careType,
-          suggestions: aiResponse.suggestions,
-          confidence: aiResponse.confidence,
-        },
-        model: 'gemini-pro',
-        tokens: aiResponse.tokens,
-      });
-
-      await assistantMessage.save();
-
-      logger.info('AI chat message processed', {
-        userId: req.user._id,
-        sessionId: actualSessionId,
         messageLength: content.length,
         responseLength: aiResponse.text.length,
       });
@@ -322,34 +265,25 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
       res.json({
         success: true,
         data: {
-          message: userMessage,
-          response: assistantMessage,
+          response: {
+            content: aiResponse.text,
+            role: 'assistant',
+            metadata: {
+              plantId,
+              careType,
+              suggestions: aiResponse.suggestions,
+              confidence: aiResponse.confidence,
+            },
+            model: 'gemini-pro',
+            tokens: aiResponse.tokens,
+          },
         },
       });
     } catch (aiError) {
       logger.error('AI processing error:', aiError);
-      
-      // Save error response
-      const errorMessage = new ChatMessage({
-        userId: req.user._id,
-        sessionId: actualSessionId,
-        role: 'assistant',
-        content: 'I apologize, but I encountered an error processing your request. Please try again or rephrase your question.',
-        metadata: {
-          error: true,
-        },
-        model: 'gemini-pro',
-      });
-
-      await errorMessage.save();
-
       res.status(500).json({
         success: false,
         message: 'Failed to get AI response',
-        data: {
-          message: userMessage,
-          response: errorMessage,
-        },
       });
     }
   } catch (error) {
@@ -368,44 +302,8 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
  */
 export const getChatHistory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    if (!req.user) {
-      res.status(401).json({
-        success: false,
-        message: 'Authentication required',
-      });
-      return;
-    }
-
-    const { sessionId } = req.query;
-
-    const query: any = { userId: req.user._id };
-
-    // If sessionId provided, get that session's history
-    // Otherwise, get the most recent session
-    if (sessionId) {
-      query.sessionId = sessionId;
-    } else {
-      // Get the most recent session
-      const recentMessage = await ChatMessage.findOne({ userId: req.user._id })
-        .sort({ createdAt: -1 })
-        .select('sessionId');
-
-      if (recentMessage) {
-        query.sessionId = recentMessage.sessionId;
-      }
-    }
-
-    const messages = await ChatMessage.find(query)
-      .sort({ createdAt: 1 })
-      .limit(100); // Limit to last 100 messages
-
-    res.json({
-      success: true,
-      data: {
-        messages,
-        sessionId: messages && messages.length > 0 && messages[0] ? messages[0].sessionId : null,
-      },
-    });
+    // Persistence for chat history is disabled in current setup
+    res.json({ success: true, data: { messages: [], sessionId: null } });
   } catch (error) {
     logger.error('Error fetching chat history:', error);
     res.status(500).json({
@@ -422,22 +320,8 @@ export const getChatHistory = async (req: AuthRequest, res: Response): Promise<v
  */
 export const getRecentSessions = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    if (!req.user) {
-      res.status(401).json({
-        success: false,
-        message: 'Authentication required',
-      });
-      return;
-    }
-
-    const sessions = await ChatMessage.getRecentSessions(req.user._id);
-
-    res.json({
-      success: true,
-      data: {
-        sessions,
-      },
-    });
+    // Persistence for chat sessions is disabled in current setup
+    res.json({ success: true, data: { sessions: [] } });
   } catch (error) {
     logger.error('Error fetching chat sessions:', error);
     res.status(500).json({
@@ -454,60 +338,8 @@ export const getRecentSessions = async (req: AuthRequest, res: Response): Promis
  */
 export const provideFeedback = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    if (!req.user) {
-      res.status(401).json({
-        success: false,
-        message: 'Authentication required',
-      });
-      return;
-    }
-
-    const { messageId, helpful, comment } = req.body;
-
-    if (!messageId) {
-      res.status(400).json({
-        success: false,
-        message: 'Message ID is required',
-      });
-      return;
-    }
-
-    const message = await ChatMessage.findById(messageId);
-
-    if (!message) {
-      res.status(404).json({
-        success: false,
-        message: 'Message not found',
-      });
-      return;
-    }
-
-    // Check if message belongs to user
-    if (message.userId.toString() !== req.user._id) {
-      res.status(403).json({
-        success: false,
-        message: 'Access denied',
-      });
-      return;
-    }
-
-    message.helpful = helpful;
-    if (comment) {
-      message.feedbackComment = comment;
-    }
-
-    await message.save();
-
-    logger.info('Chat feedback received', {
-      userId: req.user._id,
-      messageId,
-      helpful,
-    });
-
-    res.json({
-      success: true,
-      message: 'Thank you for your feedback!',
-    });
+    // Feedback persistence disabled in current setup
+    res.json({ success: true, message: 'Thank you for your feedback!' });
   } catch (error) {
     logger.error('Error saving feedback:', error);
     res.status(500).json({

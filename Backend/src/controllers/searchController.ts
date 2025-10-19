@@ -1,10 +1,7 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Plant } from '../models/Plant';
-import { CareLog } from '../models/CareLog';
-import { Reminder } from '../models/Reminder';
-import { Post } from '../models/Post';
-import { SearchAnalytics, PopularSearchTerm } from '../models/SearchAnalytics';
+import { CommunityPost } from '../models/CommunityPost';
 
 interface SearchFilters {
   category?: string;
@@ -20,7 +17,7 @@ interface SearchFilters {
 
 interface SearchResult {
   id: string;
-  type: 'plant' | 'care-log' | 'reminder' | 'post';
+  type: 'plant' | 'post';
   title: string;
   description: string;
   imageUrl?: string;
@@ -98,15 +95,7 @@ export class SearchController {
         allResults.push(...plantResults);
       }
       
-      if (!type || type === 'care-log') {
-        const careLogResults = await this.searchCareLogs(userId.toString(), query as string, filters);
-        allResults.push(...careLogResults);
-      }
-      
-      if (!type || type === 'reminder') {
-        const reminderResults = await this.searchReminders(userId.toString(), query as string, filters);
-        allResults.push(...reminderResults);
-      }
+      // care-log and reminder searches are not available in this deployment
       
       if (!type || type === 'post') {
         const postResults = await this.searchPosts(userId.toString(), query as string, filters);
@@ -120,21 +109,13 @@ export class SearchController {
       const paginatedResults = allResults.slice(filters.offset ?? 0, (filters.offset ?? 0) + (filters.limit ?? 20));
 
       // Generate suggestions and facets
-      const suggestions = await this.generateSuggestions(query as string, userId.toString());
-      const facets = await this.calculateFacets(userId.toString(), filters);
+  const suggestions: string[] = [];
+  const facets = await this.calculateFacets(userId.toString(), filters);
 
       const executionTime = Date.now() - startTime;
 
       // Track search analytics
-      await this.trackSearchAnalytics(
-        userId.toString(),
-        query as string,
-        type as string || 'universal',
-        allResults.length,
-        executionTime,
-        (req as any).sessionID || 'unknown',
-        req.ip
-      );
+      // Search analytics disabled in this deployment
 
       const response: UniversalSearchResponse = {
         results: paginatedResults,
@@ -206,81 +187,10 @@ export class SearchController {
   }
 
   // Search care logs
-  private async searchCareLogs(userId: string, query: string, filters: SearchFilters): Promise<SearchResult[]> {
-    const mongoQuery: any = { userId: new mongoose.Types.ObjectId(userId) };
-    
-    if (query.trim()) {
-      mongoQuery.$text = { $search: query };
-    }
-    
-    if (filters.careType) {
-      mongoQuery.careType = filters.careType;
-    }
-    if (filters.dateFrom || filters.dateTo) {
-      mongoQuery.date = {};
-      if (filters.dateFrom) mongoQuery.date.$gte = new Date(filters.dateFrom);
-      if (filters.dateTo) mongoQuery.date.$lte = new Date(filters.dateTo);
-    }
-    
-    const careLogs = await CareLog.find(mongoQuery)
-      .populate('plantId', 'name')
-      .limit(filters.limit || 10)
-      .lean();
-    
-    return careLogs.map((log: any) => ({
-      id: log._id.toString(),
-      type: 'care-log' as const,
-      title: `${log.careType} - ${(log.plantId as any)?.name || 'Unknown Plant'}`,
-      description: log.notes || `${log.careType} care performed`,
-      imageUrl: log.photos?.[0],
-      createdAt: log.createdAt,
-      updatedAt: log.updatedAt,
-      relevance: this.calculateRelevance(query, log.careType + ' ' + (log.notes || '')),
-      metadata: {
-        careType: log.careType,
-        plantName: (log.plantId as any)?.name
-      }
-    }));
-  }
+  // care log search removed
 
   // Search reminders
-  private async searchReminders(userId: string, query: string, filters: SearchFilters): Promise<SearchResult[]> {
-    const mongoQuery: any = { userId: new mongoose.Types.ObjectId(userId) };
-    
-    if (query.trim()) {
-      mongoQuery.$text = { $search: query };
-    }
-    
-    if (filters.status) {
-      mongoQuery.status = filters.status;
-    }
-    if (filters.dateFrom || filters.dateTo) {
-      mongoQuery.dueDate = {};
-      if (filters.dateFrom) mongoQuery.dueDate.$gte = new Date(filters.dateFrom);
-      if (filters.dateTo) mongoQuery.dueDate.$lte = new Date(filters.dateTo);
-    }
-    
-    const reminders = await Reminder.find(mongoQuery)
-      .populate('plantId', 'name')
-      .limit(filters.limit || 10)
-      .lean();
-    
-    return reminders.map((reminder: any) => ({
-      id: reminder._id.toString(),
-      type: 'reminder' as const,
-      title: reminder.title,
-      description: reminder.description || `${reminder.type} reminder for ${(reminder.plantId as any)?.name}`,
-      createdAt: reminder.createdAt,
-      updatedAt: reminder.updatedAt,
-      relevance: this.calculateRelevance(query, reminder.title + ' ' + (reminder.description || '')),
-      metadata: {
-        type: reminder.type,
-        status: reminder.status,
-        dueDate: reminder.dueDate,
-        plantName: (reminder.plantId as any)?.name
-      }
-    }));
-  }
+  // reminder search removed
 
   // Search posts
   private async searchPosts(userId: string, query: string, filters: SearchFilters): Promise<SearchResult[]> {
@@ -296,8 +206,8 @@ export class SearchController {
       if (filters.dateTo) mongoQuery.createdAt.$lte = new Date(filters.dateTo);
     }
     
-    const posts = await Post.find(mongoQuery)
-      .populate('author', 'username')
+    const posts = await CommunityPost.find(mongoQuery)
+      .populate('authorId', 'username')
       .limit(filters.limit || 10)
       .lean();
     
@@ -305,15 +215,15 @@ export class SearchController {
       id: post._id.toString(),
       type: 'post' as const,
       title: post.title,
-      description: post.content.substring(0, 200) + '...',
-      imageUrl: post.images?.[0],
+      description: (post.body || '').substring(0, 200) + '...',
+      imageUrl: post.images?.[0]?.url,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
-      relevance: this.calculateRelevance(query, post.title + ' ' + post.content),
+      relevance: this.calculateRelevance(query, post.title + ' ' + (post.body || '')),
       metadata: {
-        author: (post.author as any)?.username,
-        likes: post.likes || 0,
-        comments: post.comments?.length || 0
+        author: (post.authorId as any)?.username,
+        score: post.score || 0,
+        commentsCount: post.commentsCount || 0
       }
     }));
   }
@@ -365,43 +275,8 @@ export class SearchController {
   }
 
   // Generate search suggestions
-  private async generateSuggestions(query: string, userId: string): Promise<string[]> {
-    const suggestions = new Set<string>();
-    
-    if (!query.trim()) return [];
-    
-    // Get plant names that match query
-    const plants = await Plant.find({ 
-      userId: new mongoose.Types.ObjectId(userId),
-      $or: [
-        { name: { $regex: query, $options: 'i' } },
-        { scientificName: { $regex: query, $options: 'i' } },
-        { commonNames: { $elemMatch: { $regex: query, $options: 'i' } } }
-      ]
-    }).limit(5).lean();
-    
-    plants.forEach(plant => {
-      if (plant.scientificName?.toLowerCase().includes(query.toLowerCase())) {
-        suggestions.add(plant.scientificName);
-      }
-      if (plant.commonNames) {
-        plant.commonNames.forEach(commonName => {
-          if (commonName.toLowerCase().includes(query.toLowerCase())) {
-            suggestions.add(commonName);
-          }
-        });
-      }
-    });
-    
-    // Get popular search terms
-    const popularTerms = await PopularSearchTerm.find({
-      term: { $regex: query, $options: 'i' }
-    }).sort({ searchCount: -1 }).limit(3).lean();
-    
-    popularTerms.forEach(term => suggestions.add(term.term));
-    
-    return Array.from(suggestions).slice(0, 8);
-  }
+  // suggestions feature simplified/disabled
+  private async generateSuggestions(_query: string, _userId: string): Promise<string[]> { return []; }
 
   // Calculate search facets
   private async calculateFacets(userId: string, filters: SearchFilters): Promise<SearchFacets> {
@@ -416,18 +291,15 @@ export class SearchController {
     ]);
     
     // Calculate type facets from content types
-    const [plantCount, careLogCount, reminderCount] = await Promise.all([
-      Plant.countDocuments({ userId: userObjectId }),
-      CareLog.countDocuments({ userId: userObjectId }),
-      Reminder.countDocuments({ userId: userObjectId })
+    const [plantCount] = await Promise.all([
+      Plant.countDocuments({ userId: userObjectId })
     ]);
     
     return {
       categories: categoryFacets.map(f => ({ name: f._id, count: f.count })),
       types: [
         { name: 'plant', count: plantCount },
-        { name: 'care-log', count: careLogCount },
-        { name: 'reminder', count: reminderCount }
+        { name: 'post', count: 0 }
       ],
       authors: [], // Not applicable for personal data
       dateRanges: [] // Could be implemented based on date ranges
@@ -435,38 +307,8 @@ export class SearchController {
   }
 
   // Track search analytics
-  private async trackSearchAnalytics(
-    userId: string, 
-    query: string, 
-    type: string, 
-    resultCount: number, 
-    executionTime: number,
-    sessionId: string,
-    ipAddress?: string
-  ): Promise<void> {
-    try {
-      // Create search analytics record
-      const analytics = new SearchAnalytics({
-        userId: new mongoose.Types.ObjectId(userId),
-        query: query.trim(),
-        type,
-        resultCount,
-        executionTime,
-        sessionId,
-        ipAddress,
-        timestamp: new Date()
-      });
-      
-      await analytics.save();
-      
-      // Update popular search terms
-      if (query.trim()) {
-        await PopularSearchTerm.updateSearchTerm(query.trim(), resultCount, executionTime);
-      }
-    } catch (error) {
-      console.error('Failed to track search analytics:', error);
-    }
-  }
+  // analytics disabled
+  private async trackSearchAnalytics(): Promise<void> { return; }
 
   // Get search suggestions endpoint
   async getSearchSuggestions(req: Request, res: Response): Promise<void> {
@@ -551,19 +393,20 @@ export class SearchController {
   }
 
   // Get search history
-  async getSearchHistory(req: Request, res: Response): Promise<void> {
+  async getSearchHistory(_req: Request, res: Response): Promise<void> {
+    res.status(501).json({
+      success: false,
+      message: 'Search history is not available in this deployment.'
+    });
+  }
+
+  // Old implementation (disabled)
+  async getSearchHistoryOld(req: Request, res: Response): Promise<void> {
     try {
       const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { limit = 10 } = req.query;
       
-      const history = await SearchAnalytics.find({ 
-        userId: new mongoose.Types.ObjectId(userId),
-        query: { $ne: '' }
-      })
-      .sort({ timestamp: -1 })
-      .limit(parseInt(limit as string))
-      .select('query type resultCount timestamp')
-      .lean();
+      const history: any[] = [];
       
       res.json({
         success: true,
@@ -584,11 +427,7 @@ export class SearchController {
     try {
       const { limit = 10 } = req.query;
       
-      const trending = await PopularSearchTerm.find({})
-        .sort({ searchCount: -1, lastSearched: -1 })
-        .limit(parseInt(limit as string))
-        .select('term searchCount lastSearched')
-        .lean();
+      const trending: any[] = [];
       
       res.json({
         success: true,
@@ -605,83 +444,19 @@ export class SearchController {
   }
 
   // Get search analytics
-  async getSearchAnalytics(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
-      const { days = 30 } = req.query;
-      
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - parseInt(days as string));
-      
-      const analytics = await SearchAnalytics.aggregate([
-        {
-          $match: {
-            userId: new mongoose.Types.ObjectId(userId),
-            timestamp: { $gte: startDate }
-          }
-        },
-        {
-          $group: {
-            _id: {
-              date: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } },
-              type: '$type'
-            },
-            searchCount: { $sum: 1 },
-            avgExecutionTime: { $avg: '$executionTime' },
-            avgResultCount: { $avg: '$resultCount' }
-          }
-        },
-        { $sort: { '_id.date': 1 } }
-      ]);
-      
-      res.json({
-        success: true,
-        data: { analytics }
-      });
-    } catch (error) {
-      console.error('Get search analytics error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to get search analytics',
-        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
-      });
-    }
+  async getSearchAnalytics(_req: Request, res: Response): Promise<void> {
+    res.status(501).json({
+      success: false,
+      message: 'Search analytics are not available in this deployment.'
+    });
   }
 
   // Track search result click
-  async trackSearchClick(req: Request, res: Response): Promise<void> {
-    try {
-      const { searchId, resultId, resultType, position } = req.body;
-      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
-      
-      // Find the search record and update it with click information
-      const searchRecord = await SearchAnalytics.findOne({
-        _id: new mongoose.Types.ObjectId(searchId),
-        userId: new mongoose.Types.ObjectId(userId)
-      });
-      
-      if (searchRecord && searchRecord.selectedResults) {
-        searchRecord.selectedResults.push({
-          resultId,
-          resultType,
-          position,
-          clickedAt: new Date()
-        });
-        await searchRecord.save();
-      }
-      
-      res.json({
-        success: true,
-        message: 'Click tracked successfully'
-      });
-    } catch (error) {
-      console.error('Track search click error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to track click',
-        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
-      });
-    }
+  async trackSearchClick(_req: Request, res: Response): Promise<void> {
+    res.status(501).json({
+      success: false,
+      message: 'Search analytics tracking is not available in this deployment.'
+    });
   }
 }
 
