@@ -21,9 +21,10 @@ export const AISmartSuggestionsCard: React.FC = () => {
     try {
       setLoading(true);
       const response = await getAISuggestions({ limit: 3 });
-      setSuggestions(response.data.suggestions || []);
-    } catch (error) {
+      setSuggestions(response.data?.suggestions || []);
+    } catch (error: any) {
       console.error('Error loading AI suggestions:', error);
+      // Silently fail - suggestions are optional
     } finally {
       setLoading(false);
     }
@@ -33,15 +34,20 @@ export const AISmartSuggestionsCard: React.FC = () => {
     try {
       setGenerating(true);
       const response = await generateAISuggestions();
+      const count = response.data?.count || 0;
       toast({
         title: '✨ AI Analysis Complete',
-        description: `Generated ${response.data.count} new suggestions`,
+        description: `Generated ${count} new suggestions`,
       });
       await loadSuggestions();
     } catch (error: any) {
+      console.error('Error generating suggestions:', error);
+      const errorMessage = typeof error.response?.data?.error === 'string' 
+        ? error.response.data.error 
+        : 'Failed to generate suggestions';
       toast({
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to generate suggestions',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -55,8 +61,9 @@ export const AISmartSuggestionsCard: React.FC = () => {
       setSuggestions(suggestions.filter(s => s._id !== suggestionId));
       toast({
         title: 'Suggestion dismissed',
+        description: '',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error dismissing suggestion:', error);
     }
   };
@@ -67,8 +74,9 @@ export const AISmartSuggestionsCard: React.FC = () => {
       setSuggestions(suggestions.filter(s => s._id !== suggestionId));
       toast({
         title: '✓ Marked as done',
+        description: '',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error actioning suggestion:', error);
     }
   };
