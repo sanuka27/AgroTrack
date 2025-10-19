@@ -256,6 +256,22 @@ export const adminApi = {
     return response.data.data;
   },
 
+  // Recent Activity
+  getRecentActivity: async (limit?: number): Promise<{
+    activities: Array<{
+      id: string;
+      kind: 'user_joined' | 'report_resolved' | 'report_submitted' | 'post_created';
+      message: string;
+      ts: number;
+    }>;
+    total: number;
+  }> => {
+    const response = await api.get('/admin/activity/recent', {
+      params: { limit: limit || 50 }
+    });
+    return response.data.data;
+  },
+
   // Maintenance
   clearCache: async (): Promise<void> => {
     await api.post('/admin/maintenance/cache-clear');

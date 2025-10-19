@@ -1,9 +1,17 @@
-import React from 'react';
-import { CheckCircle, UserPlus, Flag } from 'lucide-react';
-import { useRealtimeSnapshot } from '@/realtime/hooks';
-import { ActivityRow } from '@/realtime/types';
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, UserPlus, Flag, FileText } from 'lucide-react';
+import { adminApi } from '@/api/admin';
 
-const getActivityIcon = (kind: ActivityRow['kind']) => {
+type ActivityKind = 'user_joined' | 'report_resolved' | 'report_submitted' | 'post_created';
+
+interface Activity {
+  id: string;
+  kind: ActivityKind;
+  message: string;
+  ts: number;
+}
+
+const getActivityIcon = (kind: ActivityKind) => {
   switch (kind) {
     case 'report_resolved':
       return <CheckCircle className="w-4 h-4 text-green-600" />;
@@ -11,6 +19,8 @@ const getActivityIcon = (kind: ActivityRow['kind']) => {
       return <UserPlus className="w-4 h-4 text-blue-600" />;
     case 'report_submitted':
       return <Flag className="w-4 h-4 text-orange-600" />;
+    case 'post_created':
+      return <FileText className="w-4 h-4 text-purple-600" />;
     default:
       return <CheckCircle className="w-4 h-4 text-gray-600" />;
   }
@@ -31,9 +41,30 @@ const formatTimeAgo = (timestamp: number) => {
 };
 
 export function RecentActivity() {
-  const { snapshot, isLoading } = useRealtimeSnapshot();
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (isLoading || !snapshot) {
+  useEffect(() => {
+    const loadActivities = async () => {
+      try {
+        setIsLoading(true);
+        const data = await adminApi.getRecentActivity(10);
+        setActivities(data.activities);
+      } catch (error) {
+        console.error('Error loading recent activity:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadActivities();
+
+    // Refresh activity every 30 seconds
+    const interval = setInterval(loadActivities, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (isLoading) {
     return (
       <div className="p-4 space-y-3">
         {[...Array(5)].map((_, i) => (
@@ -49,12 +80,10 @@ export function RecentActivity() {
     );
   }
 
-  const recentActivities = snapshot.activity.slice(0, 10);
-
   return (
     <div className="p-4 max-h-96 overflow-y-auto">
       <div className="space-y-3">
-        {recentActivities.map((activity, index) => (
+        {activities.map((activity, index) => (
           <div 
             key={activity.id} 
             className={`flex items-start space-x-3 p-2 rounded-lg transition-all duration-300 ${
@@ -75,7 +104,7 @@ export function RecentActivity() {
           </div>
         ))}
         
-        {recentActivities.length === 0 && (
+        {activities.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <Flag className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No recent activity</p>

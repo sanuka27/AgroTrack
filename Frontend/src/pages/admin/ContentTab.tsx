@@ -1,137 +1,121 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { adminApi, Content } from '@/api/admin';
-import ModerationModal from '@/components/admin/ModerationModal';
-import { Search, FileText, Eye, EyeOff, Trash2, MoreHorizontal } from 'lucide-react';
+import { adminApi, CommunityPost } from '@/lib/api/admin';
+import { Search, FileText, Eye, EyeOff, Trash2, ExternalLink } from 'lucide-react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
-type ContentFilter = 'all' | 'visible' | 'flagged' | 'removed';
+type ContentFilter = 'all' | 'visible' | 'hidden' | 'deleted';
 
 export function ContentTab() {
   const { toast } = useToast();
-  const [content, setContent] = useState<Content[]>([]);
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<ContentFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalContentId, setModalContentId] = useState<string | null>(null);
-  const [modalAction, setModalAction] = useState<'hide' | 'remove' | 'approve' | 'delete' | null>(null);
-  const [modalContentType, setModalContentType] = useState<'post' | 'comment' | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogAction, setDialogAction] = useState<'view' | 'hide' | 'show' | 'delete' | null>(null);
+  const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
+  const [actionReason, setActionReason] = useState('');
 
-  // Load content from admin API
   useEffect(() => {
-    const loadContent = async () => {
+    const loadPosts = async () => {
       try {
         setLoading(true);
-        const response = await adminApi.getContent();
-        setContent(response.content);
-      } catch (error) {
-        console.error('Error loading content:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load content. Please try again.",
-          variant: "destructive",
+        const response = await adminApi.getCommunityPosts({
+          status: filter === 'all' ? undefined : filter,
+          limit: 100
         });
+        setPosts(response.posts);
+      } catch (error) {
+        console.error('Error loading community posts:', error);
+        toast({ title: "Error", description: "Failed to load community posts.", variant: "destructive" });
       } finally {
         setLoading(false);
       }
     };
+    loadPosts();
+  }, [toast, filter]);
 
-    loadContent();
-  }, [toast]);
-
-  // Apply filters
-  const filteredContent = content.filter(item => {
-    const matchesFilter = filter === 'all' || item.status === filter;
-    const matchesSearch = searchTerm === '' ||
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.content.toLowerCase().includes(searchTerm.toLowerCase());
-
-    return matchesFilter && matchesSearch;
+  const filteredPosts = posts.filter(post => {
+    if (!searchTerm) return true;
+    const search = searchTerm.toLowerCase();
+    return post.title.toLowerCase().includes(search) || 
+           post.body.toLowerCase().includes(search) || 
+           post.authorName.toLowerCase().includes(search);
   });
 
-  const getStatusBadge = (status: Content['status']) => {
+  const getStatusBadge = (status: CommunityPost['status']) => {
     switch (status) {
-      case 'visible':
+      case 'visible': 
         return <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-200">Visible</Badge>;
-      case 'flagged':
-        return <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">Flagged</Badge>;
-      case 'removed':
-        return <Badge variant="destructive" className="bg-rose-100 text-rose-800 border-rose-200">Removed</Badge>;
-      default:
+      case 'hidden': 
+        return <Badge variant="outline" className="border-amber-300 text-amber-700 bg-amber-50">Hidden</Badge>;
+      case 'deleted': 
+        return <Badge variant="destructive" className="bg-rose-100 text-rose-800 border-rose-200">Deleted</Badge>;
+      default: 
         return <Badge variant="outline">{status}</Badge>;
     }
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
     });
   };
 
-  // We'll use a modal for reasons instead of prompt
-
-  const openModerationModal = (contentId: string, uiAction: 'hide' | 'remove' | 'approve' | 'delete', contentType: 'post' | 'comment' = 'post') => {
-    setModalContentId(contentId);
-    setModalAction(uiAction);
-    setModalContentType(contentType);
-    setModalOpen(true);
+  const openDialog = (post: CommunityPost, action: 'view' | 'hide' | 'show' | 'delete') => {
+    setSelectedPost(post);
+    setDialogAction(action);
+    setActionReason('');
+    setDialogOpen(true);
   };
 
-  const handleModalSubmit = async (reason: string) => {
-    if (!modalContentId || !modalAction) return;
-    const contentId = modalContentId;
-    const uiAction = modalAction;
-    setActionLoading(contentId);
-
+  const handleDialogConfirm = async () => {
+    if (!selectedPost || !dialogAction) return;
+    
+    setActionLoading(selectedPost._id);
     try {
-      if (uiAction === 'delete') {
-        const ok = window.confirm('Permanently delete this content? This action cannot be undone.');
-        if (!ok) return;
-        await adminApi.deleteContent(contentId, modalContentType || 'post');
-        setContent(prev => prev.filter(c => c._id !== contentId));
-        toast({ title: 'Content Deleted', description: 'Content has been permanently deleted.' });
-        return;
+      if (dialogAction === 'delete') {
+        await adminApi.deleteCommunityPost(selectedPost._id, actionReason);
+        setPosts(prev => prev.filter(p => p._id !== selectedPost._id));
+        toast({ title: 'Post Deleted', description: 'The post has been permanently deleted.' });
+      } else if (dialogAction === 'hide') {
+        await adminApi.updateCommunityPostStatus(selectedPost._id, 'hidden', actionReason);
+        setPosts(prev => prev.map(p => p._id === selectedPost._id ? { ...p, status: 'hidden' } : p));
+        toast({ title: 'Post Hidden', description: 'The post has been hidden from users.' });
+      } else if (dialogAction === 'show') {
+        await adminApi.updateCommunityPostStatus(selectedPost._id, 'visible', actionReason);
+        setPosts(prev => prev.map(p => p._id === selectedPost._id ? { ...p, status: 'visible' } : p));
+        toast({ title: 'Post Restored', description: 'The post is now visible to users.' });
       }
-
-      let backendAction: 'approve' | 'reject' | 'delete' = 'reject';
-      if (uiAction === 'approve') backendAction = 'approve';
-      if (uiAction === 'remove') backendAction = 'delete';
-      if (uiAction === 'hide') backendAction = 'reject';
-
-  await adminApi.moderateContent(contentId, backendAction, reason, modalContentType || 'post');
-
-      setContent(prev => prev.map(c =>
-        c._id === contentId
-          ? { ...c, status: uiAction === 'hide' ? 'flagged' : uiAction === 'remove' ? 'removed' : 'visible' }
-          : c
-      ));
-
-      toast({ title: 'Content Updated', description: 'Content moderation action completed.' });
     } catch (error) {
-      console.error('Error updating content:', error);
-      toast({ title: 'Error', description: 'Failed to moderate content. Please try again.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to update post.', variant: 'destructive' });
     } finally {
       setActionLoading(null);
-      setModalOpen(false);
-      setModalContentId(null);
-      setModalAction(null);
+      setDialogOpen(false);
+      setSelectedPost(null);
+      setDialogAction(null);
+      setActionReason('');
     }
   };
 
@@ -149,11 +133,11 @@ export function ContentTab() {
     );
   }
 
-  const flaggedCount = content.filter(c => c.status === 'flagged').length;
+  const hiddenCount = posts.filter(p => p.status === 'hidden').length;
+  const deletedCount = posts.filter(p => p.status === 'deleted').length;
 
   return (
     <div className="space-y-6">
-      {/* Header with filters */}
       <Card className="rounded-2xl ring-1 ring-slate-200 shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -163,18 +147,22 @@ export function ContentTab() {
                 Content Management
               </CardTitle>
               <CardDescription>
-                {filteredContent.length} of {content.length} content items
+                {filteredPosts.length} of {posts.length} content items
                 {filter !== 'all' && ` (filtered by ${filter})`}
-                • {flaggedCount} flagged for review
               </CardDescription>
             </div>
             <div className="flex gap-2">
               <Badge variant="outline" className="text-lg px-3 py-1">
-                {filteredContent.length}
+                {filteredPosts.length}
               </Badge>
-              {flaggedCount > 0 && (
+              {hiddenCount > 0 && (
                 <Badge variant="secondary" className="text-lg px-3 py-1 bg-amber-100 text-amber-800">
-                  {flaggedCount} flagged
+                  {hiddenCount} hidden
+                </Badge>
+              )}
+              {deletedCount > 0 && (
+                <Badge variant="destructive" className="text-lg px-3 py-1">
+                  {deletedCount} deleted
                 </Badge>
               )}
             </div>
@@ -182,20 +170,17 @@ export function ContentTab() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4">
-            {/* Search */}
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search content by title, author, or content..."
+                placeholder="Search by title, content, or author..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
-            
-            {/* Filter buttons */}
             <div className="flex gap-2">
-              {(['all', 'visible', 'flagged', 'removed'] as ContentFilter[]).map((filterOption) => (
+              {(['all', 'visible', 'hidden', 'deleted'] as ContentFilter[]).map((filterOption) => (
                 <Button
                   key={filterOption}
                   variant={filter === filterOption ? 'default' : 'outline'}
@@ -211,7 +196,6 @@ export function ContentTab() {
         </CardContent>
       </Card>
 
-      {/* Content Table */}
       <Card className="rounded-2xl ring-1 ring-slate-200 shadow-sm">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -220,119 +204,249 @@ export function ContentTab() {
                 <tr>
                   <th className="text-left py-3 px-6 font-medium text-gray-600">Title</th>
                   <th className="text-left py-3 px-6 font-medium text-gray-600">Author</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Type</th>
                   <th className="text-left py-3 px-6 font-medium text-gray-600">Status</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Reports</th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-600">Score</th>
+                  <th className="text-left py-3 px-6 font-medium text-gray-600">Comments</th>
                   <th className="text-left py-3 px-6 font-medium text-gray-600">Created</th>
                   <th className="text-left py-3 px-6 font-medium text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredContent.map((item, index) => (
+                {filteredPosts.map((post) => (
                   <tr
-                    key={item._id}
+                    key={post._id}
                     className={`hover:bg-gray-50 transition-colors ${
-                      index < 3 ? 'animate-[slideIn_0.3s_ease-out]' : ''
-                    } ${item.status === 'flagged' ? 'bg-amber-50/30' : ''}`}
-                    style={{ animationDelay: `${index * 50}ms` }}
+                      post.status === 'hidden' ? 'bg-amber-50/30' : 
+                      post.status === 'deleted' ? 'bg-rose-50/30' : ''
+                    }`}
                   >
                     <td className="py-4 px-6">
-                      <div className="font-medium text-gray-900 max-w-xs truncate" title={item.title}>
-                        {item.title}
+                      <div className="font-medium text-gray-900 max-w-xs truncate" title={post.title}>
+                        {post.title}
                       </div>
-                      <div className="text-sm text-gray-500 max-w-xs truncate" title={item.content}>
-                        {item.content}
+                      <div className="text-sm text-gray-500 max-w-xs truncate" title={post.body}>
+                        {post.body || 'No content'}
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-800">{item.author}</div>
+                      <div className="text-gray-800">{post.authorName}</div>
                     </td>
                     <td className="py-4 px-6">
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {item.type}
-                      </Badge>
+                      {getStatusBadge(post.status)}
                     </td>
                     <td className="py-4 px-6">
-                      {getStatusBadge(item.status)}
+                      <div className="text-gray-600">{post.score}</div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-600">{item.reports}</div>
+                      <div className="text-gray-600">{post.commentsCount}</div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-600 text-sm">{formatDate(item.createdAt)}</div>
+                      <div className="text-gray-600 text-sm">{formatDate(post.createdAt)}</div>
                     </td>
                     <td className="py-4 px-6">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDialog(post, 'view')}
+                          title="View Post"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                        {post.status === 'visible' && (
                           <Button
                             variant="ghost"
                             size="sm"
-                            disabled={actionLoading === item._id}
+                            onClick={() => openDialog(post, 'hide')}
+                            disabled={actionLoading === post._id}
+                            className="text-amber-600 hover:text-amber-700"
+                            title="Hide from Users"
                           >
-                            <MoreHorizontal className="w-4 h-4" />
+                            <EyeOff className="w-4 h-4" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {item.status === 'visible' && (
-                            <DropdownMenuItem
-                              onClick={() => openModerationModal(item._id, 'hide', item.type)}
-                              className="text-amber-600"
-                            >
-                              <EyeOff className="w-4 h-4 mr-2" />
-                              Hide Content
-                            </DropdownMenuItem>
-                          )}
-                          {item.status === 'flagged' && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => openModerationModal(item._id, 'approve', item.type)}
-                                className="text-emerald-600"
-                              >
-                                <Eye className="w-4 h-4 mr-2" />
-                                Approve Content
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => openModerationModal(item._id, 'remove', item.type)}
-                                className="text-rose-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Remove Content
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          {item.status === 'removed' && (
-                            <DropdownMenuItem
-                              onClick={() => openModerationModal(item._id, 'approve', item.type)}
-                              className="text-emerald-600"
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              Restore Content
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        )}
+                        {(post.status === 'hidden' || post.status === 'deleted') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDialog(post, 'show')}
+                            disabled={actionLoading === post._id}
+                            className="text-emerald-600 hover:text-emerald-700"
+                            title="Restore Post"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDialog(post, 'delete')}
+                          disabled={actionLoading === post._id}
+                          className="text-rose-600 hover:text-rose-700"
+                          title="Permanently Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            
-            {filteredContent.length === 0 && (
+            {filteredPosts.length === 0 && (
               <div className="text-center py-12">
                 <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-500">No content found matching your criteria</p>
+                <p className="text-gray-500">No content found</p>
               </div>
             )}
           </div>
         </CardContent>
       </Card>
-      <ModerationModal
-        open={modalOpen}
-        initialReason=""
-        onClose={() => setModalOpen(false)}
-        onSubmit={handleModalSubmit}
-        title={modalAction === 'remove' ? 'Remove Content' : modalAction === 'hide' ? 'Hide Content' : modalAction === 'approve' ? 'Approve Content' : 'Moderation'}
-      />
+
+      <AlertDialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <AlertDialogContent className={dialogAction === 'view' ? 'max-w-3xl max-h-[80vh] overflow-y-auto' : ''}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {dialogAction === 'view' && 'View Post'}
+              {dialogAction === 'hide' && 'Hide Post from Users'}
+              {dialogAction === 'show' && 'Restore Post'}
+              {dialogAction === 'delete' && 'Permanently Delete Post'}
+            </AlertDialogTitle>
+            {dialogAction === 'view' && selectedPost ? (
+              <div className="space-y-4 text-left pt-4">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{selectedPost.title}</h3>
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <span className="font-medium">By {selectedPost.authorName}</span>
+                    <span>•</span>
+                    <span>{formatDate(selectedPost.createdAt)}</span>
+                    {selectedPost.isSolved && (
+                      <>
+                        <span>•</span>
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">✓ Solved</Badge>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="border-t pt-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Post Content:</h4>
+                  <div className="prose max-w-none text-gray-800 whitespace-pre-wrap bg-gray-50 p-4 rounded-lg min-h-[100px]">
+                    {selectedPost.body && selectedPost.body.trim().length > 0 ? (
+                      selectedPost.body
+                    ) : (
+                      <span className="text-gray-400 italic">This post has no text content. It may contain only a title or images.</span>
+                    )}
+                  </div>
+                </div>
+
+                {selectedPost.images && selectedPost.images.length > 0 && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium text-gray-900 mb-2">Images ({selectedPost.images.length}):</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {selectedPost.images.map((image, idx) => (
+                        <div key={idx} className="border rounded-lg overflow-hidden bg-gray-50">
+                          <img 
+                            src={image.url} 
+                            alt={`Post image ${idx + 1}`}
+                            className="w-full h-auto object-cover max-h-48"
+                            loading="lazy"
+                          />
+                          <div className="px-2 py-1 text-xs text-gray-500 bg-white">
+                            {image.width} × {image.height}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedPost.tags && selectedPost.tags.length > 0 && (
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium text-gray-900 mb-2">Tags:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedPost.tags.map((tag, idx) => (
+                        <Badge key={idx} variant="outline" className="text-sm">
+                          #{tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="border-t pt-4 flex gap-6 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-700">Score:</span>
+                    <Badge variant="secondary" className="text-base">{selectedPost.score}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-700">Comments:</span>
+                    <Badge variant="secondary" className="text-base">{selectedPost.commentsCount}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-700">Status:</span>
+                    {getStatusBadge(selectedPost.status)}
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">Post ID:</span>
+                    <p className="text-gray-600 font-mono text-xs mt-1 break-all">{selectedPost._id}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Author Username:</span>
+                    <p className="text-gray-600 mt-1">{selectedPost.authorUsername || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Created:</span>
+                    <p className="text-gray-600 mt-1">{formatDate(selectedPost.createdAt)}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Last Updated:</span>
+                    <p className="text-gray-600 mt-1">{formatDate(selectedPost.updatedAt)}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <AlertDialogDescription>
+                {dialogAction === 'hide' && 'This will hide the post from users. You can restore it later.'}
+                {dialogAction === 'show' && 'This will make the post visible to users again.'}
+                {dialogAction === 'delete' && 'This action cannot be undone. The post will be permanently deleted.'}
+              </AlertDialogDescription>
+            )}
+          </AlertDialogHeader>
+          {dialogAction !== 'view' && (
+            <div className="space-y-2 my-4">
+              <Label htmlFor="reason">Reason (optional)</Label>
+              <Textarea
+                id="reason"
+                placeholder="Enter reason for this action..."
+                value={actionReason}
+                onChange={(e) => setActionReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            {dialogAction !== 'view' && (
+              <AlertDialogAction
+                onClick={handleDialogConfirm}
+                className={
+                  dialogAction === 'delete' ? 'bg-rose-600 hover:bg-rose-700' :
+                  dialogAction === 'hide' ? 'bg-amber-600 hover:bg-amber-700' :
+                  'bg-emerald-600 hover:bg-emerald-700'
+                }
+              >
+                {dialogAction === 'delete' && 'Delete Permanently'}
+                {dialogAction === 'hide' && 'Hide Post'}
+                {dialogAction === 'show' && 'Restore Post'}
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

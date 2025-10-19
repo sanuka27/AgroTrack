@@ -545,4 +545,134 @@ export const adminApi = {
       throw error;
     }
   },
+
+  // ==================== COMMUNITY POSTS MANAGEMENT ====================
+
+  /**
+   * Get all community posts (admin only)
+   * 
+   * GET /api/admin/community/posts
+   * 
+   * @param params - Query parameters
+   * @returns Promise with array of community posts
+   */
+  async getCommunityPosts(params?: {
+    status?: 'all' | 'visible' | 'hidden' | 'deleted';
+    search?: string;
+    page?: number;
+    limit?: number;
+    sortBy?: 'createdAt' | 'updatedAt' | 'score' | 'commentsCount';
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<{
+    posts: CommunityPost[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalPosts: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  }> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+      if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+
+      const response = await api.get(`/admin/community/posts?${queryParams.toString()}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching community posts:', getErrorMessage(error));
+      throw error;
+    }
+  },
+
+  /**
+   * Update community post status (admin only)
+   * 
+   * PUT /api/admin/community/posts/:postId
+   * 
+   * @param postId - Post ID
+   * @param status - New status (visible, hidden, or deleted)
+   * @param reason - Reason for the action
+   * @returns Promise with updated post
+   */
+  async updateCommunityPostStatus(
+    postId: string,
+    status: 'visible' | 'hidden' | 'deleted',
+    reason?: string
+  ): Promise<CommunityPost> {
+    try {
+      const response = await api.put(`/admin/community/posts/${postId}`, { status, reason });
+      return response.data.data.post;
+    } catch (error) {
+      console.error('Error updating community post:', getErrorMessage(error));
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a community post permanently (admin only)
+   * 
+   * DELETE /api/admin/community/posts/:postId
+   * 
+   * @param postId - Post ID
+   * @param reason - Reason for deletion
+   * @returns Promise that resolves when post is deleted
+   */
+  async deleteCommunityPost(postId: string, reason?: string): Promise<void> {
+    try {
+      await api.delete(`/admin/community/posts/${postId}`, { data: { reason } });
+    } catch (error) {
+      console.error('Error deleting community post:', getErrorMessage(error));
+      throw error;
+    }
+  },
+  
+  /**
+   * Get recent activity for admin dashboard
+   * 
+   * GET /api/admin/activity/recent
+   * 
+   * @param limit - Number of activities to fetch
+   * @returns Promise with array of recent activities
+   */
+  getRecentActivity: async (limit?: number) => {
+    const response = await api.get('/admin/activity/recent', {
+      params: { limit: limit || 50 }
+    });
+    return response.data.data;
+  },
 };
+
+// Type definitions for Community Posts
+export interface CommunityPost {
+  _id: string;
+  authorId: {
+    _id: string;
+    name: string;
+    email: string;
+  } | string;
+  authorName: string;
+  authorUsername?: string;
+  title: string;
+  body: string;
+  images: Array<{
+    url: string;
+    width: number;
+    height: number;
+  }>;
+  tags: string[];
+  score: number;
+  commentsCount: number;
+  isSolved: boolean;
+  status: 'visible' | 'hidden' | 'deleted';
+  deletedAt?: string;
+  deletedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+

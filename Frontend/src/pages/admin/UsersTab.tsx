@@ -6,15 +6,37 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { adminApi, User } from '@/api/admin';
-import { Search, Filter, MoreHorizontal, Ban, CheckCircle, Trash2 } from 'lucide-react';
+import { Search, Filter, Eye, Edit, Trash2, Loader2 } from 'lucide-react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type UserFilter = 'all' | 'active' | 'pending' | 'banned';
+
+interface UserDetails extends User {
+  statistics?: {
+    plants: number;
+    posts: number;
+    careLogs: number;
+    reminders: number;
+  };
+}
 
 export function UsersTab() {
   const { toast } = useToast();
@@ -32,6 +54,20 @@ export function UsersTab() {
     currentPage: 1,
     totalPages: 1,
     totalUsers: 0,
+  });
+
+  // Dialog states
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserDetails | null>(null);
+  
+  // Edit form state
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    role: '',
+    isActive: true,
   });
 
   // Load users from real API
@@ -158,32 +194,86 @@ export function UsersTab() {
     });
   };
 
-  const handleUserAction = async (userId: string, action: 'activate' | 'ban' | 'delete') => {
-    setActionLoading(userId);
+  // View user details
+  const handleViewUser = async (user: User) => {
+    setActionLoading(user._id);
     try {
-      if (action === 'delete') {
-        await adminApi.deleteUser(userId);
-        setUsers(prev => prev.filter(u => u._id !== userId));
-        toast({
-          title: "User Deleted",
-          description: "The user has been permanently removed.",
-        });
-      } else {
-        const isActive = action === 'activate';
-        await adminApi.updateUser(userId, { isActive });
-        setUsers(prev => prev.map(u =>
-          u._id === userId ? { ...u, isActive } : u
-        ));
-        toast({
-          title: isActive ? "User Activated" : "User Banned",
-          description: `The user has been ${isActive ? 'activated' : 'banned'} successfully.`,
-        });
-      }
+      const userDetails = await adminApi.getUser(user._id);
+      setSelectedUser(userDetails as UserDetails);
+      setViewDialogOpen(true);
     } catch (error) {
-      console.error(`Error ${action}ing user:`, error);
+      console.error('Error fetching user details:', error);
       toast({
         title: "Error",
-        description: `Failed to ${action} user. Please try again.`,
+        description: "Failed to load user details. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Edit user
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user as UserDetails);
+    setEditForm({
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedUser) return;
+    
+    setActionLoading(selectedUser._id);
+    try {
+      const updatedUser = await adminApi.updateUser(selectedUser._id, editForm);
+      setUsers(prev => prev.map(u =>
+        u._id === selectedUser._id ? updatedUser : u
+      ));
+      toast({
+        title: "User Updated",
+        description: "User information has been updated successfully.",
+      });
+      setEditDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update user. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Delete user
+  const handleDeleteUser = (user: User) => {
+    setSelectedUser(user as UserDetails);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedUser) return;
+    
+    setActionLoading(selectedUser._id);
+    try {
+      await adminApi.deleteUser(selectedUser._id);
+      setUsers(prev => prev.filter(u => u._id !== selectedUser._id));
+      toast({
+        title: "User Deleted",
+        description: "The user has been permanently removed.",
+      });
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete user. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -358,36 +448,42 @@ export function UsersTab() {
                       <div className="text-gray-600">{formatDate(user.createdAt)}</div>
                     </td>
                     <td className="py-4 px-6">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" disabled={actionLoading === user._id}>
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {!user.isActive && (
-                            <DropdownMenuItem onClick={() => handleUserAction(user._id, 'activate')}>
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Activate
-                            </DropdownMenuItem>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewUser(user)}
+                          disabled={actionLoading === user._id}
+                          title="View Details"
+                          className="hover:bg-blue-50 hover:text-blue-600"
+                        >
+                          {actionLoading === user._id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
                           )}
-                          {user.isActive && user.role !== 'admin' && (
-                            <DropdownMenuItem onClick={() => handleUserAction(user._id, 'ban')}>
-                              <Ban className="w-4 h-4 mr-2" />
-                              Ban User
-                            </DropdownMenuItem>
-                          )}
-                          {user.role !== 'admin' && (
-                            <DropdownMenuItem
-                              onClick={() => handleUserAction(user._id, 'delete')}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete User
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditUser(user)}
+                          disabled={actionLoading === user._id}
+                          title="Edit User"
+                          className="hover:bg-amber-50 hover:text-amber-600"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteUser(user)}
+                          disabled={actionLoading === user._id || user.role === 'admin'}
+                          title={user.role === 'admin' ? 'Cannot delete admin' : 'Delete User'}
+                          className="hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -403,6 +499,212 @@ export function UsersTab() {
           </div>
         </CardContent>
       </Card>
+
+      {/* View User Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>User Details</DialogTitle>
+            <DialogDescription>
+              Complete information about the selected user
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Name</Label>
+                  <p className="mt-1 text-sm font-semibold">{selectedUser.name}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Email</Label>
+                  <p className="mt-1 text-sm">{selectedUser.email}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Role</Label>
+                  <div className="mt-1">{getRoleBadge(selectedUser.role)}</div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Status</Label>
+                  <div className="mt-1">{getStatusBadge(selectedUser)}</div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">User ID</Label>
+                  <p className="mt-1 text-xs font-mono text-gray-600">{selectedUser._id}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Firebase UID</Label>
+                  <p className="mt-1 text-xs font-mono text-gray-600">{selectedUser.uid || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Auth Provider</Label>
+                  <p className="mt-1 text-sm capitalize">{selectedUser.authProvider || 'local'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Email Verified</Label>
+                  <p className="mt-1 text-sm">{selectedUser.isEmailVerified ? '✅ Yes' : '❌ No'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Joined</Label>
+                  <p className="mt-1 text-sm">{formatDate(selectedUser.createdAt)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-500">Last Updated</Label>
+                  <p className="mt-1 text-sm">{formatDate(selectedUser.updatedAt)}</p>
+                </div>
+              </div>
+
+              {/* Statistics */}
+              {selectedUser.statistics && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-500 mb-3 block">Activity Statistics</Label>
+                  <div className="grid grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <p className="text-2xl font-bold text-green-600">{selectedUser.statistics.plants}</p>
+                        <p className="text-xs text-gray-500 mt-1">Plants</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <p className="text-2xl font-bold text-blue-600">{selectedUser.statistics.posts}</p>
+                        <p className="text-xs text-gray-500 mt-1">Posts</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <p className="text-2xl font-bold text-purple-600">{selectedUser.statistics.careLogs}</p>
+                        <p className="text-xs text-gray-500 mt-1">Care Logs</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <p className="text-2xl font-bold text-orange-600">{selectedUser.statistics.reminders}</p>
+                        <p className="text-xs text-gray-500 mt-1">Reminders</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information and settings
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Name</Label>
+              <Input
+                id="edit-name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="Enter name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                placeholder="Enter email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-role">Role</Label>
+              <Select value={editForm.role} onValueChange={(value) => setEditForm({ ...editForm, role: value })}>
+                <SelectTrigger id="edit-role">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="mod">Moderator</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="edit-active"
+                checked={editForm.isActive}
+                onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
+                className="w-4 h-4 rounded border-gray-300"
+              />
+              <Label htmlFor="edit-active" className="cursor-pointer">
+                Account Active
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={actionLoading === selectedUser?._id}>
+              {actionLoading === selectedUser?._id ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete <strong>{selectedUser?.name}</strong>'s account
+              and remove all their data from the database, including:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>User profile and authentication</li>
+                <li>All plants and care logs</li>
+                <li>Community posts and comments</li>
+                <li>Reminders and notifications</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={actionLoading === selectedUser?._id}
+            >
+              {actionLoading === selectedUser?._id ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete User'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

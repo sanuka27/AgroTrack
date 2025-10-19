@@ -133,13 +133,13 @@ export const analyticsApi = {
   /**
    * Get dashboard analytics for current user
    * 
-   * GET /api/analytics/dashboard
+   * GET /api/analytics/dashboard/simple
    * 
    * @returns Promise with dashboard analytics
    */
   async getDashboardAnalytics(): Promise<DashboardAnalytics> {
     try {
-      const response = await api.get<DashboardAnalyticsResponse>('/analytics/dashboard');
+      const response = await api.get<DashboardAnalyticsResponse>('/analytics/dashboard/simple');
       return response.data.data.analytics;
     } catch (error) {
       console.error('Error fetching dashboard analytics:', getErrorMessage(error));

@@ -1,10 +1,11 @@
 {
   "type": "module",
   "scripts": {
-    "seed:reports": "node scripts/seedReports.js",
-    "migrate:dry": "tsx scripts/migrations/migrate.ts --dry-run",
-    "migrate": "tsx scripts/migrations/migrate.ts",
-    "migrate:dropold": "tsx scripts/migrations/migrate.ts --drop-old"
+    "migrate:dry": "tsx scripts/migrations/migrate_forum.ts --dry-run",
+    "migrate": "tsx scripts/migrations/migrate_forum.ts",
+    "backup": "tsx scripts/migrations/exportDatabase.ts",
+    "indexes": "tsx scripts/migrations/create_forum_indexes.ts",
+    "verify:migration": "tsx scripts/migrations/verify_forum.ts"
   },
   "dependencies": {
     "@hapi/joi": "^17.1.1",
