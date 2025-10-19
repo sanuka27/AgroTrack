@@ -14,7 +14,7 @@ import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { exportPlantsToCSV, exportPlantsToJSON } from "@/utils/exportUtils";
 import { BulkOperationsBar } from "@/components/BulkOperationsBar";
 import { useSearchDebounce } from "@/hooks/use-search";
-import { Leaf, Plus, Calendar, Droplets, Sun, Bell, TrendingUp, MessageSquare, CheckSquare, Square } from "lucide-react";
+import { Leaf, Plus, Calendar, Droplets, Sun, Bell, TrendingUp, MessageSquare, CheckSquare, Square, AlertTriangle } from "lucide-react";
 import api from '@/lib/api';
 import plantsApi from '@/lib/api/plants';
 
@@ -325,137 +325,275 @@ const MyPlants = () => {
   };
   
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
       <Header />
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Welcome Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Welcome back, {user?.name || 'Gardener'}! 🌱
-          </h1>
-          <p className="text-muted-foreground">Your personalized plant care dashboard</p>
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Modern Header with Gradient */}
+        <div className="mb-8 relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl opacity-10"></div>
+          <div className="relative p-8 rounded-2xl">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-green-700 to-emerald-600 bg-clip-text text-transparent mb-2">
+              Your Plant Collection �
+            </h1>
+            <p className="text-lg text-gray-600">Track care history and manage multiple plants</p>
+          </div>
         </div>
 
-        {/* Loading and Error States */}
+        {/* Loading State */}
         {loading && (
-          <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="mt-2 text-muted-foreground">Loading your plants...</p>
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-green-200 border-t-green-600"></div>
+            <p className="mt-4 text-gray-600 font-medium">Loading your garden...</p>
           </div>
         )}
 
+        {/* Error State */}
         {error && (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-8">
-            <p className="text-destructive">{error}</p>
+          <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-6 mb-8 shadow-sm">
+            <div className="flex items-center">
+              <AlertTriangle className="w-5 h-5 text-red-500 mr-3" />
+              <p className="text-red-700 font-medium">{error}</p>
+            </div>
             <Button
               variant="outline"
               size="sm"
               onClick={() => window.location.reload()}
-              className="mt-2"
+              className="mt-4"
             >
               Try Again
             </Button>
           </div>
         )}
 
-        {/* Quick Actions */}
+        {/* Modern Action Cards - Eye-catching with gradients */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* AI Plant Analysis - Primary Action */}
+          <Link to="/plant-analysis" className="group">
+            <Card className="border-2 border-green-200 hover:border-green-400 transition-all duration-300 hover:shadow-xl cursor-pointer bg-gradient-to-br from-green-50 to-emerald-50">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-md group-hover:scale-110 transition-transform">
+                      <Leaf className="w-7 h-7 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-green-800 group-hover:text-green-900">
+                        AI Plant Analysis
+                      </h3>
+                      <p className="text-sm text-green-600">Scan & identify your plants instantly</p>
+                    </div>
+                  </div>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Button variant="default" size="lg" asChild className="h-20 flex-col">
-            <Link to="/plant-analysis">
-              <Leaf className="w-8 h-8 mb-2" />
-              AI Plant Analysis
-            </Link>
-          </Button>
-          <Button 
-            variant="outline" 
-            size="lg" 
-            className="h-20 flex-col"
+          {/* Add New Plant */}
+          <Card 
+            className="border-2 border-blue-200 hover:border-blue-400 transition-all duration-300 hover:shadow-xl cursor-pointer bg-gradient-to-br from-blue-50 to-sky-50 group"
             onClick={() => handleOpenModal()}
             data-testid="add-plant-btn"
           >
-            <Plus className="w-8 h-8 mb-2" />
-            Add New Plant
-          </Button>
-          <Button 
-            variant={selectionMode ? "default" : "outline"} 
-            size="lg" 
-            className="h-20 flex-col"
-            onClick={handleToggleSelectionMode}
-            disabled={plants.length === 0}
-          >
-            {selectionMode ? <CheckSquare className="w-8 h-8 mb-2" /> : <Square className="w-8 h-8 mb-2" />}
-            {selectionMode ? "Exit Select" : "Select Plants"}
-          </Button>
-          <Button variant="outline" size="lg" asChild className="h-20 flex-col">
-            <Link to="/community">
-              <MessageSquare className="w-8 h-8 mb-2" />
-              Join Discussion
-            </Link>
-          </Button>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="p-3 bg-gradient-to-br from-blue-500 to-sky-600 rounded-xl shadow-md group-hover:scale-110 transition-transform">
+                    <Plus className="w-7 h-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-blue-800 group-hover:text-blue-900">
+                      Add New Plant
+                    </h3>
+                    <p className="text-sm text-blue-600">Expand your garden collection</p>
+                  </div>
+                </div>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Dashboard Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Leaf className="w-5 h-5 text-green-600" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Plants</p>
-                  <p className="text-xl font-bold text-green-800">{plants.length}</p>
-                </div>
+        {/* Modern Stats Dashboard with Gradients */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {/* Total Plants */}
+          <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-white to-green-50/50 hover:shadow-lg transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-2">
+                <Leaf className="w-6 h-6 text-green-600" />
+                <span className="text-2xl font-bold text-green-700">{plants.length}</span>
+              </div>
+              <p className="text-sm font-medium text-gray-600">Total Plants</p>
+              <div className="mt-2 h-1 bg-green-200 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-green-500 to-emerald-500 w-full"></div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Droplets className="w-5 h-5 text-blue-500" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Need Water</p>
-                  <p className="text-xl font-bold text-blue-600">
-                    {filterAndSortPlants(plants, { ...filters, careNeeds: 'needs-water' }).length}
-                  </p>
-                </div>
+          {/* Need Water */}
+          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-white to-blue-50/50 hover:shadow-lg transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-2">
+                <Droplets className="w-6 h-6 text-blue-600" />
+                <span className="text-2xl font-bold text-blue-700">
+                  {filterAndSortPlants(plants, { ...filters, careNeeds: 'needs-water' }).length}
+                </span>
+              </div>
+              <p className="text-sm font-medium text-gray-600">Need Water</p>
+              <div className="mt-2 h-1 bg-blue-200 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-blue-500 to-sky-500 w-3/4"></div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Bell className="w-5 h-5 text-orange-500" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Overdue Care</p>
-                  <p className="text-xl font-bold text-orange-600">
-                    {filterAndSortPlants(plants, { ...filters, careNeeds: 'overdue' }).length}
-                  </p>
-                </div>
+          {/* Overdue Care */}
+          <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-white to-orange-50/50 hover:shadow-lg transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-2">
+                <Bell className="w-6 h-6 text-orange-600" />
+                <span className="text-2xl font-bold text-orange-700">
+                  {filterAndSortPlants(plants, { ...filters, careNeeds: 'overdue' }).length}
+                </span>
+              </div>
+              <p className="text-sm font-medium text-gray-600">Needs Attention</p>
+              <div className="mt-2 h-1 bg-orange-200 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-orange-500 to-amber-500 w-1/2"></div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="w-5 h-5 text-purple-500" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Healthy Plants</p>
-                  <p className="text-xl font-bold text-purple-600">
-                    {plants.filter(p => p.health === 'Excellent' || p.health === 'Good').length}
-                  </p>
-                </div>
+          {/* Healthy Plants */}
+          <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-white to-purple-50/50 hover:shadow-lg transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-2">
+                <TrendingUp className="w-6 h-6 text-purple-600" />
+                <span className="text-2xl font-bold text-purple-700">
+                  {plants.filter(p => p.health === 'Excellent' || p.health === 'Good').length}
+                </span>
+              </div>
+              <p className="text-sm font-medium text-gray-600">Healthy</p>
+              <div className="mt-2 h-1 bg-purple-200 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 w-full"></div>
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Plant Collection & Care History - Moved to top */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-green-800">Your Plant Collection</CardTitle>
+                <CardDescription>Track care history and manage multiple plants</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {plants.length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Plant Filters */}
+                    <PlantFiltersComponent
+                      filters={filters}
+                      onFiltersChange={setFilters}
+                      plantsCount={plants.length}
+                      filteredCount={filteredPlants.length}
+                    />
+                    
+                    {/* Filtered Plants Grid */}
+                    {filteredPlants.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {filteredPlants.map((plant) => (
+                          <PlantCard 
+                            key={plant.id} 
+                            plant={plant} 
+                            onEdit={handleOpenModal}
+                            onDelete={handleDeletePlant}
+                            onWatered={handleWateredPlant}
+                            isSelected={isSelected(plant.id)}
+                            onSelectionChange={toggleSelection}
+                            selectionMode={selectionMode}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Leaf className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No plants match your filters</h3>
+                        <p className="text-muted-foreground mb-4">
+                          Try adjusting your search or filter criteria
+                        </p>
+                        <Button variant="outline" onClick={() => setFilters({
+                          search: '',
+                          healthStatus: 'all',
+                          category: 'all',
+                          careNeeds: 'all',
+                          sortBy: 'name',
+                          sortOrder: 'asc'
+                        })}>
+                          Clear Filters
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Leaf className="w-20 h-20 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">No plants yet</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Start your plant collection by adding your first plant
+                    </p>
+                    <Button onClick={() => handleOpenModal()}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Your First Plant
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Care History Sidebar */}
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Care Activity</CardTitle>
+                <CardDescription>Your plant care history</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {plants.slice(0, 3).map((plant) => (
+                    <div key={plant.id} className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+                      <div className="p-2 bg-green-100 rounded-full">
+                        <Droplets className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{plant.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {plant.lastWatered 
+                            ? `Watered ${new Date(plant.lastWatered).toLocaleDateString()}`
+                            : 'Not watered yet'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {plants.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No activity yet
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Smart Notifications & Reminders */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-2 border-t-4 border-t-orange-400">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Bell className="w-5 h-5 text-orange-500" />
@@ -464,9 +602,11 @@ const MyPlants = () => {
               <CardDescription>Smart adaptive notifications for your plants</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100/50 rounded-xl border-l-4 border-blue-400 hover:shadow-md transition-shadow">
                 <div className="flex items-center space-x-3">
-                  <Droplets className="w-4 h-4 text-blue-500" />
+                  <div className="p-2 bg-blue-500 rounded-lg">
+                    <Droplets className="w-5 h-5 text-white" />
+                  </div>
                   <div>
                     <p className="font-medium text-blue-800">Water your Monstera</p>
                     <p className="text-sm text-blue-600">Soil moisture is getting low</p>
@@ -523,126 +663,6 @@ const MyPlants = () => {
           </Card>
         </div>
 
-        {/* Plant Collection & Care History */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-green-800">Your Plant Collection</CardTitle>
-                  <Button variant="outline" size="sm" onClick={() => handleOpenModal()}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Plant
-                  </Button>
-                </div>
-                <CardDescription>Track care history and manage multiple plants</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {plants.length > 0 ? (
-                  <div className="space-y-6">
-                    {/* Plant Filters */}
-                    <PlantFiltersComponent
-                      filters={filters}
-                      onFiltersChange={setFilters}
-                      plantsCount={plants.length}
-                      filteredCount={filteredPlants.length}
-                    />
-                    
-                    {/* Filtered Plants Grid */}
-                    {filteredPlants.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {filteredPlants.map((plant) => (
-                          <PlantCard 
-                            key={plant.id} 
-                            plant={plant} 
-                            onEdit={handleOpenModal}
-                            onDelete={handleDeletePlant}
-                            onWatered={handleWateredPlant}
-                            isSelected={isSelected(plant.id)}
-                            onSelectionChange={toggleSelection}
-                            selectionMode={selectionMode}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <Leaf className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">No plants match your filters</h3>
-                        <p className="text-muted-foreground mb-4">
-                          Try adjusting your search or filter criteria
-                        </p>
-                        <Button variant="ghost" onClick={() => setFilters({
-                          search: '',
-                          healthStatus: 'all',
-                          category: 'all',
-                          careNeeds: 'all',
-                          sortBy: 'name',
-                          sortOrder: 'asc'
-                        })}>
-                          Clear All Filters
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Leaf className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No plants yet</h3>
-                    <p className="text-muted-foreground mb-4">
-                      Start your garden by adding your first plant!
-                    </p>
-                    <Button onClick={() => handleOpenModal()}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Your First Plant
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-green-800">Care History</CardTitle>
-                <CardDescription>Recent plant care activities</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center space-x-3 p-2 border-l-4 border-blue-400 bg-blue-50">
-                  <Droplets className="w-4 h-4 text-blue-500" />
-                  <div>
-                    <p className="text-sm font-medium">Watered Monstera</p>
-                    <p className="text-xs text-muted-foreground">2 days ago</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-3 p-2 border-l-4 border-green-400 bg-green-50">
-                  <Leaf className="w-4 h-4 text-green-500" />
-                  <div>
-                    <p className="text-sm font-medium">Added Fiddle Leaf Fig</p>
-                    <p className="text-xs text-muted-foreground">1 week ago</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-3 p-2 border-l-4 border-yellow-400 bg-yellow-50">
-                  <Sun className="w-4 h-4 text-yellow-500" />
-                  <div>
-                    <p className="text-sm font-medium">Moved plants for better light</p>
-                    <p className="text-xs text-muted-foreground">1 week ago</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-3 p-2 border-l-4 border-purple-400 bg-purple-50">
-                  <Calendar className="w-4 h-4 text-purple-500" />
-                  <div>
-                    <p className="text-sm font-medium">Set fertilizer reminder</p>
-                    <p className="text-xs text-muted-foreground">2 weeks ago</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
       </main>
 
       {/* Add Plant Modal */}
