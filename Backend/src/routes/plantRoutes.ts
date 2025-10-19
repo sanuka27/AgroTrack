@@ -4,6 +4,7 @@ import multer from 'multer';
 import path from 'path';
 import { firebaseService } from '../config/firebase';
 import { authMiddleware } from '../middleware/authMiddleware';
+import { PlantController } from '../controllers/plantController';
 
 const router = Router();
 
@@ -23,13 +24,20 @@ const plantImageUpload = multer({
   }
 });
 
-router.get("/", cacheResponse(30), (_req, res) => {
-  res.json({ ok: true, service: "plants", items: [] });
-});
+// GET /api/plants - Get all user's plants
+router.get("/", authMiddleware, PlantController.getPlants);
 
-router.get("/:id", cacheResponse(60, req => `plant:${req.params.id}`), (req, res) => {
-  res.json({ ok: true, id: req.params.id, name: "Demo Plant" });
-});
+// GET /api/plants/:id - Get single plant
+router.get("/:id", authMiddleware, PlantController.getPlantById);
+
+// POST /api/plants - Create new plant
+router.post("/", authMiddleware, plantImageUpload.single('image'), PlantController.createPlant);
+
+// PUT /api/plants/:id - Update plant
+router.put("/:id", authMiddleware, plantImageUpload.single('image'), PlantController.updatePlant);
+
+// DELETE /api/plants/:id - Delete plant
+router.delete("/:id", authMiddleware, PlantController.deletePlant);
 
 // Plant image upload endpoint
 router.post('/:plantId/images',

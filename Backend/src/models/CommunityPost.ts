@@ -1,5 +1,21 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+// Embedded Comment Interface
+export interface IEmbeddedComment {
+  _id: mongoose.Types.ObjectId;
+  authorId: mongoose.Types.ObjectId;
+  authorName: string;
+  body: string;
+  parentCommentId?: mongoose.Types.ObjectId;
+  upvotes: number;
+  downvotes: number;
+  isExpertReply: boolean;
+  isDeleted: boolean;
+  deletedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface ICommunityPost extends Document {
   authorId: mongoose.Types.ObjectId; // Changed from authorUid (string) to authorId (ObjectId)
   author: mongoose.Types.ObjectId; // Alias for authorId (backward compatibility)
@@ -18,6 +34,7 @@ export interface ICommunityPost extends Document {
   score: number; // Changed from voteScore
   voteScore: number; // Alias for score (for compatibility)
   commentsCount: number; // Changed from commentCount
+  comments: IEmbeddedComment[]; // NEW: Embedded comments array
   isSolved: boolean;
   status: 'visible' | 'hidden' | 'deleted'; // Changed from isDeleted (boolean)
   deletedAt?: Date;
@@ -30,6 +47,56 @@ export interface ICommunityPost extends Document {
   updatedAt: Date;
   extractHashtags(): string[];
 }
+
+// Embedded Comment Schema
+const embeddedCommentSchema = new Schema<IEmbeddedComment>(
+  {
+    _id: {
+      type: Schema.Types.ObjectId,
+      default: () => new mongoose.Types.ObjectId(),
+    },
+    authorId: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      ref: 'User',
+    },
+    authorName: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+    body: {
+      type: String,
+      required: true,
+      maxlength: 5000,
+    },
+    parentCommentId: {
+      type: Schema.Types.ObjectId,
+    },
+    upvotes: {
+      type: Number,
+      default: 0,
+    },
+    downvotes: {
+      type: Number,
+      default: 0,
+    },
+    isExpertReply: {
+      type: Boolean,
+      default: false,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: Date,
+  },
+  {
+    timestamps: true,
+    _id: false, // Prevent automatic _id generation (we handle it manually)
+  }
+);
 
 const communityPostSchema = new Schema<ICommunityPost>(
   {
@@ -87,6 +154,10 @@ const communityPostSchema = new Schema<ICommunityPost>(
     commentsCount: {
       type: Number,
       default: 0,
+    },
+    comments: {
+      type: [embeddedCommentSchema],
+      default: [],
     },
     isSolved: {
       type: Boolean,

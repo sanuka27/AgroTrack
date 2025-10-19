@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
+import path from 'path';
 import { Plant } from '../models/Plant';
 import { PlantCareAnalytics } from '../models/PlantCareAnalytics';
 import { UserAnalytics, AnalyticsEventType } from '../models/UserAnalytics';
 import { logger } from '../config/logger';
+import { firebaseService } from '../config/firebase';
 
 // Extended Request interfaces for type safety
 interface CreatePlantRequest extends Request {
@@ -104,9 +106,44 @@ export class PlantController {
   static async createPlant(req: CreatePlantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+      
+      // Handle image upload if file is provided
+      let imageUrl: string | undefined;
+      if (req.file) {
+        try {
+          const bucket = firebaseService.getStorage().bucket();
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+          const filename = `plant-${userId}-${uniqueSuffix}${path.extname(req.file.originalname)}`;
+          const fileRef = bucket.file(`plant-images/${filename}`);
+
+          // Upload file buffer to Firebase Storage
+          await fileRef.save(req.file.buffer, {
+            metadata: {
+              contentType: req.file.mimetype,
+              metadata: {
+                originalName: req.file.originalname,
+                userId: userId.toString(),
+                uploadDate: new Date().toISOString()
+              }
+            }
+          });
+
+          // Make file publicly readable
+          await fileRef.makePublic();
+
+          // Get the public URL
+          imageUrl = `https://storage.googleapis.com/${bucket.name}/${fileRef.name}`;
+          logger.info(`Plant image uploaded: ${imageUrl}`);
+        } catch (uploadError) {
+          logger.error('Failed to upload plant image:', uploadError);
+          // Continue without image rather than failing the whole request
+        }
+      }
+
       const plantData = {
         ...req.body,
         userId,
+        imageUrl,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -170,7 +207,16 @@ export class PlantController {
    */
   static async getPlants(req: SearchPlantsRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+      // Verify user is authenticated
+      if (!req.user || !(req.user as any)._id) {
+        logger.error('getPlants: User not authenticated or _id missing');
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        }) as any;
+      }
+
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id.toString());
       const {
         q = '',
         category,
@@ -219,8 +265,7 @@ export class PlantController {
         Plant.find(searchQuery)
           .sort(sortObj)
           .skip(skip)
-          .limit(limitNum)
-          .populate('careAnalytics', 'totalCareLogs lastCareDate nextCareDate careScore'),
+          .limit(limitNum),
         Plant.countDocuments(searchQuery)
       ]);
 
@@ -250,8 +295,16 @@ export class PlantController {
    */
   static async getPlantById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      // Verify user is authenticated
+      if (!req.user || !(req.user as any)._id) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        }) as any;
+      }
+
       const { plantId } = req.params;
-      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id.toString());
 
       // Check if plantId is valid MongoDB ObjectId
       if (!mongoose.Types.ObjectId.isValid(plantId!)) {
@@ -262,8 +315,7 @@ export class PlantController {
         return;
       }
 
-      const plant = await Plant.findOne({ _id: new mongoose.Types.ObjectId(plantId!), userId })
-        .populate('careAnalytics', 'totalCareLogs lastCareDate nextCareDate careScore streakDays');
+      const plant = await Plant.findOne({ _id: new mongoose.Types.ObjectId(plantId!), userId });
 
       if (!plant) {
         res.status(404).json({
@@ -303,9 +355,56 @@ export class PlantController {
    */
   static async updatePlant(req: UpdatePlantRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      // Verify user is authenticated
+      if (!req.user || !(req.user as any)._id) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        }) as any;
+      }
+
       const { plantId } = req.params;
-      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
-      const updateData = { ...req.body, updatedAt: new Date() };
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id.toString());
+      
+      // Handle image upload if file is provided
+      let imageUrl: string | undefined;
+      if (req.file) {
+        try {
+          const bucket = firebaseService.getStorage().bucket();
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+          const filename = `plant-${plantId}-${userId}-${uniqueSuffix}${path.extname(req.file.originalname)}`;
+          const fileRef = bucket.file(`plant-images/${filename}`);
+
+          // Upload file buffer to Firebase Storage
+          await fileRef.save(req.file.buffer, {
+            metadata: {
+              contentType: req.file.mimetype,
+              metadata: {
+                originalName: req.file.originalname,
+                plantId: plantId,
+                userId: userId.toString(),
+                uploadDate: new Date().toISOString()
+              }
+            }
+          });
+
+          // Make file publicly readable
+          await fileRef.makePublic();
+
+          // Get the public URL
+          imageUrl = `https://storage.googleapis.com/${bucket.name}/${fileRef.name}`;
+          logger.info(`Plant image uploaded: ${imageUrl}`);
+        } catch (uploadError) {
+          logger.error('Failed to upload plant image:', uploadError);
+          // Continue without image rather than failing the whole request
+        }
+      }
+
+      const updateData = { 
+        ...req.body, 
+        ...(imageUrl && { imageUrl }), // Only add imageUrl if it exists
+        updatedAt: new Date() 
+      };
 
       // Check if plantId is valid MongoDB ObjectId
       if (!mongoose.Types.ObjectId.isValid(plantId!)) {
@@ -320,7 +419,7 @@ export class PlantController {
         { _id: new mongoose.Types.ObjectId(plantId!), userId },
         { $set: updateData },
         { new: true, runValidators: true }
-      ).populate('careAnalytics');
+      );
 
       if (!plant) {
         res.status(404).json({
@@ -378,8 +477,16 @@ export class PlantController {
    */
   static async deletePlant(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      // Verify user is authenticated
+      if (!req.user || !(req.user as any)._id) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        }) as any;
+      }
+
       const { plantId } = req.params;
-      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id.toString());
 
       // Check if plantId is valid MongoDB ObjectId
       if (!mongoose.Types.ObjectId.isValid(plantId!)) {
