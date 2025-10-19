@@ -234,6 +234,53 @@ Watering Frequency: Every ${plant.wateringEveryDays || plant.wateringFrequency |
       if (!condition) continue;
 
       try {
+        // If model is not available, fall back to deterministic template-based suggestions
+        if (!model) {
+          // Basic templating based on type and analysis
+          let title = '';
+          let message = '';
+
+          switch (type) {
+            case 'health_warning':
+              title = `${plant.name} needs attention`;
+              message = `Your ${plant.name} has a low health score (${analysis.healthScore}/100). Check soil moisture, inspect for pests, and reduce stress (adjust watering and light). Start with checking soil and removing damaged leaves.`;
+              break;
+            case 'alert':
+              title = `Water ${plant.name}`;
+              message = `Soil moisture for ${plant.name} may be low. Water thoroughly until water drains from the pot, then allow to dry slightly before next watering. Avoid waterlogging.`;
+              break;
+            case 'growth_insight':
+              title = analysis.growthRate > 0 ? `${plant.name} growing faster` : `${plant.name} declining`;
+              message = analysis.growthRate > 0
+                ? `${plant.name} is showing a growth change of ${analysis.growthRate}% this month. Continue current care and consider light and feeding to support growth.`
+                : `${plant.name} is declining by ${Math.abs(analysis.growthRate)}% this month. Check for pests, root issues, and adjust watering/fertilizer.`;
+              break;
+            case 'pro_tip':
+              title = `Care tip for ${plant.name}`;
+              message = `Your ${plant.name} is doing well. Consider gently rotating the plant for even light exposure and fertilizing lightly during active growth.`;
+              break;
+            case 'care_reminder':
+              title = `Fertilize ${plant.name}`;
+              message = `It's time to fertilize ${plant.name}. Use a balanced, diluted fertilizer following the product instructions. Avoid over-fertilizing.`;
+              break;
+            default:
+              title = `Suggestion for ${plant.name}`;
+              message = `General care suggestion for ${plant.name}.`;
+          }
+
+          suggestions.push({
+            type,
+            title,
+            message,
+            priority,
+            confidence: 0.5,
+            expiresInDays: type === 'alert' ? 1 : type === 'care_reminder' ? 3 : 7
+          });
+          // Limit to avoid too many entries
+          if (suggestions.length >= 2) break;
+          continue;
+        }
+
         const fullPrompt = `${context}\n\n${prompt}\n\nProvide ONLY the message text, no labels or extra formatting.`;
         const result = await model!.generateContent(fullPrompt);
         const response = await result.response;
@@ -243,7 +290,7 @@ Watering Frequency: Every ${plant.wateringEveryDays || plant.wateringFrequency |
         const titleResult = await model!.generateContent(
           `Create a 3-5 word title for this plant care message: "${message}". Respond with ONLY the title, nothing else.`
         );
-        const title = titleResult.response.text().trim().replace(/['"]/g, '');
+  const title = titleResult.response.text().trim().replace(/['"]/g, '');
 
         suggestions.push({
           type,

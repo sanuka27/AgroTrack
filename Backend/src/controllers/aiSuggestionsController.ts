@@ -34,6 +34,15 @@ export const generateSuggestions = async (req: Request, res: Response): Promise<
     });
   } catch (error: any) {
     logger.error('Error generating AI suggestions:', error);
+    // If AI model/service is not available, return 503 with a helpful message
+    if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('ai service not available')) {
+      res.status(503).json({
+        success: false,
+        error: 'AI service unavailable. Please configure GEMINI_API_KEY or check AI provider status.'
+      });
+      return;
+    }
+
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to generate AI suggestions'
