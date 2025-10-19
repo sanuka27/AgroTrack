@@ -63,8 +63,9 @@ export const plantsApi = {
     sortOrder?: 'asc' | 'desc';
   }): Promise<Plant[]> {
     try {
-      const response = await api.get<PlantsListResponse>('/plants', { params });
-      return response.data.plants || [];
+      const response = await api.get<any>('/plants', { params });
+      // Backend returns: { success, data: { plants, total, page, limit } }
+      return response.data.data?.plants || response.data.plants || [];
     } catch (error) {
       console.error('Failed to fetch plants:', getErrorMessage(error));
       throw error;
@@ -79,11 +80,14 @@ export const plantsApi = {
    */
   async getPlantById(id: string): Promise<Plant> {
     try {
-      const response = await api.get<PlantResponse>(`/plants/${id}`);
-      if (!response.data.plant) {
+      const response = await api.get<any>(`/plants/${id}`);
+      // Backend returns: { success, data: { plant } }
+      const plant = response.data.data?.plant || response.data.plant;
+      
+      if (!plant) {
         throw new Error('Plant not found');
       }
-      return response.data.plant;
+      return plant;
     } catch (error) {
       console.error('Failed to fetch plant:', getErrorMessage(error));
       throw error;
@@ -113,17 +117,20 @@ export const plantsApi = {
         ? { 'Content-Type': 'multipart/form-data' }
         : {};
 
-      const response = await api.post<PlantResponse>(
+      const response = await api.post<any>(
         '/plants',
         plantData,
         { headers }
       );
 
-      if (!response.data.plant) {
+      // Backend returns: { success, message, data: { plant } }
+      const plant = response.data.data?.plant || response.data.plant;
+      
+      if (!plant) {
         throw new Error('Failed to create plant');
       }
 
-      return response.data.plant;
+      return plant;
     } catch (error) {
       console.error('Failed to create plant:', getErrorMessage(error));
       throw error;
@@ -143,17 +150,20 @@ export const plantsApi = {
         ? { 'Content-Type': 'multipart/form-data' }
         : {};
 
-      const response = await api.put<PlantResponse>(
+      const response = await api.put<any>(
         `/plants/${id}`,
         plantData,
         { headers }
       );
 
-      if (!response.data.plant) {
+      // Backend returns: { success, message, data: { plant } }
+      const plant = response.data.data?.plant || response.data.plant;
+      
+      if (!plant) {
         throw new Error('Failed to update plant');
       }
 
-      return response.data.plant;
+      return plant;
     } catch (error) {
       console.error('Failed to update plant:', getErrorMessage(error));
       throw error;
@@ -187,17 +197,20 @@ export const plantsApi = {
       const formData = new FormData();
       formData.append('image', image);
 
-      const response = await api.post<PlantResponse>(
+      const response = await api.post<any>(
         `/plants/${id}/images`,
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
 
-      if (!response.data.plant) {
+      // Backend returns: { success, data: { plant } }
+      const plant = response.data.data?.plant || response.data.plant;
+      
+      if (!plant) {
         throw new Error('Failed to upload image');
       }
 
-      return response.data.plant;
+      return plant;
     } catch (error) {
       console.error('Failed to upload image:', getErrorMessage(error));
       throw error;
@@ -213,16 +226,19 @@ export const plantsApi = {
    */
   async deleteImage(id: string, imageUrl: string): Promise<Plant> {
     try {
-      const response = await api.delete<PlantResponse>(
+      const response = await api.delete<any>(
         `/plants/${id}/images`,
         { data: { imageUrl } }
       );
 
-      if (!response.data.plant) {
+      // Backend returns: { success, data: { plant } }
+      const plant = response.data.data?.plant || response.data.plant;
+      
+      if (!plant) {
         throw new Error('Failed to delete image');
       }
 
-      return response.data.plant;
+      return plant;
     } catch (error) {
       console.error('Failed to delete image:', getErrorMessage(error));
       throw error;
