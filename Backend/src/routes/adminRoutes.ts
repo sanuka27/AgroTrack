@@ -154,6 +154,20 @@ router.get('/dashboard',
 );
 
 /**
+ * @route   GET /api/admin/activity/recent
+ * @desc    Get recent system activity and events
+ * @access  Private (Admin/Super Admin)
+ */
+router.get('/activity/recent',
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Limit must be between 1 and 100'),
+  validate,
+  adminController.getRecentActivity
+);
+
+/**
  * @route   GET /api/admin/users
  * @desc    Get all users with filtering and pagination
  * @access  Private (Admin/Super Admin)
@@ -367,8 +381,8 @@ router.get('/reports/users',
           // Resolve reporter names
           const reporterUids = [...new Set(reports.map(r => r.reporterUid))];
           const { CommunityUser } = await import('../models/CommunityUser');
-          const users = await CommunityUser.find({ uid: { $in: reporterUids } }).lean();
-          const userMap = new Map(users.map(u => [u.uid, u]));
+          const users = await CommunityUser.find({ firebaseUid: { $in: reporterUids } }).lean();
+          const userMap = new Map(users.map(u => [u.firebaseUid, u]));
 
           // Map reports to a cleaner shape
           const mapped = reports.map(r => {
@@ -437,11 +451,11 @@ router.get('/reports/content',
         CommunityReport.countDocuments(query)
       ]);
 
-      // Resolve reporter names
+      // Resolve reporter names (using User model instead of CommunityUser)
       const reporterUids = [...new Set(reports.map(r => r.reporterUid))];
-      const { CommunityUser } = await import('../models/CommunityUser');
-      const users = await CommunityUser.find({ uid: { $in: reporterUids } }).lean();
-      const userMap = new Map(users.map(u => [u.uid, u]));
+      const { User } = await import('../models/User');
+      const users = await User.find({ firebaseUid: { $in: reporterUids } }).lean();
+      const userMap = new Map(users.map(u => [u.firebaseUid, u]));
 
       // Map reports to a cleaner shape
       const mapped = reports.map(r => {
@@ -475,6 +489,78 @@ router.get('/reports/content',
       res.status(500).json({ success: false, message: 'Failed to fetch reports' });
     }
   }
+);
+
+// ==================== COMMUNITY POSTS MANAGEMENT ====================
+
+/**
+ * @route   GET /api/admin/community/posts
+ * @desc    Get all community posts with filtering and pagination
+ * @access  Private (Admin/Super Admin)
+ * @params  page, limit, search, status, sortBy, sortOrder
+ */
+router.get('/community/posts',
+  adminLimiter,
+  [
+    ...paginationValidation,
+    query('search')
+      .optional()
+      .isLength({ min: 1, max: 200 })
+      .withMessage('Search query must be between 1 and 200 characters'),
+    query('status')
+      .optional()
+      .isIn(['all', 'visible', 'hidden', 'deleted'])
+      .withMessage('Status must be all, visible, hidden, or deleted'),
+    query('sortBy')
+      .optional()
+      .isIn(['createdAt', 'updatedAt', 'score', 'commentsCount'])
+      .withMessage('Invalid sort field'),
+    query('sortOrder')
+      .optional()
+      .isIn(['asc', 'desc'])
+      .withMessage('Sort order must be asc or desc')
+  ],
+  validate,
+  adminController.getCommunityPosts
+);
+
+/**
+ * @route   PUT /api/admin/community/posts/:postId
+ * @desc    Update community post status (hide/show)
+ * @access  Private (Admin/Super Admin)
+ */
+router.put('/community/posts/:postId',
+  sensitiveAdminLimiter,
+  [
+    param('postId').isMongoId().withMessage('Invalid post ID'),
+    body('status')
+      .isIn(['visible', 'hidden', 'deleted'])
+      .withMessage('Status must be visible, hidden, or deleted'),
+    body('reason')
+      .optional()
+      .isLength({ min: 1, max: 500 })
+      .withMessage('Reason must be between 1 and 500 characters')
+  ],
+  validate,
+  adminController.updateCommunityPost
+);
+
+/**
+ * @route   DELETE /api/admin/community/posts/:postId
+ * @desc    Permanently delete community post
+ * @access  Private (Admin/Super Admin)
+ */
+router.delete('/community/posts/:postId',
+  sensitiveAdminLimiter,
+  [
+    param('postId').isMongoId().withMessage('Invalid post ID'),
+    body('reason')
+      .optional()
+      .isLength({ min: 1, max: 500 })
+      .withMessage('Reason must be between 1 and 500 characters')
+  ],
+  validate,
+  adminController.deleteCommunityPost
 );
 
 export default router;

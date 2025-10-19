@@ -4,6 +4,7 @@ import { protect as authMiddleware } from '../middleware/authMiddleware';
 import { validate } from '../middleware/validate';
 import {
   getUserDashboard,
+  getSimpleDashboardAnalytics,
   getPlantHealthAnalytics,
   getCareEffectivenessAnalytics,
   getGrowthAnalytics,
@@ -46,6 +47,13 @@ router.get(
   '/dashboard',
   analyticsReadLimit,
   getUserDashboard
+);
+
+// Simplified dashboard analytics (for frontend compatibility)
+router.get(
+  '/dashboard/simple',
+  analyticsReadLimit,
+  getSimpleDashboardAnalytics
 );
 
 router.put(

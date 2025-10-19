@@ -1,9 +1,7 @@
 import mongoose from 'mongoose';
 import { Plant } from '../models/Plant';
-import { CareLog } from '../models/CareLog';
-import { Reminder } from '../models/Reminder';
-import { Post } from '../models/Post';
-import { Comment } from '../models/Comment';
+import { CommunityPost } from '../models/CommunityPost';
+import { CommunityComment } from '../models/CommunityComment';
 
 /**
  * Database Setup Script for Search Optimization
@@ -43,86 +41,43 @@ export class DatabaseSetup {
       await Plant.collection.createIndex({ userId: 1, createdAt: -1 });
       console.log('✅ Plant additional indexes created');
 
-      // Create text index for CareLog
-      await CareLog.collection.createIndex({
-        notes: 'text',
-        careType: 'text',
-        recommendations: 'text'
-      }, {
-        name: 'carelog_text_index',
-        weights: {
-          careType: 10,
-          notes: 5,
-          recommendations: 3
-        }
-      });
-      console.log('✅ CareLog text index created');
-
-      // Create additional indexes for CareLog
-      await CareLog.collection.createIndex({ userId: 1, careType: 1 });
-      await CareLog.collection.createIndex({ userId: 1, date: -1 });
-      await CareLog.collection.createIndex({ userId: 1, plantId: 1, date: -1 });
-      console.log('✅ CareLog additional indexes created');
-
-      // Create text index for Reminder
-      await Reminder.collection.createIndex({
+      // Create text index for CommunityPost
+      await CommunityPost.collection.createIndex({
         title: 'text',
-        description: 'text',
-        careType: 'text'
-      }, {
-        name: 'reminder_text_index',
-        weights: {
-          title: 10,
-          careType: 8,
-          description: 5
-        }
-      });
-      console.log('✅ Reminder text index created');
-
-      // Create additional indexes for Reminder
-      await Reminder.collection.createIndex({ userId: 1, status: 1 });
-      await Reminder.collection.createIndex({ userId: 1, careType: 1 });
-      await Reminder.collection.createIndex({ userId: 1, nextDueDate: 1 });
-      await Reminder.collection.createIndex({ userId: 1, plantId: 1 });
-      console.log('✅ Reminder additional indexes created');
-
-      // Create text index for Post
-      await Post.collection.createIndex({
-        title: 'text',
-        content: 'text',
+        body: 'text',
         tags: 'text'
       }, {
-        name: 'post_text_index',
+        name: 'community_post_text_index',
         weights: {
           title: 10,
-          content: 5,
+          body: 5,
           tags: 8
         }
       });
-      console.log('✅ Post text index created');
+      console.log('✅ CommunityPost text index created');
 
       // Create additional indexes for Post
-      await Post.collection.createIndex({ category: 1, createdAt: -1 });
-      await Post.collection.createIndex({ tags: 1, createdAt: -1 });
-      await Post.collection.createIndex({ authorId: 1, createdAt: -1 });
-      await Post.collection.createIndex({ plantId: 1, createdAt: -1 });
-      console.log('✅ Post additional indexes created');
+  await CommunityPost.collection.createIndex({ category: 1, createdAt: -1 });
+  await CommunityPost.collection.createIndex({ tags: 1, createdAt: -1 });
+  await CommunityPost.collection.createIndex({ authorId: 1, createdAt: -1 });
+  await CommunityPost.collection.createIndex({ plantId: 1, createdAt: -1 });
+  console.log('✅ CommunityPost additional indexes created');
 
       // Create text index for Comment
-      await Comment.collection.createIndex({
-        content: 'text'
+      await CommunityComment.collection.createIndex({
+        text: 'text'
       }, {
-        name: 'comment_text_index',
+        name: 'community_comment_text_index',
         weights: {
-          content: 5
+          text: 5
         }
       });
-      console.log('✅ Comment text index created');
+      console.log('✅ CommunityComment text index created');
 
       // Create additional indexes for Comment
-      await Comment.collection.createIndex({ postId: 1, createdAt: -1 });
-      await Comment.collection.createIndex({ authorId: 1, createdAt: -1 });
-      console.log('✅ Comment additional indexes created');
+  await CommunityComment.collection.createIndex({ postId: 1, createdAt: -1 });
+  await CommunityComment.collection.createIndex({ authorId: 1, createdAt: -1 });
+  console.log('✅ CommunityComment additional indexes created');
 
       console.log('🎉 All search indexes created successfully!');
 
@@ -138,10 +93,8 @@ export class DatabaseSetup {
 
       // Drop text indexes
       await Plant.collection.dropIndex('plant_text_index').catch(() => {});
-      await CareLog.collection.dropIndex('carelog_text_index').catch(() => {});
-      await Reminder.collection.dropIndex('reminder_text_index').catch(() => {});
-      await Post.collection.dropIndex('post_text_index').catch(() => {});
-      await Comment.collection.dropIndex('comment_text_index').catch(() => {});
+  await CommunityPost.collection.dropIndex('community_post_text_index').catch(() => {});
+  await CommunityComment.collection.dropIndex('community_comment_text_index').catch(() => {});
 
       console.log('🗑️ Search indexes dropped successfully!');
 
@@ -160,9 +113,7 @@ export class DatabaseSetup {
 
       // Create compound indexes for common query patterns
       await Plant.collection.createIndex({ userId: 1, category: 1, healthStatus: 1 });
-      await CareLog.collection.createIndex({ userId: 1, plantId: 1, careType: 1 });
-      await Reminder.collection.createIndex({ userId: 1, plantId: 1, status: 1 });
-      await Post.collection.createIndex({ category: 1, tags: 1, createdAt: -1 });
+  await CommunityPost.collection.createIndex({ category: 1, tags: 1, createdAt: -1 });
 
       console.log('🚀 Database optimization completed!');
 
@@ -176,10 +127,8 @@ export class DatabaseSetup {
     try {
       const indexInfo = {
         plants: await Plant.collection.listIndexes().toArray(),
-        careLogs: await CareLog.collection.listIndexes().toArray(),
-        reminders: await Reminder.collection.listIndexes().toArray(),
-        posts: await Post.collection.listIndexes().toArray(),
-        comments: await Comment.collection.listIndexes().toArray()
+        posts: await CommunityPost.collection.listIndexes().toArray(),
+        comments: await CommunityComment.collection.listIndexes().toArray()
       };
 
       return indexInfo;
