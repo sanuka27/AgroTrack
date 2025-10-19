@@ -9,7 +9,7 @@ export interface IComment {
 
 export interface IPost extends Document {
   _id: mongoose.Types.ObjectId;
-  sourceId: mongoose.Types.ObjectId; // Original communityposts _id
+  sourceId: mongoose.Types.ObjectId; // Original posts _id
   authorId: mongoose.Types.ObjectId;
   title: string;
   body: string;

@@ -7,9 +7,9 @@ export interface IUser extends Document {
   phone?: string;
   name?: string;
   roles: string[];
-  sourceIds: {
-    communityusers?: mongoose.Types.ObjectId;
-    users?: mongoose.Types.ObjectId;
+  sourceIds?: {
+    legacyCommunityUser?: mongoose.Types.ObjectId;
+    legacyUser?: mongoose.Types.ObjectId;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -22,10 +22,10 @@ const UserSchema = new Schema<IUser>({
   email: { type: String, sparse: true },
   phone: { type: String, sparse: true },
   name: String,
-  roles: [{ type: String, enum: ['member', 'moderator', 'admin', 'super_admin'] }],
+  roles: [{ type: String, enum: ['user', 'member', 'mod', 'moderator', 'admin', 'super_admin'] }],
   sourceIds: {
-    communityusers: { type: Schema.Types.ObjectId, ref: 'communityusers' },
-    users: { type: Schema.Types.ObjectId, ref: 'users' }
+    legacyCommunityUser: { type: Schema.Types.ObjectId, ref: 'users' },
+    legacyUser: { type: Schema.Types.ObjectId, ref: 'users' }
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
