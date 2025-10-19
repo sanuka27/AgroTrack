@@ -486,13 +486,12 @@ const MyPlants = () => {
         {/* Plant Collection & Care History - Moved to top */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-green-800">Your Plant Collection</CardTitle>
-                <CardDescription>Track care history and manage multiple plants</CardDescription>
+            <Card className="border border-green-200/60 shadow-md hover:shadow-lg transition-all duration-200">
+              <CardHeader className="border-b border-green-100/50 bg-gradient-to-r from-white to-green-50/20">
+                <CardTitle className="text-green-800 text-xl">Your Plant Collection</CardTitle>
+                <CardDescription className="text-green-600/80">Track care history and manage multiple plants</CardDescription>
               </CardHeader>
-              <CardContent>
-                {plants.length > 0 ? (
+              <CardContent className="pt-6">{plants.length > 0 ? (
                   <div className="space-y-6">
                     {/* Plant Filters */}
                     <PlantFiltersComponent
@@ -540,12 +539,14 @@ const MyPlants = () => {
                   </div>
                 ) : (
                   <div className="text-center py-12">
-                    <Leaf className="w-20 h-20 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">No plants yet</h3>
-                    <p className="text-muted-foreground mb-6">
+                    <div className="inline-block p-6 bg-green-50 rounded-full mb-4">
+                      <Leaf className="w-16 h-16 text-green-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-green-900 mb-2">No plants yet</h3>
+                    <p className="text-green-600/70 mb-6">
                       Start your plant collection by adding your first plant
                     </p>
-                    <Button onClick={() => handleOpenModal()}>
+                    <Button onClick={() => handleOpenModal()} className="bg-green-600 hover:bg-green-700">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Your First Plant
                     </Button>
