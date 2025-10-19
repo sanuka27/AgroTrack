@@ -3,11 +3,8 @@ import fs from 'fs/promises';
 import fsSync from 'fs';
 import { User } from '../models/User';
 import { Plant } from '../models/Plant';
-import { CareLog } from '../models/CareLog';
-import { Reminder } from '../models/Reminder';
-import { Post } from '../models/Post';
-import { Comment } from '../models/Comment';
-import { Notification } from '../models/Notification';
+import { CommunityPost } from '../models/CommunityPost';
+import { CommunityComment } from '../models/CommunityComment';
 import { NotificationPreference } from '../models/NotificationPreference';
 import { ExportImportOperation } from '../models/ExportImportOperation';
 import { createObjectCsvWriter } from 'csv-writer';
@@ -49,7 +46,7 @@ class ExportImportController {
       const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const options: ExportOptions = {
         format: req.body.format || 'json',
-        dataTypes: req.body.dataTypes || ['plants', 'careLogs', 'reminders', 'profile'],
+  dataTypes: req.body.dataTypes || ['plants', 'profile', 'posts', 'comments'],
         dateRange: req.body.dateRange,
         includeMedia: req.body.includeMedia || false
       };
@@ -111,48 +108,19 @@ class ExportImportController {
       }
 
       // Export care logs
-      if (options.dataTypes.includes('careLogs')) {
-        const careLogQuery: any = { userId };
-        
-        if (options.dateRange) {
-          careLogQuery.date = {
-            $gte: options.dateRange.start,
-            $lte: options.dateRange.end
-          };
-        }
-
-        const careLogs = await CareLog.find(careLogQuery).populate('plantId', 'name species');
-        exportData.careLogs = careLogs;
-      }
+      // Care logs are not part of current schema
 
       // Export reminders
-      if (options.dataTypes.includes('reminders')) {
-        const reminders = await Reminder.find({ userId }).populate('plantId', 'name species');
-        exportData.reminders = reminders;
-      }
+      // Reminders are not part of current schema
 
       // Export community posts
       if (options.dataTypes.includes('posts')) {
-        const posts = await Post.find({ authorId: userId }).populate('plantId', 'name species');
-        const comments = await Comment.find({ authorId: userId }).populate('postId', 'title');
+        const posts = await CommunityPost.find({ authorId: userId }).populate('plantId', 'name species');
+        const comments = await CommunityComment.find({ authorId: userId }).populate('postId', 'title');
         exportData.posts = posts;
         exportData.comments = comments;
       }
-
-      // Export notifications
-      if (options.dataTypes.includes('notifications')) {
-        const notificationQuery: any = { userId };
-        
-        if (options.dateRange) {
-          notificationQuery.createdAt = {
-            $gte: options.dateRange.start,
-            $lte: options.dateRange.end
-          };
-        }
-
-        const notifications = await Notification.find(notificationQuery);
-        exportData.notifications = notifications;
-      }
+      // Notifications are not part of current schema
 
       // Save data in requested format(s)
       const files: string[] = [];
@@ -193,10 +161,10 @@ class ExportImportController {
       // Mark operation as completed
       const recordCounts = {
         plants: exportData.plants?.length || 0,
-        careLogs: exportData.careLogs?.length || 0,
-        reminders: exportData.reminders?.length || 0,
+        careLogs: 0,
+        reminders: 0,
         posts: exportData.posts?.length || 0,
-        notifications: exportData.notifications?.length || 0
+        notifications: 0
       };
 
       operation.markAsCompleted({ recordCounts });
@@ -251,7 +219,7 @@ class ExportImportController {
         userId: new mongoose.Types.ObjectId(userId),
         operationType: 'import',
         format: file.mimetype === 'application/json' ? 'json' : 'csv',
-        dataTypes: options.dataTypes || ['plants', 'careLogs', 'reminders'],
+  dataTypes: options.dataTypes || ['plants', 'posts', 'comments'],
         options: {
           overwrite: options.overwrite,
           validateOnly: options.validateOnly
@@ -571,62 +539,10 @@ class ExportImportController {
       }
 
       // Import care logs
-      if (importData.careLogs && (!options.dataTypes || options.dataTypes.includes('careLogs'))) {
-        let importedLogs = 0;
-        for (const logData of importData.careLogs) {
-          try {
-            delete logData._id;
-            logData.userId = userId;
-            
-            // Find matching plant by name/species if plantId is invalid
-            if (logData.plantId && typeof logData.plantId === 'object' && logData.plantId.name) {
-              const plant = await Plant.findOne({
-                userId,
-                name: logData.plantId.name,
-                species: logData.plantId.species
-              });
-              logData.plantId = plant?._id;
-            }
-            
-            if (logData.plantId) {
-              await CareLog.create(logData);
-              importedLogs++;
-            }
-          } catch (error) {
-            result.errors.push(`Failed to import care log: ${error}`);
-          }
-        }
-        result.imported.careLogs = importedLogs;
-      }
+      // Care logs import skipped
 
       // Import reminders
-      if (importData.reminders && (!options.dataTypes || options.dataTypes.includes('reminders'))) {
-        let importedReminders = 0;
-        for (const reminderData of importData.reminders) {
-          try {
-            delete reminderData._id;
-            reminderData.userId = userId;
-            
-            // Find matching plant
-            if (reminderData.plantId && typeof reminderData.plantId === 'object' && reminderData.plantId.name) {
-              const plant = await Plant.findOne({
-                userId,
-                name: reminderData.plantId.name,
-                species: reminderData.plantId.species
-              });
-              reminderData.plantId = plant?._id;
-            }
-            
-            if (reminderData.plantId) {
-              await Reminder.create(reminderData);
-              importedReminders++;
-            }
-          } catch (error) {
-            result.errors.push(`Failed to import reminder: ${error}`);
-          }
-        }
-        result.imported.reminders = importedReminders;
-      }
+      // Reminders import skipped
 
     } catch (error) {
       result.success = false;

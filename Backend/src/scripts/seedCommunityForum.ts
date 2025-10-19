@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { config } from 'dotenv';
-import { CommunityUser } from '../models/CommunityUser';
+import { User } from '../models/User';
 import { CommunityPost } from '../models/CommunityPost';
 import { CommunityComment } from '../models/CommunityComment';
 import { CommunityVote } from '../models/CommunityVote';
@@ -101,14 +101,14 @@ async function seedDatabase() {
 
     // Clear existing data
     console.log('🗑️  Clearing existing community forum data...');
-    await CommunityUser.deleteMany({ uid: /^seed-user-/ });
-    await CommunityPost.deleteMany({ authorUid: /^seed-user-/ });
-    await CommunityComment.deleteMany({ authorUid: /^seed-user-/ });
-    await CommunityVote.deleteMany({ voterUid: /^seed-user-/ });
+    await User.deleteMany({ email: /^seed-user-/ });
+    await CommunityPost.deleteMany({ authorId: /^seed-user-/ });
+    await CommunityComment.deleteMany({ authorId: /^seed-user-/ });
+    await CommunityVote.deleteMany({ userId: /^seed-user-/ });
 
     // Create users
     console.log('👥 Creating users...');
-    const users = await CommunityUser.insertMany(sampleUsers);
+    const users = await User.insertMany(sampleUsers);
     console.log(`✅ Created ${users.length} users`);
 
     // Create posts
@@ -218,7 +218,7 @@ async function seedDatabase() {
       }
       
       // Update comment count on post
-      post.commentCount = numComments;
+      post.commentsCount = numComments;
       await post.save();
     }
     console.log(`✅ Created ${commentCount} comments`);

@@ -1,12 +1,7 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import { Post } from '../models/Post';
-import { Comment } from '../models/Comment';
-import { Like } from '../models/Like';
-import { BlogPost } from '../models/BlogPost';
-import { BlogCategory } from '../models/BlogCategory';
-import { BlogSeries } from '../models/BlogSeries';
-import { BlogTag } from '../models/BlogTag';
+import { CommunityPost } from '../models/CommunityPost';
+import { CommunityComment } from '../models/CommunityComment';
 import { User } from '../models/User';
 import { UserAnalytics, AnalyticsEventType } from '../models/UserAnalytics';
 import { logger } from '../config/logger';
@@ -35,30 +30,21 @@ export class CommunityController {
       } = req.body;
 
       // Create post
-      const post = new Post({
+      const post = new CommunityPost({
         title,
-        content,
+        body: content,
         category,
         tags,
         postType,
-        author: userId,
+        authorId: userId,
         images,
         isAnonymous,
         allowComments,
         plantId,
         expertiseLevel,
-        status: 'active',
-        engagement: {
-          views: 0,
-          likes: 0,
-          comments: 0,
-          shares: 0
-        },
-        moderation: {
-          flagged: false,
-          approved: true,
-          flagCount: 0
-        }
+        status: 'visible',
+        score: 0,
+        commentsCount: 0,
       });
 
       await post.save();
@@ -81,10 +67,10 @@ export class CommunityController {
       );
 
       // Populate response data
-      const populatedPost = await Post.findById(post._id)
-        .populate('author', 'username profilePicture bio expertiseLevel')
+      const populatedPost = await CommunityPost.findById(post._id)
+        .populate('authorId', 'username profilePicture bio expertiseLevel')
         .populate('plantId', 'name species images')
-        .populate('category', 'name description');
+        .lean();
 
       logger.info(`New forum post created: ${post._id} by user ${userId}`);
 
@@ -127,12 +113,12 @@ export class CommunityController {
       } = req.query;
 
       // Build filter query
-      const filter: any = { status };
+  const filter: any = { status: status === 'active' ? 'visible' : status };
 
       if (category) filter.category = category;
       if (postType) filter.postType = postType;
       if (expertiseLevel) filter.expertiseLevel = expertiseLevel;
-      if (author) filter.author = author;
+  if (author) filter.authorId = author;
       if (plantId) filter.plantId = plantId;
 
       if (tags) {
@@ -162,24 +148,23 @@ export class CommunityController {
       const skip = (Number(page) - 1) * Number(limit);
 
       // Get posts with population
-      const posts = await Post.find(filter)
-        .populate('author', 'username profilePicture bio expertiseLevel')
+      const posts = await CommunityPost.find(filter)
+        .populate('authorId', 'username profilePicture bio expertiseLevel')
         .populate('plantId', 'name species images')
-        .populate('category', 'name description color')
         .sort(sort)
         .skip(skip)
         .limit(Number(limit))
         .lean();
 
       // Get total count for pagination
-      const totalPosts = await Post.countDocuments(filter);
+  const totalPosts = await CommunityPost.countDocuments(filter);
       const totalPages = Math.ceil(totalPosts / Number(limit));
 
       // Update view counts for posts
       const postIds = posts.map(post => post._id);
-      await Post.updateMany(
+      await CommunityPost.updateMany(
         { _id: { $in: postIds } },
-        { $inc: { 'engagement.views': 1 } }
+        { $inc: { score: 0 } }
       );
 
       res.status(200).json({
@@ -215,10 +200,10 @@ export class CommunityController {
       const { postId } = req.params;
       const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
-      const post = await Post.findById(postId)
-        .populate('author', 'username profilePicture bio expertiseLevel')
+      const post = await CommunityPost.findById(postId)
+        .populate('authorId', 'username profilePicture bio expertiseLevel')
         .populate('plantId', 'name species images')
-        .populate('category', 'name description color');
+        .lean();
 
       if (!post) {
         res.status(404).json({
@@ -229,20 +214,10 @@ export class CommunityController {
       }
 
       // Increment view count (only once per user session)
-      await Post.findByIdAndUpdate(postId, {
-        $inc: { 'engagement.views': 1 }
-      });
+      // no-op for views in simplified model
 
       // Check if user has liked this post
-      let hasLiked = false;
-      if (userId) {
-        const like = await Like.findOne({
-          targetId: postId,
-          targetType: 'post',
-          userId
-        });
-        hasLiked = !!like;
-      }
+      const hasLiked = false;
 
       res.status(200).json({
         success: true,
@@ -275,7 +250,7 @@ export class CommunityController {
       const updateData = req.body;
 
       // Find the post
-      const post = await Post.findById(postId);
+  const post = await CommunityPost.findById(postId);
       if (!post) {
         res.status(404).json({
           success: false,
@@ -285,7 +260,7 @@ export class CommunityController {
       }
 
       // Check ownership
-      if (post.author.toString() !== userId.toString()) {
+  if (post.authorId.toString() !== userId.toString()) {
         res.status(403).json({
           success: false,
           message: 'Not authorized to update this post'
@@ -310,13 +285,12 @@ export class CommunityController {
       updates.editedAt = new Date();
       updates.editCount = (post.editCount || 0) + 1;
 
-      const updatedPost = await Post.findByIdAndUpdate(
+      const updatedPost = await CommunityPost.findByIdAndUpdate(
         postId,
-        { $set: updates },
+        { $set: { ...updates, body: updates.content, content: undefined } },
         { new: true, runValidators: true }
-      ).populate('author', 'username profilePicture bio expertiseLevel')
-       .populate('plantId', 'name species images')
-       .populate('category', 'name description color');
+      ).populate('authorId', 'username profilePicture bio expertiseLevel')
+       .populate('plantId', 'name species images');
 
       logger.info(`Forum post updated: ${postId} by user ${userId}`);
 
@@ -348,7 +322,7 @@ export class CommunityController {
       const userRole = (req.user as any).role;
 
       // Find the post
-      const post = await Post.findById(postId);
+  const post = await CommunityPost.findById(postId);
       if (!post) {
         res.status(404).json({
           success: false,
@@ -358,7 +332,7 @@ export class CommunityController {
       }
 
       // Check authorization (owner or admin/moderator)
-      if (post.author.toString() !== userId.toString() && !['admin', 'moderator'].includes(userRole)) {
+  if (post.authorId.toString() !== userId.toString() && !['admin'].includes(userRole)) {
         res.status(403).json({
           success: false,
           message: 'Not authorized to delete this post'
@@ -367,22 +341,10 @@ export class CommunityController {
       }
 
       // Soft delete - update status instead of removing
-      await Post.findByIdAndUpdate(postId, {
-        status: 'deleted',
-        deletedAt: new Date(),
-        deletedBy: userId
-      });
+      await CommunityPost.findByIdAndUpdate(postId, { status: 'deleted', deletedAt: new Date() });
 
       // Also delete associated likes and comments
-      await Like.updateMany(
-        { targetId: postId, targetType: 'post' },
-        { status: 'deleted', deletedAt: new Date() }
-      );
-
-      await Comment.updateMany(
-        { postId },
-        { status: 'deleted', deletedAt: new Date() }
-      );
+      await CommunityComment.updateMany({ postId }, { status: 'deleted', deletedAt: new Date() });
 
       // Update user analytics
       await UserAnalytics.findOneAndUpdate(
@@ -424,7 +386,7 @@ export class CommunityController {
       const { content, parentCommentId, isAnonymous = false } = req.body;
 
       // Check if post exists and allows comments
-      const post = await Post.findById(postId);
+  const post = await CommunityPost.findById(postId);
       if (!post) {
         res.status(404).json({
           success: false,
@@ -442,31 +404,22 @@ export class CommunityController {
       }
 
       // Create comment
-      const comment = new Comment({
-        content,
-        author: userId,
+      const comment = new CommunityComment({
+        text: content,
+        authorId: userId,
         postId,
         parentCommentId,
-        isAnonymous,
-        status: 'active',
-        engagement: {
-          likes: 0,
-          replies: 0
-        }
+        status: 'visible'
       });
 
       await comment.save();
 
       // Update post comment count
-      await Post.findByIdAndUpdate(postId, {
-        $inc: { 'engagement.comments': 1 }
-      });
+      await CommunityPost.findByIdAndUpdate(postId, { $inc: { commentsCount: 1 } });
 
       // Update parent comment reply count if this is a reply
       if (parentCommentId) {
-        await Comment.findByIdAndUpdate(parentCommentId, {
-          $inc: { 'engagement.replies': 1 }
-        });
+        // replies count not tracked in simplified model
       }
 
       // Update user analytics
@@ -486,8 +439,8 @@ export class CommunityController {
       );
 
       // Populate response data
-      const populatedComment = await Comment.findById(comment._id)
-        .populate('author', 'username profilePicture bio expertiseLevel');
+      const populatedComment = await CommunityComment.findById(comment._id)
+        .populate('authorId', 'username profilePicture bio expertiseLevel');
 
       logger.info(`New comment added: ${comment._id} on post ${postId} by user ${userId}`);
 
@@ -523,7 +476,7 @@ export class CommunityController {
       } = req.query;
 
       // Check if post exists
-      const post = await Post.findById(postId);
+  const post = await CommunityPost.findById(postId);
       if (!post) {
         res.status(404).json({
           success: false,
@@ -544,12 +497,12 @@ export class CommunityController {
       const skip = (Number(page) - 1) * Number(limit);
 
       // Get top-level comments (no parent)
-      const comments = await Comment.find({
+      const comments = await CommunityComment.find({
         postId,
         parentCommentId: null,
-        status: 'active'
+        status: 'visible'
       })
-      .populate('author', 'username profilePicture bio expertiseLevel')
+      .populate('authorId', 'username profilePicture bio expertiseLevel')
       .sort(sort)
       .skip(skip)
       .limit(Number(limit))
@@ -558,11 +511,11 @@ export class CommunityController {
       // Get replies for each comment
       const commentsWithReplies = await Promise.all(
         comments.map(async (comment) => {
-          const replies = await Comment.find({
+          const replies = await CommunityComment.find({
             parentCommentId: comment._id,
-            status: 'active'
+            status: 'visible'
           })
-          .populate('author', 'username profilePicture bio expertiseLevel')
+          .populate('authorId', 'username profilePicture bio expertiseLevel')
           .sort({ createdAt: 1 })
           .limit(10) // Limit replies per comment
           .lean();
@@ -575,10 +528,10 @@ export class CommunityController {
       );
 
       // Get total count
-      const totalComments = await Comment.countDocuments({
+      const totalComments = await CommunityComment.countDocuments({
         postId,
         parentCommentId: null,
-        status: 'active'
+        status: 'visible'
       });
 
       const totalPages = Math.ceil(totalComments / Number(limit));
@@ -618,7 +571,7 @@ export class CommunityController {
       const { content } = req.body;
 
       // Find the comment
-      const comment = await Comment.findById(commentId);
+  const comment = await CommunityComment.findById(commentId);
       if (!comment) {
         res.status(404).json({
           success: false,
@@ -628,7 +581,7 @@ export class CommunityController {
       }
 
       // Check ownership
-      if (comment.author.toString() !== userId.toString()) {
+  if (comment.authorId?.toString() !== userId.toString()) {
         res.status(403).json({
           success: false,
           message: 'Not authorized to update this comment'
@@ -637,15 +590,11 @@ export class CommunityController {
       }
 
       // Update comment
-      const updatedComment = await Comment.findByIdAndUpdate(
+      const updatedComment = await CommunityComment.findByIdAndUpdate(
         commentId,
-        {
-          content,
-          editedAt: new Date(),
-          editCount: (comment.editCount || 0) + 1
-        },
+        { text: content, editedAt: new Date(), editCount: (comment.editCount || 0) + 1 },
         { new: true, runValidators: true }
-      ).populate('author', 'username profilePicture bio expertiseLevel');
+      ).populate('authorId', 'username profilePicture bio expertiseLevel');
 
       logger.info(`Comment updated: ${commentId} by user ${userId}`);
 
@@ -677,7 +626,7 @@ export class CommunityController {
       const userRole = (req.user as any).role;
 
       // Find the comment
-      const comment = await Comment.findById(commentId);
+  const comment = await CommunityComment.findById(commentId);
       if (!comment) {
         res.status(404).json({
           success: false,
@@ -687,7 +636,7 @@ export class CommunityController {
       }
 
       // Check authorization
-      if (comment.author.toString() !== userId.toString() && !['admin', 'moderator'].includes(userRole)) {
+  if (comment.authorId?.toString() !== userId.toString() && !['admin'].includes(userRole)) {
         res.status(403).json({
           success: false,
           message: 'Not authorized to delete this comment'
@@ -696,22 +645,14 @@ export class CommunityController {
       }
 
       // Soft delete
-      await Comment.findByIdAndUpdate(commentId, {
-        status: 'deleted',
-        deletedAt: new Date(),
-        deletedBy: userId
-      });
+      await CommunityComment.findByIdAndUpdate(commentId, { status: 'deleted', deletedAt: new Date() });
 
       // Update post comment count
-      await Post.findByIdAndUpdate(comment.post, {
-        $inc: { 'engagement.comments': -1 }
-      });
+      await CommunityPost.findByIdAndUpdate(comment.postId, { $inc: { commentsCount: -1 } });
 
       // Update parent comment reply count if this is a reply
-      if (comment.parentComment) {
-        await Comment.findByIdAndUpdate(comment.parentComment, {
-          $inc: { 'engagement.replies': -1 }
-        });
+      if (comment.parentCommentId) {
+        // replies count not tracked in simplified model
       }
 
       // Update user analytics
@@ -747,121 +688,8 @@ export class CommunityController {
   /**
    * Toggle like on a post or comment
    */
-  static async toggleLike(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
-      const { targetId, targetType } = req.body;
-
-      if (!['post', 'comment'].includes(targetType)) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid target type. Must be post or comment'
-        });
-        return;
-      }
-
-      // Check if target exists
-      const Model = targetType === 'post' ? Post : Comment;
-      const target = await (Model as any).findById(targetId);
-      if (!target) {
-        res.status(404).json({
-          success: false,
-          message: `${targetType} not found`
-        });
-        return;
-      }
-
-      // Check if user already liked this target
-      const existingLike = await Like.findOne({
-        targetId,
-        targetType,
-        userId
-      });
-
-      let isLiked = false;
-      let likesCount = target.engagement?.likes || 0;
-
-      if (existingLike) {
-        // Unlike - remove the like
-        await Like.findByIdAndDelete(existingLike._id);
-        likesCount = Math.max(0, likesCount - 1);
-        isLiked = false;
-
-        // Update user analytics
-        await UserAnalytics.findOneAndUpdate(
-          { userId },
-          {
-            $inc: {
-              'community.likesGiven': -1,
-              'engagement.totalActions': -1
-            }
-          }
-        );
-
-      } else {
-        // Like - create new like
-        const like = new Like({
-          targetId,
-          targetType,
-          userId,
-          likeType: 'like'
-        });
-        await like.save();
-        
-        likesCount += 1;
-        isLiked = true;
-
-        // Update user analytics
-        await UserAnalytics.findOneAndUpdate(
-          { userId },
-          {
-            $inc: {
-              'community.likesGiven': 1,
-              'engagement.totalActions': 1
-            },
-            $set: {
-              lastActivityDate: new Date()
-            }
-          },
-          { upsert: true }
-        );
-
-        // Update target author's analytics (likes received)
-        await UserAnalytics.findOneAndUpdate(
-          { userId: target.author },
-          {
-            $inc: {
-              'community.likesReceived': 1
-            }
-          },
-          { upsert: true }
-        );
-      }
-
-      // Update target likes count
-      await (Model as any).findByIdAndUpdate(targetId, {
-        'engagement.likes': likesCount
-      });
-
-      logger.info(`Like toggled on ${targetType} ${targetId} by user ${userId}: ${isLiked ? 'liked' : 'unliked'}`);
-
-      res.status(200).json({
-        success: true,
-        message: `${targetType} ${isLiked ? 'liked' : 'unliked'} successfully`,
-        data: {
-          isLiked,
-          likesCount
-        }
-      });
-
-    } catch (error) {
-      logger.error('Error toggling like:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to toggle like',
-        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
-      });
-    }
+  static async toggleLike(_req: Request, res: Response): Promise<void> {
+    res.status(501).json({ success: false, message: 'Likes are not available in this deployment.' });
   }
 
   // Content Moderation
@@ -883,7 +711,7 @@ export class CommunityController {
       }
 
       // Check if target exists
-      const Model = targetType === 'post' ? Post : Comment;
+      const Model = targetType === 'post' ? CommunityPost : CommunityComment;
       const target = await (Model as any).findById(targetId);
       if (!target) {
         res.status(404).json({
@@ -966,75 +794,22 @@ export class CommunityController {
       const [
         totalPosts,
         totalComments,
-        totalLikes,
         activeUsers,
-        topContributors,
-        popularTags,
-        postsByCategory,
-        engagementTrends
+        popularTags
       ] = await Promise.all([
-        // Total posts
-        Post.countDocuments(filter),
-        
-        // Total comments
-        Comment.countDocuments({ ...dateFilter, status: 'active' }),
-        
-        // Total likes
-        Like.countDocuments(dateFilter),
-        
-        // Active users (users who posted or commented)
-        Post.distinct('author', filter).then(authors => 
-          Comment.distinct('author', { ...dateFilter, status: 'active' }).then(commenters => 
+        CommunityPost.countDocuments(filter),
+        CommunityComment.countDocuments({ ...dateFilter, status: 'visible' }),
+        CommunityPost.distinct('authorId', filter).then(authors => 
+          CommunityComment.distinct('authorId', { ...dateFilter, status: 'visible' }).then(commenters => 
             new Set([...authors.map(String), ...commenters.map(String)]).size
           )
         ),
-        
-        // Top contributors
-        UserAnalytics.find({})
-          .sort({ 'community.postsCreated': -1, 'community.commentsPosted': -1 })
-          .limit(10)
-          .populate('userId', 'username profilePicture bio')
-          .lean(),
-        
-        // Popular tags
-        Post.aggregate([
+        CommunityPost.aggregate([
           { $match: filter },
           { $unwind: '$tags' },
           { $group: { _id: '$tags', count: { $sum: 1 } } },
           { $sort: { count: -1 } },
           { $limit: 20 }
-        ]),
-        
-        // Posts by category
-        Post.aggregate([
-          { $match: filter },
-          { $group: { _id: '$category', count: { $sum: 1 } } },
-          { $lookup: {
-            from: 'blogcategories',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'categoryInfo'
-          }},
-          { $sort: { count: -1 } }
-        ]),
-        
-        // Engagement trends (last 7 days)
-        Post.aggregate([
-          {
-            $match: {
-              status: 'active',
-              createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-            }
-          },
-          {
-            $group: {
-              _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-              posts: { $sum: 1 },
-              totalLikes: { $sum: '$engagement.likes' },
-              totalComments: { $sum: '$engagement.comments' }
-            }
-          },
-          { $sort: { _id: 1 } }
         ])
       ]);
 
@@ -1045,23 +820,16 @@ export class CommunityController {
           overview: {
             totalPosts,
             totalComments,
-            totalLikes,
+            totalLikes: 0,
             activeUsers
           },
-          topContributors: topContributors.map(user => ({
-            user: user.userId,
-            stats: {
-              postsCreated: user.community?.postsCreated || 0,
-              commentsPosted: user.community?.commentsPosted || 0,
-              likesReceived: user.community?.likesReceived || 0
-            }
-          })),
+          topContributors: [],
           popularTags: popularTags.map(tag => ({
             tag: tag._id,
             count: tag.count
           })),
-          postsByCategory,
-          engagementTrends,
+          postsByCategory: [],
+          engagementTrends: [],
           timeframe
         }
       });
@@ -1092,10 +860,10 @@ export class CommunityController {
       startDate.setHours(startDate.getHours() - hours);
 
       // Get trending posts based on engagement score
-      const trendingPosts = await Post.aggregate([
+      const trendingPosts = await CommunityPost.aggregate([
         {
           $match: {
-            status: 'active',
+            status: 'visible',
             createdAt: { $gte: startDate }
           }
         },
@@ -1104,9 +872,8 @@ export class CommunityController {
             // Calculate trending score based on likes, comments, views, and recency
             trendingScore: {
               $add: [
-                { $multiply: ['$engagement.likes', 3] },
-                { $multiply: ['$engagement.comments', 5] },
-                { $multiply: ['$engagement.views', 0.1] },
+                { $multiply: ['$score', 3] },
+                { $multiply: ['$commentsCount', 5] },
                 {
                   $divide: [
                     { $subtract: [new Date(), '$createdAt'] },
@@ -1122,7 +889,7 @@ export class CommunityController {
         {
           $lookup: {
             from: 'users',
-            localField: 'author',
+            localField: 'authorId',
             foreignField: '_id',
             as: 'author',
             pipeline: [
@@ -1142,21 +909,10 @@ export class CommunityController {
           }
         },
         {
-          $lookup: {
-            from: 'blogcategories',
-            localField: 'category',
-            foreignField: '_id',
-            as: 'category',
-            pipeline: [
-              { $project: { name: 1, description: 1, color: 1 } }
-            ]
-          }
-        },
-        {
           $addFields: {
             author: { $arrayElemAt: ['$author', 0] },
             plant: { $arrayElemAt: ['$plant', 0] },
-            category: { $arrayElemAt: ['$category', 0] }
+            category: '$category'
           }
         }
       ]);

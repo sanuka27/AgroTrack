@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { CommunityPost } from '../models/CommunityPost';
 import { CommunityComment } from '../models/CommunityComment';
 import { CommunityVote } from '../models/CommunityVote';
-import { CommunityUser } from '../models/CommunityUser';
+import { User } from '../models/User'; // Changed from CommunityUser
 import { CommunityReport } from '../models/CommunityReport';
 import { logger } from '../config/logger';
 import mongoose from 'mongoose';
@@ -34,36 +34,62 @@ export class CommunityForumController {
         });
       }
 
-      // Create post
+      // Find user by firebaseUid to get ObjectId
+      const user = await User.findOne({ firebaseUid: authorUid });
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
+
+      // Predefined display names
+      const displayNames = [
+        { name: 'Sanuka Marasinghe', role: 'admin' },
+        { name: 'Asma Fahim', role: 'user' },
+        { name: 'Pathumi Arunodya', role: 'admin' }
+      ];
+
+      // Determine author display name
+      let authorDisplayName = user.name;
+      const matchedName = displayNames.find(dn => dn.name === user.name);
+      
+      if (!matchedName) {
+        // If user name doesn't match predefined names, use a predefined name based on role
+        const filteredNames = user.role === 'admin' 
+          ? displayNames.filter(dn => dn.role === 'admin')
+          : displayNames;
+        authorDisplayName = filteredNames[Math.floor(Math.random() * filteredNames.length)].name;
+      }
+
+      // Create post with author name stored
       const post = new CommunityPost({
-        authorUid,
+        authorId: user._id,
+        authorName: authorDisplayName,
         title,
-        bodyMarkdown,
+        body: bodyMarkdown,
         images: images || [],
-        voteScore: 0,
-        commentCount: 0,
+        score: 0,
+        commentsCount: 0,
         isSolved: false,
-        isDeleted: false,
+        status: 'visible',
       });
 
       await post.save();
 
-      // Populate author info
-      const author = await CommunityUser.findOne({ uid: authorUid });
-
-      logger.info(`Forum post created: ${post._id} by ${authorUid}`);
+      logger.info(`Forum post created: ${post._id} by ${authorDisplayName} (${authorUid})`);
 
       res.status(201).json({
         success: true,
         message: 'Post created successfully',
         data: {
           post,
-          author: author ? {
-            uid: author.uid,
-            name: author.name,
-            avatarUrl: author.avatarUrl,
-            role: author.role,
-          } : null,
+          author: {
+            uid: user.firebaseUid,
+            name: authorDisplayName,
+            avatarUrl: user.avatar,
+            role: user.role,
+          },
         },
       });
     } catch (error: any) {
@@ -94,12 +120,18 @@ export class CommunityForumController {
       const isGuest = !req.user;
       const showTeaser = includeTeaser === 'true' && isGuest;
 
+      // For guests, limit to 3 posts (teaser)
+      const queryLimit = showTeaser ? 3 : limitNum;
+
       // Build query
-      const query: any = { isDeleted: false };
+      const query: any = { status: 'visible' };
 
       if (tag) {
         query.tags = tag as string;
       }
+
+      console.log('🔍 GET POSTS Query:', JSON.stringify(query));
+      console.log('🔍 Sort:', sort, 'Limit:', queryLimit);
 
       // Cursor-based pagination
       if (cursor) {
@@ -107,9 +139,9 @@ export class CommunityForumController {
           const cursorPost = await CommunityPost.findById(cursor);
           if (cursorPost) {
             query.$or = [
-              { voteScore: { $lt: cursorPost.voteScore } },
+              { score: { $lt: cursorPost.score } },
               {
-                voteScore: cursorPost.voteScore,
+                score: cursorPost.score,
                 _id: { $lt: new mongoose.Types.ObjectId(cursor as string) },
               },
             ];
@@ -122,16 +154,15 @@ export class CommunityForumController {
       // Sorting
       const sortOption: any =
         sort === 'top'
-          ? { voteScore: -1, createdAt: -1 }
+          ? { score: -1, createdAt: -1 }
           : { createdAt: -1 };
-
-      // For guests, limit to 3 posts (teaser)
-      const queryLimit = showTeaser ? 3 : limitNum;
 
       const posts = await CommunityPost.find(query)
         .sort(sortOption)
         .limit(queryLimit + 1) // Fetch one extra to check for next page
         .lean();
+
+      console.log('🔍 Posts found:', posts.length);
 
       // Check if there are more posts
       const hasMore = posts.length > queryLimit;
@@ -140,39 +171,47 @@ export class CommunityForumController {
       }
 
       // Get author information for all posts
-      const authorUids = [...new Set(posts.map((p) => p.authorUid))];
-      const authors = await CommunityUser.find({ uid: { $in: authorUids } }).lean();
-      const authorsMap = new Map(authors.map((a) => [a.uid, a]));
+      const authorIds = [...new Set(posts.map((p) => p.authorId?.toString()).filter(Boolean))];
+      console.log('🔍 Author IDs to lookup:', authorIds.length, 'unique IDs');
+      const authors = await User.find({ _id: { $in: authorIds } }).lean();
+      console.log('🔍 Authors found:', authors.length);
+      const authorsMap = new Map(authors.map((a) => [a._id.toString(), a]));
 
       // Get user votes if authenticated
       let userVotesMap = new Map();
       if (req.user) {
-        const postIds = posts.map((p) => p._id);
-        const userVotes = await CommunityVote.find({
-          postId: { $in: postIds },
-          voterUid: req.user.uid,
-        }).lean();
-        userVotesMap = new Map(userVotes.map((v) => [v.postId.toString(), v.value]));
+        // Find current user by firebaseUid
+        const currentUser = await User.findOne({ firebaseUid: req.user.uid }).lean();
+        if (currentUser) {
+          const postIds = posts.map((p) => p._id);
+          const userVotes = await CommunityVote.find({
+            postId: { $in: postIds },
+            userId: currentUser._id,
+          }).lean();
+          userVotesMap = new Map(userVotes.map((v) => [v.postId.toString(), v.value]));
+        }
       }
 
       // Enrich posts with author info
       const enrichedPosts = posts.map((post) => {
-        const author = authorsMap.get(post.authorUid);
+        const author = authorsMap.get(post.authorId?.toString());
+        
+        // Use stored authorName from post if available, otherwise fallback to user lookup
+        const displayName = (post as any).authorName || author?.name || 'Unknown User';
+        
         return {
           ...post,
-          author: author
-            ? {
-                uid: author.uid,
-                name: author.name,
-                avatarUrl: author.avatarUrl,
-                role: author.role,
-              }
-            : null,
+          author: {
+            uid: author?.firebaseUid || '',
+            name: displayName,
+            avatarUrl: author?.avatar || '',
+            role: author?.role || 'user',
+          },
           // Truncate body for guests
           bodyMarkdown: showTeaser
-            ? post.bodyMarkdown.substring(0, 200) +
-              (post.bodyMarkdown.length > 200 ? '...' : '')
-            : post.bodyMarkdown,
+            ? post.body.substring(0, 200) +
+              (post.body.length > 200 ? '...' : '')
+            : post.body,
           userVote: userVotesMap.get(post._id.toString()) || null,
         };
       });
@@ -219,7 +258,7 @@ export class CommunityForumController {
 
       const post = await CommunityPost.findOne({
         _id: id,
-        isDeleted: false,
+        status: 'visible',
       }).lean();
 
       if (!post) {
@@ -230,16 +269,23 @@ export class CommunityForumController {
       }
 
       // Get author info
-      const author = await CommunityUser.findOne({ uid: post.authorUid }).lean();
+      const author = await User.findById(post.authorId).lean();
+
+      // Use stored authorName from post if available
+      const displayName = (post as any).authorName || author?.name || 'Unknown User';
 
       // Get user's vote if authenticated
       let userVote = null;
       if (req.user) {
-        const vote = await CommunityVote.findOne({
-          postId: id,
-          voterUid: req.user.uid,
-        }).lean();
-        userVote = vote ? vote.value : null;
+        // Find user by firebaseUid to get ObjectId
+        const currentUser = await User.findOne({ firebaseUid: req.user.uid }).lean();
+        if (currentUser) {
+          const vote = await CommunityVote.findOne({
+            postId: id,
+            userId: currentUser._id,
+          }).lean();
+          userVote = vote ? vote.value : null;
+        }
       }
 
       res.json({
@@ -247,14 +293,12 @@ export class CommunityForumController {
         data: {
           post: {
             ...post,
-            author: author
-              ? {
-                  uid: author.uid,
-                  name: author.name,
-                  avatarUrl: author.avatarUrl,
-                  role: author.role,
-                }
-              : null,
+            author: {
+              uid: author?.firebaseUid || '',
+              name: displayName,
+              avatarUrl: author?.avatar || '',
+              role: author?.role || 'user',
+            },
           },
           userVote,
         },
@@ -294,10 +338,19 @@ export class CommunityForumController {
         });
       }
 
+      // Find user by firebaseUid to get ObjectId
+      const user = await User.findOne({ firebaseUid: voterUid });
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
+
       // Check if post exists
       const post = await CommunityPost.findOne({
         _id: id,
-        isDeleted: false,
+        status: 'visible',
       });
 
       if (!post) {
@@ -310,7 +363,7 @@ export class CommunityForumController {
       // Check if user already voted
       const existingVote = await CommunityVote.findOne({
         postId: id,
-        voterUid,
+        userId: user._id,
       });
 
       let voteScoreDelta = 0;
@@ -332,7 +385,7 @@ export class CommunityForumController {
         // Create new vote
         await CommunityVote.create({
           postId: id,
-          voterUid,
+          userId: user._id,
           value,
         });
         voteScoreDelta = value;
@@ -340,19 +393,19 @@ export class CommunityForumController {
       }
 
       // Update post vote score
-      post.voteScore += voteScoreDelta;
+      post.score += voteScoreDelta;
       await post.save();
 
       // Get updated user vote
       const updatedVote = await CommunityVote.findOne({
         postId: id,
-        voterUid,
+        userId: user._id,
       });
 
       res.json({
         success: true,
         data: {
-          voteScore: post.voteScore,
+          voteScore: post.score,
           userVote: updatedVote ? updatedVote.value : null,
         },
       });
@@ -393,7 +446,7 @@ export class CommunityForumController {
       // Check if post exists
       const post = await CommunityPost.findOne({
         _id: id,
-        isDeleted: false,
+        status: 'visible',
       });
 
       if (!post) {
@@ -403,20 +456,28 @@ export class CommunityForumController {
         });
       }
 
+      // Find user by firebaseUid to get ObjectId
+      const user = await User.findOne({ firebaseUid: authorUid });
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        });
+      }
+
       // Create comment
-      const comment = await CommunityComment.create({
+      const comment = new CommunityComment({
         postId: id,
-        authorUid,
-        bodyMarkdown,
-        isDeleted: false,
+        authorId: user._id,
+        text: bodyMarkdown,
+        status: 'visible',
       });
 
-      // Increment comment count
-      post.commentCount += 1;
-      await post.save();
+      await comment.save();
 
-      // Get author info
-      const author = await CommunityUser.findOne({ uid: authorUid }).lean();
+      // Increment comment count
+      post.commentsCount += 1;
+      await post.save();
 
       logger.info(`Comment created: ${comment._id} on post ${id} by ${authorUid}`);
 
@@ -426,14 +487,12 @@ export class CommunityForumController {
         data: {
           comment: {
             ...comment.toObject(),
-            author: author
-              ? {
-                  uid: author.uid,
-                  name: author.name,
-                  avatarUrl: author.avatarUrl,
-                  role: author.role,
-                }
-              : null,
+            author: {
+              uid: user.firebaseUid,
+              name: user.name,
+              avatarUrl: user.avatar,
+              role: user.role,
+            },
           },
         },
       });
@@ -468,7 +527,7 @@ export class CommunityForumController {
       // Build query
       const query: any = {
         postId: id,
-        isDeleted: false,
+        status: 'visible',
       };
 
       if (cursor) {
@@ -486,21 +545,21 @@ export class CommunityForumController {
         comments.pop();
       }
 
-      // Get author information
-      const authorUids = [...new Set(comments.map((c) => c.authorUid))];
-      const authors = await CommunityUser.find({ uid: { $in: authorUids } }).lean();
-      const authorsMap = new Map(authors.map((a) => [a.uid, a]));
+      // Get author information for all comments
+      const authorIds = [...new Set(comments.map((c) => c.authorId?.toString()).filter(Boolean))];
+      const authors = await User.find({ _id: { $in: authorIds } }).lean();
+      const authorsMap = new Map(authors.map((a) => [a._id.toString(), a]));
 
       // Enrich comments with author info
       const enrichedComments = comments.map((comment) => {
-        const author = authorsMap.get(comment.authorUid);
+        const author = authorsMap.get(comment.authorId?.toString());
         return {
           ...comment,
           author: author
             ? {
-                uid: author.uid,
+                uid: author.firebaseUid,
                 name: author.name,
-                avatarUrl: author.avatarUrl,
+                avatarUrl: author.avatar,
                 role: author.role,
               }
             : null,
@@ -578,7 +637,7 @@ export class CommunityForumController {
   }
 
   /**
-   * Toggle solved status on a post (by OP or moderator)
+   * Toggle solved status on a post (by OP or admin)
    * PATCH /api/community/forum/posts/:id/solved
    */
   static async toggleSolved(req: AuthRequest, res: Response) {
@@ -596,7 +655,7 @@ export class CommunityForumController {
 
       const post = await CommunityPost.findOne({
         _id: id,
-        isDeleted: false,
+        status: 'visible',
       });
 
       if (!post) {
@@ -606,15 +665,17 @@ export class CommunityForumController {
         });
       }
 
-      // Check if user is OP or moderator
-      const user = await CommunityUser.findOne({ uid: userUid });
-      const isMod = user && (user.role === 'mod' || user.role === 'admin');
-      const isOP = post.authorUid === userUid;
+      // Check if user is OP or admin
+      const user = await User.findOne({ uid: userUid });
+      const isAdmin = user && user.role === 'admin';
+      // Get user ObjectId from firebaseUid
+      const currentUser = await User.findOne({ firebaseUid: userUid }).lean();
+      const isOP = currentUser && post.authorId?.toString() === currentUser._id.toString();
 
-      if (!isOP && !isMod) {
+      if (!isOP && !isAdmin) {
         return res.status(403).json({
           success: false,
-          message: 'Only the post author or moderators can mark as solved',
+          message: 'Only the post author or admins can mark as solved',
         });
       }
 
@@ -654,7 +715,7 @@ export class CommunityForumController {
       const trendingTags = await CommunityPost.aggregate([
         {
           $match: {
-            isDeleted: false,
+            status: 'visible',
             createdAt: { $gte: startDate },
           },
         },
@@ -715,11 +776,11 @@ export class CommunityForumController {
         });
       }
 
-      let user = await CommunityUser.findOne({ uid: userUid });
+      let user = await User.findOne({ uid: userUid });
 
       if (!user) {
         // Create new user
-        user = await CommunityUser.create({
+        user = await User.create({
           uid: userUid,
           name: name || 'Anonymous',
           avatarUrl,
@@ -729,7 +790,7 @@ export class CommunityForumController {
       } else if (name || avatarUrl) {
         // Update existing user
         if (name) user.name = name;
-        if (avatarUrl) user.avatarUrl = avatarUrl;
+        if (avatarUrl) user.avatar = avatarUrl;
         await user.save();
         logger.info(`Community user updated: ${userUid}`);
       }

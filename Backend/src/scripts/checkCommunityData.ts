@@ -10,11 +10,11 @@ async function checkCommunityData() {
     console.log('✅ Connected to database\n');
     
     const collections = [
-      'communityusers',
-      'communityposts', 
-      'communitycomments',
-      'communityvotes',
-      'communityreports'
+      'users',
+      'posts', 
+      'comments',
+      'votes',
+      'reports'
     ];
     
     console.log('📊 Community Forum Data:\n');
