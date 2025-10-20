@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { X, Upload, Image as ImageIcon } from 'lucide-react';
 import { Plant, Category, Sunlight, Health } from '@/types/plant';
 import { useToast } from '@/hooks/use-toast';
@@ -462,13 +463,21 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
               <Label htmlFor="plant-health" className="text-sm font-medium text-gray-700">
                 Health Status
               </Label>
-              <Input
-                id="plant-health"
+              <Select
                 value={formData.health}
-                onChange={(e) => handleInputChange('health', e.target.value)}
-                placeholder="e.g., Good"
-                className="w-full bg-gray-50"
-              />
+                onValueChange={(val: string) => handleInputChange('health', val)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Health Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Excellent">Excellent</SelectItem>
+                  <SelectItem value="Good">Good</SelectItem>
+                  <SelectItem value="Needs light">Needs light</SelectItem>
+                  <SelectItem value="Needs water">Needs water</SelectItem>
+                  <SelectItem value="Attention">Attention</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
