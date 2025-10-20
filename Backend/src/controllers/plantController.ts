@@ -15,7 +15,8 @@ interface CreatePlantRequest extends Request {
     category: 'houseplant' | 'vegetable' | 'herb' | 'flower' | 'tree' | 'succulent';
     variety?: string;
     description?: string;
-    images?: string[];
+  images?: string[];
+  imageUrl?: string;
     location: string;
     potSize?: string;
     potType?: string;
@@ -107,8 +108,14 @@ export class PlantController {
     try {
       const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       
+      // Validate imageUrl if provided (reject blob URLs)
+      if (req.body.imageUrl && req.body.imageUrl.startsWith('blob:')) {
+        logger.warn(`Rejected blob URL in plant creation: ${req.body.imageUrl}`);
+        delete req.body.imageUrl; // Remove invalid blob URL
+      }
+      
       // Handle image upload if file is provided
-      let imageUrl: string | undefined;
+      let imageUrl: string | undefined = req.body.imageUrl; // Use client-provided URL if valid
       if (req.file) {
         try {
           const bucket = firebaseService.getStorage().bucket();
@@ -366,8 +373,14 @@ export class PlantController {
   const { id: plantId } = req.params as { id?: string };
       const userId = new mongoose.Types.ObjectId((req.user as any)._id.toString());
       
+      // Validate imageUrl if provided (reject blob URLs)
+      if (req.body.imageUrl && req.body.imageUrl.startsWith('blob:')) {
+        logger.warn(`Rejected blob URL in plant update: ${req.body.imageUrl}`);
+        delete req.body.imageUrl; // Remove invalid blob URL
+      }
+      
       // Handle image upload if file is provided
-      let imageUrl: string | undefined;
+      let imageUrl: string | undefined = req.body.imageUrl; // Use client-provided URL if valid
       if (req.file) {
         try {
           const bucket = firebaseService.getStorage().bucket();
