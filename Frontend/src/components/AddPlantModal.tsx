@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { X, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Image as ImageIcon, Camera } from 'lucide-react';
+import { uploadPlantImage } from '@/utils/firebaseStorage';
 import { Plant, Category, Sunlight, Health } from '@/types/plant';
 import { useToast } from '@/hooks/use-toast';
 import { suggestPlantDefaults, PlantSuggestion } from '@/lib/api/agroAi';
@@ -38,6 +39,9 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
   
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string>(''); // Track actual Firebase URL separately from blob preview
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [skipUpload, setSkipUpload] = useState(false);
   const [isValid, setIsValid] = useState(false);
   // AI suggestion state
   const [aiSuggestion, setAiSuggestion] = useState<any | null>(null);
@@ -69,6 +73,8 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
   // Fetch AI suggestion when debounced name changes; moved to useCallback to support retry and manual triggers
   const fetchSuggestion = React.useCallback(async (name: string, attempt = 0) => {
     if (!name || name.trim().length < 3) return;
+    // Don't auto-fetch when editing an existing plant; allow manual regeneration only
+    if (mode === 'edit') return;
     if (didAutoApply) return;
     setAiLoading(true);
     if (attempt > 0) setRetrying(true);
@@ -164,12 +170,12 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
       setRetrying(false);
       setAiLoading(false);
     }
-  }, [didAutoApply, toast]);
+  }, [didAutoApply, toast, mode]);
 
-  // Call AI suggestions when modal is open (create or edit)
+  // Call AI suggestions only in create mode when modal is open
   useEffect(() => {
-    if (open) fetchSuggestion(debouncedName, 0);
-  }, [debouncedName, open, fetchSuggestion]);
+    if (open && mode === 'create') fetchSuggestion(debouncedName, 0);
+  }, [debouncedName, open, fetchSuggestion, mode]);
 
   // Initialize form with initial data when modal opens
   useEffect(() => {
@@ -187,6 +193,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
         growthRatePctThisMonth: initial.growthRatePctThisMonth?.toString() || '0'
       });
       setImagePreview(initial.imageUrl || '');
+      setUploadedImageUrl(initial.imageUrl || ''); // Set uploaded URL for edit mode
     } else if (open && !initial) {
       // Reset form for create mode
       setFormData({
@@ -203,6 +210,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
       });
       setImageFile(null);
       setImagePreview('');
+      setUploadedImageUrl(''); // Reset uploaded URL
     }
   }, [open, initial]);
 
@@ -231,6 +239,44 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
     }
   };
 
+  const handleUploadToFirebase = async (): Promise<string | undefined> => {
+    if (!imageFile) return undefined;
+    try {
+      const userId = (window as any).__AGROTRACK__?.userId || 'anonymous';
+      const img = await uploadPlantImage(imageFile, userId, (progress) => setUploadProgress(progress));
+      setUploadProgress(null);
+      setUploadedImageUrl(img.url); // Store the actual Firebase URL
+      return img.url;
+    } catch (err) {
+      console.error('Upload to Firebase failed', err);
+  toast({ title: 'Image upload failed', description: 'Unable to upload image. Try again or save and upload later.' });
+      setUploadProgress(null);
+      return undefined;
+    }
+  };
+
+  // Wrap upload with a timeout so a stuck upload doesn't block Save forever.
+  const handleUploadWithTimeout = async (timeoutMs = 20000): Promise<string | undefined> => {
+    if (!imageFile) return undefined;
+    try {
+      const uploadPromise = handleUploadToFirebase();
+      const timeoutPromise = new Promise<string | undefined>((_, reject) => {
+        const id = setTimeout(() => {
+          clearTimeout(id);
+          reject(new Error('upload-timeout'));
+        }, timeoutMs);
+      });
+
+      return await Promise.race([uploadPromise, timeoutPromise]) as string | undefined;
+    } catch (err: any) {
+      console.warn('Upload timed out or failed:', err);
+      // Clear progress UI
+      setUploadProgress(null);
+      toast({ title: 'Image upload timed out', description: 'Upload is taking too long. You can save now and the server will accept the image upload instead.' });
+      return undefined;
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -246,6 +292,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
     });
     setImageFile(null);
     setImagePreview('');
+    setUploadedImageUrl(''); // Reset uploaded URL
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -256,7 +303,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
     onCancel();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!isValid) return;
 
     const plantData: Plant = {
@@ -269,18 +316,33 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
       fertilizerEveryWeeks: formData.fertilizerEveryWeeks && !isNaN(Number(formData.fertilizerEveryWeeks)) ? Number(formData.fertilizerEveryWeeks) : undefined,
       soil: formData.soil.trim() || undefined,
       notes: formData.notes.trim() || undefined,
-      imageUrl: imagePreview || (mode === 'edit' && initial?.imageUrl ? initial.imageUrl : undefined),
+      imageUrl: uploadedImageUrl || (mode === 'edit' && initial?.imageUrl ? initial.imageUrl : undefined), // Use uploaded Firebase URL, NOT blob preview
       lastWatered: mode === 'edit' && initial?.lastWatered ? initial.lastWatered : null,
       health: formData.health as Health,
       growthRatePctThisMonth: formData.growthRatePctThisMonth && !isNaN(Number(formData.growthRatePctThisMonth)) ? Number(formData.growthRatePctThisMonth) : 0
     };
 
-  onSubmit(plantData, imageFile);
-    
+    // If a new local image file was chosen and the user hasn't chosen to skip client upload,
+    // try uploading it to Firebase Storage first and use that URL.
+    // If the client upload stalls or fails, fall back to sending the file to the backend (passFile below).
+    let finalImageUrl = plantData.imageUrl;
+    if (imageFile && !skipUpload) {
+      const uploaded = await handleUploadWithTimeout(20000); // 20s timeout
+      if (uploaded) {
+        finalImageUrl = uploaded;
+      }
+    }
+
+    plantData.imageUrl = finalImageUrl;
+
+  // Pass imageFile only when we didn't upload to Firebase (avoid duplicate uploads).
+  const passFile = imageFile && !finalImageUrl ? imageFile : null;
+  onSubmit(plantData, passFile);
+
     // Show success toast
     toast({
       title: mode === 'create' ? "Plant Added Successfully!" : "Plant Updated Successfully!",
-      description: mode === 'create' 
+      description: mode === 'create'
         ? `✅ ${plantData.name} has been added to your collection.`
         : `✅ ${plantData.name} has been updated.`,
     });
@@ -328,6 +390,41 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
 
         {/* Form */}
         <div className="p-6 space-y-6">
+          {/* Circular image uploader */}
+          <div className="flex items-center justify-center">
+            <div className="relative">
+              <button
+                type="button"
+                className="w-28 h-28 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center overflow-hidden"
+                onClick={() => fileInputRef.current?.click()}
+                aria-label="Upload plant photo"
+              >
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Plant" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center text-sm text-muted-foreground">
+                    <Camera className="w-6 h-6 text-emerald-600" />
+                    <div className="mt-1">Add photo</div>
+                  </div>
+                )}
+              </button>
+              {uploadProgress !== null && (
+                <div className="absolute -bottom-4 left-0 right-0 flex flex-col items-center text-center text-xs text-muted-foreground space-y-1 z-10">
+                  <div className="bg-white px-2 rounded">Uploading {uploadProgress}%</div>
+                  <div>
+                    <button
+                      type="button"
+                      className="text-emerald-600 underline text-xs pointer-events-auto"
+                      onClick={() => setSkipUpload(true)}
+                    >
+                      Save now (server will upload image)
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Plant Name */}
           <div className="space-y-2">
             <Label htmlFor="plant-name" className="text-sm font-medium text-gray-700">
@@ -495,52 +592,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
             </div>
           </div>
 
-          {/* Image Upload */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-gray-700">
-              Plant Photo
-            </Label>
-            <div className="flex items-center space-x-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center space-x-2"
-              >
-                <Upload className="w-4 h-4" />
-                <span>Choose Photo</span>
-              </Button>
-              
-              {imagePreview && (
-                <div className="flex items-center space-x-2">
-                  <img 
-                    src={imagePreview} 
-                    alt="Plant preview" 
-                    className="w-12 h-12 rounded-lg object-cover border"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setImageFile(null);
-                      setImagePreview('');
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-            />
-          </div>
+          {/* Image upload handled by circular uploader at the top */}
 
           {/* Notes */}
           <div className="space-y-2">
@@ -574,6 +626,15 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
           </Button>
         </div>
       </div>
+
+      {/* Hidden file input used by circular uploader */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageUpload}
+      />
     </div>
   );
 }

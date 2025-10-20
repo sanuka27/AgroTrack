@@ -9,6 +9,7 @@ import { AddPlantModal } from "@/components/AddPlantModal";
 import { PlantCard } from "@/components/PlantCard";
 import { PlantFiltersComponent, PlantFilters } from "@/components/PlantFilters";
 import { Plant, Category } from "@/types/plant";
+import type { Plant as ApiPlant } from "@/types/api";
 import { filterAndSortPlants } from "@/utils/plantFiltering";
 import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { exportPlantsToCSV, exportPlantsToJSON } from "@/utils/exportUtils";
@@ -17,8 +18,10 @@ import { useSearchDebounce } from "@/hooks/use-search";
 import { Leaf, Plus, Calendar, Droplets, Sun, Bell, TrendingUp, MessageSquare, CheckSquare, Square, AlertTriangle, Activity } from "lucide-react";
 import api from '@/lib/api';
 import plantsApi from '@/lib/api/plants';
+import { uploadPlantImage } from '@/utils/firebaseStorage';
 import { analyticsApi } from '@/lib/api/analytics';
 import { remindersApi, Reminder as ReminderType } from '@/lib/api/reminders';
+import { useToast } from '@/hooks/use-toast';
 
 // Helper function to map API category to frontend Category type
 const mapCategory = (apiCategory: string): Category => {
@@ -34,8 +37,23 @@ const mapCategory = (apiCategory: string): Category => {
   return categoryMap[apiCategory] || 'Outdoor';
 };
 
+// Normalize frontend category labels to backend enum values
+const mapToApiCategory = (frontendCategory: string): string => {
+  const c = (frontendCategory || '').toLowerCase();
+  if (c === 'houseplant' || c === 'indoor') return 'Indoor';
+  if (c === 'outdoor') return 'Outdoor';
+  if (c === 'succulent') return 'Succulent';
+  if (c === 'herb') return 'Herb';
+  if (c === 'flower') return 'Flower';
+  if (c === 'tree') return 'Tree';
+  if (c === 'shrub') return 'Shrub';
+  if (c === 'vegetable') return 'Vegetable';
+  return 'Other';
+};
+
 const MyPlants = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [plants, setPlants] = useState<Plant[]>([]);
   const LOCAL_STORAGE_PLANTS_KEY = 'agrotrack:plants';
 
@@ -88,21 +106,21 @@ const MyPlants = () => {
         setLoading(true);
         setError(null);
         const resp = await api.get('/plants?limit=100');
-        const responsePlants = resp?.data?.data?.plants || resp?.data?.plants || [];
-        const convertedPlants: Plant[] = responsePlants.map((apiPlant: any) => ({
+        const responsePlants: ApiPlant[] = resp?.data?.data?.plants || resp?.data?.plants || [];
+        const convertedPlants: Plant[] = responsePlants.map((apiPlant: ApiPlant) => ({
           id: apiPlant._id,
           name: apiPlant.name,
           category: mapCategory(apiPlant.category),
-          sunlight: apiPlant.sunlightHours >= 8 ? "Full Sun" : apiPlant.sunlightHours >= 6 ? "Partial Sun" : "Low Light",
-          ageYears: undefined,
-          wateringEveryDays: apiPlant.wateringFrequency,
-          fertilizerEveryWeeks: undefined,
-          soil: apiPlant.soilType,
-          notes: apiPlant.careInstructions,
+          sunlight: (apiPlant.sunlightHours ?? 4) >= 8 ? "Full Sun" : (apiPlant.sunlightHours ?? 4) >= 6 ? "Partial Sun" : "Low Light",
+          ageYears: (apiPlant as any).ageYears ?? undefined,
+          wateringEveryDays: apiPlant.wateringFrequency ?? 7,
+          fertilizerEveryWeeks: (apiPlant as any).fertilizerEveryWeeks ?? undefined,
+          soil: apiPlant.soilType ?? undefined,
+          notes: (apiPlant as any).notes || apiPlant.careInstructions || undefined,
           imageUrl: apiPlant.imageUrl,
-          lastWatered: apiPlant.lastWatered || undefined,
-          health: apiPlant.health || "Good",
-          growthRatePctThisMonth: apiPlant.growthRatePctThisMonth,
+          lastWatered: (apiPlant as any).lastWatered || undefined,
+          health: (apiPlant as any).health || "Good",
+          growthRatePctThisMonth: (apiPlant as any).growthRatePctThisMonth ?? undefined,
         }));
   setPlants(convertedPlants);
   savePlantsToLocalStorage(convertedPlants);
@@ -156,50 +174,34 @@ const MyPlants = () => {
   // CRUD operations
   const handleCreatePlant = async (newPlant: Plant, imageFile?: File | null) => {
     try {
-      // prepare payload; use FormData if image is present
-      let createdPlant: any = null;
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append('name', newPlant.name);
-        formData.append('scientificName', newPlant.name);
-        formData.append('description', newPlant.notes || '');
-        formData.append('category', newPlant.category);
-        formData.append('wateringFrequency', String(newPlant.wateringEveryDays));
-        formData.append('sunlightHours', String(newPlant.sunlight === "Full Sun" ? 8 : newPlant.sunlight === "Partial Sun" ? 6 : 4));
-        formData.append('soilType', newPlant.soil || 'Well-draining soil');
-        formData.append('careInstructions', newPlant.notes || '');
-        formData.append('image', imageFile);
+      // Create plant record quickly without image to make UI feel fast
+      const payload = {
+        name: newPlant.name,
+        scientificName: newPlant.name,
+        description: newPlant.notes || '',
+        category: mapToApiCategory(newPlant.category),
+        wateringFrequency: newPlant.wateringEveryDays,
+        sunlightHours: newPlant.sunlight === "Full Sun" ? 8 : newPlant.sunlight === "Partial Sun" ? 6 : 4,
+        soilType: newPlant.soil || 'Well-draining soil',
+        notes: newPlant.notes || '',
+      } as any;
 
-        createdPlant = await plantsApi.createPlant(formData);
-      } else {
-        const payload = {
-          name: newPlant.name,
-          scientificName: newPlant.name,
-          description: newPlant.notes || '',
-          category: newPlant.category,
-          wateringFrequency: newPlant.wateringEveryDays,
-          sunlightHours: newPlant.sunlight === "Full Sun" ? 8 : newPlant.sunlight === "Partial Sun" ? 6 : 4,
-          soilType: newPlant.soil || 'Well-draining soil',
-          careInstructions: newPlant.notes || '',
-        };
-        createdPlant = await plantsApi.createPlant(payload as any);
-      }
+      const createdPlant = await plantsApi.createPlant(payload);
 
-      // Convert and add to state
       const frontendPlant: Plant = {
         id: createdPlant._id,
         name: createdPlant.name,
         category: mapCategory(createdPlant.category),
-        sunlight: createdPlant.sunlightHours >= 8 ? "Full Sun" : createdPlant.sunlightHours >= 6 ? "Partial Sun" : "Low Light",
-        ageYears: createdPlant.ageYears,
-        wateringEveryDays: createdPlant.wateringFrequency,
-        fertilizerEveryWeeks: createdPlant.fertilizerEveryWeeks,
-        soil: createdPlant.soilType,
-        notes: createdPlant.careInstructions,
-        imageUrl: createdPlant.imageUrl,
-        lastWatered: createdPlant.lastWatered,
-        health: createdPlant.health || 'Good',
-        growthRatePctThisMonth: createdPlant.growthRatePctThisMonth,
+        sunlight: ((createdPlant as any).sunlightHours ?? 4) >= 8 ? "Full Sun" : ((createdPlant as any).sunlightHours ?? 4) >= 6 ? "Partial Sun" : "Low Light",
+        ageYears: (createdPlant as any).ageYears ?? undefined,
+        wateringEveryDays: createdPlant.wateringFrequency ?? 7,
+        fertilizerEveryWeeks: (createdPlant as any).fertilizerEveryWeeks ?? undefined,
+        soil: createdPlant.soilType ?? undefined,
+        notes: (createdPlant as any).notes || (createdPlant as any).careInstructions || undefined,
+        imageUrl: createdPlant.imageUrl ?? undefined,
+        lastWatered: (createdPlant as any).lastWatered ?? undefined,
+        health: (createdPlant as any).health || 'Good',
+        growthRatePctThisMonth: (createdPlant as any).growthRatePctThisMonth ?? undefined,
       };
 
       setPlants(prev => {
@@ -207,66 +209,89 @@ const MyPlants = () => {
         savePlantsToLocalStorage(next);
         return next;
       });
-    } catch (error) {
+
+      // If an image was provided, upload in the background and then patch the plant
+      if (imageFile) {
+        (async () => {
+          try {
+            const userId = (window as any).__AGROTRACK__?.userId || 'anonymous';
+            const img = await uploadPlantImage(imageFile, userId, (progress) => {});
+            if (img?.url) {
+              await plantsApi.updatePlant(createdPlant._id, { imageUrl: img.url } as any);
+              setPlants(prev => {
+                const next = prev.map(p => p.id === createdPlant._id ? { ...p, imageUrl: img.url } : p);
+                savePlantsToLocalStorage(next);
+                return next;
+              });
+            }
+          } catch (err) {
+            console.error('Background image upload failed', err);
+            toast({ title: 'Image upload failed', description: 'Image upload failed in background. You can retry from the plant editor.' });
+          }
+        })();
+      }
+    } catch (error: any) {
       console.error('Error creating plant:', error);
-      // For now, just add to local state as fallback
-      setPlants(prev => {
-        const next = [newPlant, ...prev];
-        savePlantsToLocalStorage(next);
-        return next;
-      });
+      toast({ title: 'Failed to add plant', description: error?.message || 'Please ensure you are logged in and the server is running.' });
     }
   };
 
   const handleUpdatePlant = async (updatedPlant: Plant, imageFile?: File | null) => {
     try {
-      // Use FormData if image provided
-      let updated: any = null;
-      if (imageFile) {
-        const formData = new FormData();
-        formData.append('name', updatedPlant.name);
-        formData.append('scientificName', updatedPlant.name);
-        formData.append('description', updatedPlant.notes || '');
-        formData.append('category', updatedPlant.category);
-        formData.append('wateringFrequency', String(updatedPlant.wateringEveryDays));
-        formData.append('sunlightHours', String(updatedPlant.sunlight === "Full Sun" ? 8 : updatedPlant.sunlight === "Partial Sun" ? 6 : 4));
-        formData.append('soilType', updatedPlant.soil || 'Well-draining soil');
-        formData.append('careInstructions', updatedPlant.notes || '');
-        formData.append('image', imageFile);
+      // Optimistic metadata update: patch core fields immediately
+      const payload = {
+        name: updatedPlant.name,
+        scientificName: updatedPlant.name,
+        description: updatedPlant.notes || '',
+        category: mapToApiCategory(updatedPlant.category),
+        wateringFrequency: updatedPlant.wateringEveryDays,
+        sunlightHours: updatedPlant.sunlight === "Full Sun" ? 8 : updatedPlant.sunlight === "Partial Sun" ? 6 : 4,
+        soilType: updatedPlant.soil || 'Well-draining soil',
+        notes: updatedPlant.notes || '',
+      } as any;
 
-        updated = await plantsApi.updatePlant(updatedPlant.id, formData);
-      } else {
-        const payload = {
-          name: updatedPlant.name,
-          scientificName: updatedPlant.name,
-          description: updatedPlant.notes || '',
-          category: updatedPlant.category,
-          wateringFrequency: updatedPlant.wateringEveryDays,
-          sunlightHours: updatedPlant.sunlight === "Full Sun" ? 8 : updatedPlant.sunlight === "Partial Sun" ? 6 : 4,
-          soilType: updatedPlant.soil || 'Well-draining soil',
-          careInstructions: updatedPlant.notes || '',
-        };
-        updated = await plantsApi.updatePlant(updatedPlant.id, payload as any);
-      }
-
+      // Apply optimistic update to UI
       setPlants(prev => {
         const next = prev.map(plant => plant.id === updatedPlant.id ? {
           ...plant,
-          name: updated.name,
-          imageUrl: updated.imageUrl || plant.imageUrl,
-          wateringEveryDays: updated.wateringFrequency,
-          soil: updated.soilType,
-          notes: updated.careInstructions,
+          name: updatedPlant.name,
+          wateringEveryDays: updatedPlant.wateringEveryDays,
+          soil: updatedPlant.soil,
+          notes: updatedPlant.notes || plant.notes,
         } : plant);
         savePlantsToLocalStorage(next);
         return next;
       });
-    } catch (error) {
+
+      // Send metadata update to server (non-blocking)
+      plantsApi.updatePlant(updatedPlant.id, payload).catch(err => {
+        console.error('Failed to update plant metadata', err);
+        toast({ title: 'Update failed', description: 'Failed to save changes. Please retry.' });
+      });
+
+      // If image supplied, upload in background and patch imageUrl
+      if (imageFile) {
+        (async () => {
+          try {
+            const userId = (window as any).__AGROTRACK__?.userId || 'anonymous';
+            const img = await uploadPlantImage(imageFile, userId, (progress) => {});
+            if (img?.url) {
+              await plantsApi.updatePlant(updatedPlant.id, { imageUrl: img.url } as any);
+              setPlants(prev => {
+                const next = prev.map(p => p.id === updatedPlant.id ? { ...p, imageUrl: img.url } : p);
+                savePlantsToLocalStorage(next);
+                return next;
+              });
+            }
+          } catch (err) {
+            console.error('Background image upload failed', err);
+            toast({ title: 'Image upload failed', description: 'Image upload failed in background. You can retry from the plant editor.' });
+          }
+        })();
+      }
+    } catch (error: any) {
       console.error('Error updating plant:', error);
-      // Fallback to local state update
-      setPlants(prev => prev.map(plant =>
-        plant.id === updatedPlant.id ? updatedPlant : plant
-      ));
+      toast({ title: 'Failed to update plant', description: error?.message || 'Please try again.' });
     }
   };
 

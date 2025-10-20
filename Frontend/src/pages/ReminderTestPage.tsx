@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plant, Category, Sunlight, Health } from '@/types/plant';
 import { CareLog, CareType } from '@/types/care';
 import { ReminderPreferences } from '@/types/reminders';
-import { Bell, Settings, TestTube, Zap, Clock, CheckCircle, Loader2 } from 'lucide-react';
+import { Bell, Settings, TestTube, Zap, Clock, CheckCircle, Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { plantsApi } from '@/lib/api/plants';
 import careLogsApi from '@/lib/api/careLogs';
 import type { Plant as APIPlant, CareLog as APICareLog } from '@/types/api';
@@ -52,6 +52,7 @@ const ReminderTestPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [careLogsUnavailable, setCareLogsUnavailable] = useState(false); // Track if care-logs API is unavailable
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
 
   // Fetch plants and care logs from real API with retry/backoff for rate limits
   useEffect(() => {
@@ -107,6 +108,7 @@ const ReminderTestPage = () => {
             setCareLogs([]);
           }
         }
+        setLastRefreshedAt(new Date());
       } catch (err: any) {
         const status = err?.response?.status;
         if (status === 429) {
@@ -128,6 +130,31 @@ const ReminderTestPage = () => {
       setLoading(false);
     }
   }, [isAuthenticated, user]);
+
+  const handleRefresh = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      // Re-run the same fetch logic: fetch plants then try care logs
+      const plantsResp = await plantsApi.getPlants({ limit: 100 });
+      const convertedPlants = (plantsResp || []).map((p: any) => convertAPIPlantToPlant(p as APIPlant));
+      setPlants(convertedPlants);
+      try {
+        const careLogsResp = await careLogsApi.getRecentCareLogs(50);
+        const convertedCareLogs = (careLogsResp || []).map((l: any) => convertAPICareLogToCareLog(l as APICareLog));
+        setCareLogs(convertedCareLogs);
+        setCareLogsUnavailable(false);
+      } catch (err: any) {
+        setCareLogs([]);
+        setCareLogsUnavailable(true);
+      }
+      setLastRefreshedAt(new Date());
+    } catch (err: any) {
+      setError(err instanceof Error ? err.message : 'Failed to refresh data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSaveSettings = (preferences: ReminderPreferences) => {
     console.log('Saving reminder preferences:', preferences);
@@ -215,20 +242,37 @@ const ReminderTestPage = () => {
 
       <main className="container mx-auto px-4 py-8">
         {/* Data source indicator */}
-        {user && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-800">
-              ✅ Using <strong>real data</strong> from your account.
-            </p>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            {user && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                <div className="flex items-center gap-2 text-sm text-green-800">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Using <strong>real data</strong></span>
+                </div>
+              </div>
+            )}
+
+            {careLogsUnavailable && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <div className="flex items-center gap-2 text-sm text-yellow-800">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Care logs unavailable — showing reminders from plant schedules only</span>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-        {careLogsUnavailable && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              Care logs service is unavailable right now. Showing reminders based on plant schedules only.
-            </p>
+
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Refresh
+            </Button>
+            {lastRefreshedAt && (
+              <div className="text-sm text-muted-foreground">Last refreshed: {lastRefreshedAt.toLocaleTimeString()}</div>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -265,6 +309,55 @@ const ReminderTestPage = () => {
                 <p className="text-gray-600 mb-6">
                   Intelligent reminder system that learns from your care patterns and adapts to seasonal changes
                 </p>
+                {/* Compact plants summary (polished) */}
+                <div className="mb-6">
+                  <div className="bg-white border rounded-lg p-4 shadow-sm">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Your plants</div>
+                        <div className="text-2xl font-semibold text-emerald-800">{plants.length} plant{plants.length !== 1 ? 's' : ''}</div>
+                        <div className="text-sm text-muted-foreground mt-1">{careLogs.length > 0 ? `Last care: ${new Date(careLogs[0].date).toLocaleDateString()}` : 'No recent care logs'}</div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <Button size="sm" variant="outline" onClick={() => navigate('/plants')}>Manage Plants</Button>
+                        <Button size="sm" onClick={handleRefresh}>Refresh</Button>
+                      </div>
+                    </div>
+
+                    {plants.length > 0 ? (
+                      <div className="mt-4 grid grid-cols-3 sm:grid-cols-6 gap-3">
+                        {plants.slice(0, 6).map(p => (
+                          <div key={p.id} className="flex flex-col items-center gap-2 bg-gray-50 p-3 rounded">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full overflow-hidden flex items-center justify-center">
+                              <img
+                                src={p.imageUrl || '/placeholder-plant.png'}
+                                alt={p.name}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                                onError={(e) => {
+                                  const target = e.currentTarget as HTMLImageElement;
+                                  if (target.src && !target.dataset.fallback) {
+                                    target.dataset.fallback = '1';
+                                    target.src = '/placeholder-plant.png';
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="text-sm text-center">
+                              <div className="font-medium text-sm">{p.name}</div>
+                              <div className="text-muted-foreground text-xs">{p.category}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-4 text-sm text-gray-600">
+                        You don't have any plants yet. Add a plant to get personalized reminders.
+                      </div>
+                    )}
+                  </div>
+                </div>
                 <SmartReminderDashboard
                   plants={plants}
                   careLogs={careLogs}
@@ -320,16 +413,40 @@ const ReminderTestPage = () => {
                     Reminder Types
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-3">
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="p-2 bg-blue-50 rounded">💧 Watering</div>
-                    <div className="p-2 bg-green-50 rounded">🌱 Fertilizing</div>
-                    <div className="p-2 bg-yellow-50 rounded">✂️ Pruning</div>
-                    <div className="p-2 bg-purple-50 rounded">🪴 Repotting</div>
-                    <div className="p-2 bg-red-50 rounded">🏥 Health Check</div>
-                    <div className="p-2 bg-orange-50 rounded">🐛 Pest Treatment</div>
-                    <div className="p-2 bg-indigo-50 rounded">🌍 Soil Change</div>
-                    <div className="p-2 bg-pink-50 rounded">📍 Location Change</div>
+                    <div className="p-2 bg-blue-50 rounded flex items-center gap-2">
+                      <span className="w-2 h-2 bg-blue-400 rounded-full" />
+                      <span>Watering</span>
+                    </div>
+                    <div className="p-2 bg-green-50 rounded flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-400 rounded-full" />
+                      <span>Fertilizing</span>
+                    </div>
+                    <div className="p-2 bg-yellow-50 rounded flex items-center gap-2">
+                      <span className="w-2 h-2 bg-yellow-400 rounded-full" />
+                      <span>Pruning</span>
+                    </div>
+                    <div className="p-2 bg-purple-50 rounded flex items-center gap-2">
+                      <span className="w-2 h-2 bg-purple-400 rounded-full" />
+                      <span>Repotting</span>
+                    </div>
+                    <div className="p-2 bg-red-50 rounded flex items-center gap-2">
+                      <span className="w-2 h-2 bg-red-400 rounded-full" />
+                      <span>Health Check</span>
+                    </div>
+                    <div className="p-2 bg-orange-50 rounded flex items-center gap-2">
+                      <span className="w-2 h-2 bg-orange-400 rounded-full" />
+                      <span>Pest Treatment</span>
+                    </div>
+                    <div className="p-2 bg-indigo-50 rounded flex items-center gap-2">
+                      <span className="w-2 h-2 bg-indigo-400 rounded-full" />
+                      <span>Soil Change</span>
+                    </div>
+                    <div className="p-2 bg-pink-50 rounded flex items-center gap-2">
+                      <span className="w-2 h-2 bg-pink-400 rounded-full" />
+                      <span>Location Change</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

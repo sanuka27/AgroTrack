@@ -142,3 +142,57 @@ export async function uploadMultipleImages(
 
   return Promise.all(uploadPromises);
 }
+
+/**
+ * Upload an image to Firebase Storage for a plant and return the image metadata
+ */
+export async function uploadPlantImage(
+  file: File,
+  userId: string,
+  onProgress?: (progress: number) => void
+): Promise<PostImage> {
+  // Compress image
+  const compressedFile = await compressImage(file);
+
+  // Get dimensions
+  const dimensions = await getImageDimensions(compressedFile);
+
+  // Generate unique filename
+  const timestamp = Date.now();
+  const randomId = Math.random().toString(36).substring(2, 9);
+  const extension = compressedFile.name.split('.').pop() || 'jpg';
+  const filename = `${timestamp}_${randomId}.${extension}`;
+
+  // Upload path: plants/{userId}/{filename}
+  const storagePath = `plants/${userId}/${filename}`;
+  const storageRef = ref(storage, storagePath);
+
+  return new Promise((resolve, reject) => {
+    const uploadTask = uploadBytesResumable(storageRef, compressedFile, {
+      contentType: compressedFile.type,
+    });
+
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        onProgress?.(Math.round(progress));
+      },
+      (error) => {
+        reject(error);
+      },
+      async () => {
+        try {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve({
+            url: downloadUrl,
+            width: dimensions.width,
+            height: dimensions.height,
+          });
+        } catch (error) {
+          reject(error);
+        }
+      }
+    );
+  });
+}
