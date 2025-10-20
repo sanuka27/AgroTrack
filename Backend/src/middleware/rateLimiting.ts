@@ -208,7 +208,7 @@ export const createUserBasedLimiter = (config: {
 // Burst rate limiter for high-frequency operations
 export const burstLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 30, // limit each IP to 30 requests per minute
+  max: 300, // limit each IP to 300 requests per minute (increased for local dev)
   message: {
     success: false,
     message: 'Too many requests per minute, please slow down.',
@@ -330,7 +330,7 @@ export const whitelistLimiter = (config: {
 // Global rate limiting middleware for all routes
 export const globalRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 2000, // Global limit per IP
+  max: 10000, // Global limit per IP (increased for local dev)
   message: {
     success: false,
     message: 'Global rate limit exceeded. Please try again later.',

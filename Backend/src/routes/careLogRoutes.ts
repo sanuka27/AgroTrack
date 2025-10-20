@@ -10,7 +10,7 @@ const router = express.Router();
 // Rate limiting for care log operations
 const careLogRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  max: 500, // 500 requests per window (increased for local dev)
   message: {
     error: 'Too many care log requests from this IP, please try again later.'
   }

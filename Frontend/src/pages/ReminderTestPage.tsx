@@ -10,8 +10,11 @@ import { Plant, Category, Sunlight, Health } from '@/types/plant';
 import { CareLog, CareType } from '@/types/care';
 import { ReminderPreferences } from '@/types/reminders';
 import { Bell, Settings, TestTube, Zap, Clock, CheckCircle, Loader2 } from 'lucide-react';
-import mockApi from '@/lib/mockApi';
+import { plantsApi } from '@/lib/api/plants';
+import careLogsApi from '@/lib/api/careLogs';
 import type { Plant as APIPlant, CareLog as APICareLog } from '@/types/api';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 // Helper function to convert API Plant to component Plant
 const convertAPIPlantToPlant = (apiPlant: APIPlant): Plant => {
@@ -41,37 +44,90 @@ const convertAPICareLogToCareLog = (apiLog: APICareLog): CareLog => {
 };
 
 const ReminderTestPage = () => {
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
   const [plants, setPlants] = useState<Plant[]>([]);
   const [careLogs, setCareLogs] = useState<CareLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [careLogsUnavailable, setCareLogsUnavailable] = useState(false); // Track if care-logs API is unavailable
 
-  // Fetch plants and care logs from mock API
+  // Fetch plants and care logs from real API with retry/backoff for rate limits
   useEffect(() => {
+    const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+    const MAX_RETRIES = 3;
+
+    const fetchWithRetry = async <T,>(fn: () => Promise<T>, attempt = 0): Promise<T> => {
+      try {
+        return await fn();
+      } catch (err: any) {
+        const status = err?.response?.status;
+        if (status === 429 && attempt < MAX_RETRIES) {
+          const wait = 700 * Math.pow(2, attempt);
+          console.warn(`Rate limited (429). Retrying in ${wait}ms... attempt ${attempt + 1}`);
+          await sleep(wait);
+          return fetchWithRetry(fn, attempt + 1);
+        }
+        throw err;
+      }
+    };
+
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [plantsResponse, careLogsData] = await Promise.all([
-          mockApi.plants.getAll(),
-          mockApi.careLogs.getAll()
-        ]);
-        
-        // Convert API data to component data types
-        const convertedPlants = plantsResponse.plants.map(convertAPIPlantToPlant);
-        const convertedCareLogs = careLogsData.map(convertAPICareLogToCareLog);
-        
+        setError(null);
+        setCareLogsUnavailable(false);
+
+        // Fetch plants with retry
+        const plantsResp = await fetchWithRetry(() => plantsApi.getPlants({ limit: 100 }));
+        const convertedPlants = (plantsResp || []).map((p: any) => convertAPIPlantToPlant(p as APIPlant));
         setPlants(convertedPlants);
-        setCareLogs(convertedCareLogs);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load data');
+
+        // Fetch care logs best-effort (don't fail page if unavailable)
+        try {
+          const careLogsResp = await careLogsApi.getRecentCareLogs(50);
+          const convertedCareLogs = (careLogsResp || []).map((l: any) => convertAPICareLogToCareLog(l as APICareLog));
+          setCareLogs(convertedCareLogs);
+        } catch (err: any) {
+          const status = err?.response?.status;
+          if (status === 401) {
+            // If unauthorized specifically for care-logs but plants succeeded, treat as unavailable
+            setCareLogs([]);
+            setCareLogsUnavailable(true);
+          } else if (status === 404 || status === 501) {
+            // Endpoint missing/not implemented
+            setCareLogs([]);
+            setCareLogsUnavailable(true);
+          } else if (status === 429) {
+            // Rate limited on care logs; degrade gracefully
+            setCareLogs([]);
+          } else {
+            console.warn('Care logs fetch failed:', err?.message || err);
+            setCareLogs([]);
+          }
+        }
+      } catch (err: any) {
+        const status = err?.response?.status;
+        if (status === 429) {
+          setError('Rate limited by the API (429). Please retry in a moment.');
+        } else if (status === 401) {
+          setError('Not authenticated. Please log in to view your real data.');
+        } else {
+          setError(err instanceof Error ? err.message : 'Failed to load data');
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, []);
+    // Only attempt to fetch when authenticated; otherwise show login prompt
+    if (isAuthenticated) {
+      fetchData();
+    } else {
+      setLoading(false);
+    }
+  }, [isAuthenticated, user]);
 
   const handleSaveSettings = (preferences: ReminderPreferences) => {
     console.log('Saving reminder preferences:', preferences);
@@ -111,8 +167,44 @@ const ReminderTestPage = () => {
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">Error: {error}</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+          <div className="flex items-center justify-center gap-3">
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+            {!isAuthenticated && (
+              <Button
+                variant="outline"
+                onClick={() => navigate('/login')}
+              >
+                Go to Login
+              </Button>
+            )}
+          </div>
         </div>
+      </div>
+    );
+  }
+
+  // Unauthenticated state: Encourage login for real data (no mock fallback)
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+        <Header />
+        <main className="container mx-auto px-4 py-20">
+          <Card className="max-w-xl mx-auto">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="w-5 h-5 text-blue-600" />
+                Smart Reminder System
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-center">
+              <p className="text-gray-700">
+                Please log in to view your plants and personalized reminders.
+              </p>
+              <Button onClick={() => navigate('/login')}>Go to Login</Button>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
       </div>
     );
   }
@@ -122,6 +214,22 @@ const ReminderTestPage = () => {
       <Header />
 
       <main className="container mx-auto px-4 py-8">
+        {/* Data source indicator */}
+        {user && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-green-800">
+              ✅ Using <strong>real data</strong> from your account.
+            </p>
+          </div>
+        )}
+        {careLogsUnavailable && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800">
+              Care logs service is unavailable right now. Showing reminders based on plant schedules only.
+            </p>
+          </div>
+        )}
+
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
