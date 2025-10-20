@@ -15,11 +15,11 @@
  */
 
 import api, { getErrorMessage } from '../api';
-import type { Plant } from '@/types/plant';
+import type { Plant as ApiPlant } from '@/types/api';
 
 // Plant list response
 interface PlantsListResponse {
-  plants: Plant[];
+  plants: ApiPlant[];
   total: number;
   page: number;
   limit: number;
@@ -27,7 +27,7 @@ interface PlantsListResponse {
 
 // Single plant response
 interface PlantResponse {
-  plant: Plant;
+  plant: ApiPlant;
 }
 
 // Plant statistics response
@@ -61,7 +61,7 @@ export const plantsApi = {
     limit?: number;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
-  }): Promise<Plant[]> {
+  }): Promise<ApiPlant[]> {
     try {
       const response = await api.get<any>('/plants', { params });
       // Backend returns: { success, data: { plants, total, page, limit } }
@@ -78,7 +78,7 @@ export const plantsApi = {
    * @param id - Plant ID
    * @returns Promise with plant data
    */
-  async getPlantById(id: string): Promise<Plant> {
+  async getPlantById(id: string): Promise<ApiPlant> {
     try {
       const response = await api.get<any>(`/plants/${id}`);
       // Backend returns: { success, data: { plant } }
@@ -111,7 +111,7 @@ export const plantsApi = {
    * const newPlant = await plantsApi.createPlant(formData);
    * ```
    */
-  async createPlant(plantData: FormData | Partial<Plant>): Promise<Plant> {
+  async createPlant(plantData: FormData | Partial<ApiPlant>): Promise<ApiPlant> {
     try {
       const headers = plantData instanceof FormData 
         ? { 'Content-Type': 'multipart/form-data' }
@@ -124,7 +124,7 @@ export const plantsApi = {
       );
 
       // Backend returns: { success, message, data: { plant } }
-      const plant = response.data.data?.plant || response.data.plant;
+  const plant: ApiPlant = response.data.data?.plant || response.data.plant;
       
       if (!plant) {
         throw new Error('Failed to create plant');
@@ -144,7 +144,7 @@ export const plantsApi = {
    * @param plantData - Updated plant data
    * @returns Promise with updated plant
    */
-  async updatePlant(id: string, plantData: FormData | Partial<Plant>): Promise<Plant> {
+  async updatePlant(id: string, plantData: FormData | Partial<ApiPlant>): Promise<ApiPlant> {
     try {
       const headers = plantData instanceof FormData 
         ? { 'Content-Type': 'multipart/form-data' }
@@ -157,7 +157,7 @@ export const plantsApi = {
       );
 
       // Backend returns: { success, message, data: { plant } }
-      const plant = response.data.data?.plant || response.data.plant;
+  const plant: ApiPlant = response.data.data?.plant || response.data.plant;
       
       if (!plant) {
         throw new Error('Failed to update plant');
@@ -192,7 +192,7 @@ export const plantsApi = {
    * @param image - Image file
    * @returns Promise with updated plant
    */
-  async uploadImage(id: string, image: File): Promise<Plant> {
+  async uploadImage(id: string, image: File): Promise<ApiPlant> {
     try {
       const formData = new FormData();
       formData.append('image', image);
@@ -204,7 +204,7 @@ export const plantsApi = {
       );
 
       // Backend returns: { success, data: { plant } }
-      const plant = response.data.data?.plant || response.data.plant;
+  const plant: ApiPlant = response.data.data?.plant || response.data.plant;
       
       if (!plant) {
         throw new Error('Failed to upload image');
@@ -224,7 +224,7 @@ export const plantsApi = {
    * @param imageUrl - Image URL to delete
    * @returns Promise with updated plant
    */
-  async deleteImage(id: string, imageUrl: string): Promise<Plant> {
+  async deleteImage(id: string, imageUrl: string): Promise<ApiPlant> {
     try {
       const response = await api.delete<any>(
         `/plants/${id}/images`,
@@ -232,7 +232,7 @@ export const plantsApi = {
       );
 
       // Backend returns: { success, data: { plant } }
-      const plant = response.data.data?.plant || response.data.plant;
+  const plant: ApiPlant = response.data.data?.plant || response.data.plant;
       
       if (!plant) {
         throw new Error('Failed to delete image');
@@ -251,7 +251,7 @@ export const plantsApi = {
    * @param query - Search query
    * @returns Promise with matching plants
    */
-  async searchPlants(query: string): Promise<Plant[]> {
+  async searchPlants(query: string): Promise<ApiPlant[]> {
     try {
       const response = await api.get<PlantsListResponse>('/plants/search', {
         params: { q: query }
