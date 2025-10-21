@@ -42,6 +42,8 @@ const COLLECTIONS_TO_KEEP = [
   'votes',
   'reports',
   'comments_backup', // Keep backup for safety
+  'ai_recommendations',
+  'reminders',
 ];
 
 const FORCE_DELETE_PATTERNS = [
@@ -52,6 +54,8 @@ const FORCE_DELETE_PATTERNS = [
 const EMPTY_COLLECTIONS_TO_REMOVE = [
   'comments',
   'communityreports',
+  'communityposts',
+  'communityvotes',
   'dashboardanalytics',
   'useranalytics',
   'plantcareanalytics',
@@ -64,6 +68,7 @@ const EMPTY_COLLECTIONS_TO_REMOVE = [
   'contactmessages',
   'systemmetrics',
   'chatmessages',
+  'ai_suggestions',
 ];
 
 // ═══════════════════════════════════════════════════════════════
