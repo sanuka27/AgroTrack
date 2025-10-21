@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { body, query, param, validationResult } from 'express-validator';
 import mongoose from 'mongoose';
 import { NotificationPreference } from '../models/NotificationPreference';
+import { Notification } from '../models/Notification';
 import { logger } from '../config/logger';
 
 // Interfaces for request types
@@ -15,9 +16,28 @@ type NotificationData = object;
 class NotificationService {}
 
 // Create notification
-export const createNotification = async (_req: AuthenticatedRequest, res: Response) => {
-  return res.status(501).json({ success: false, message: 'Notifications are not available in this deployment.' });
+export const createNotification = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+    const { type, title, message, data } = req.body as any;
+    const notif = await Notification.create({ userId, type, title, message, data });
+    return res.status(201).json({ success: true, data: { notification: notif } });
+  } catch (error) {
+    logger.error('Error creating notification:', error);
+    return res.status(500).json({ success: false, message: 'Failed to create notification' });
+  }
 };
+
+// Helper to create notifications programmatically
+export async function createNotificationNow(payload: { userId: mongoose.Types.ObjectId; type: string; title: string; message: string; data?: any }) {
+  try {
+    const n = await Notification.create({ userId: payload.userId, type: payload.type as any, title: payload.title, message: payload.message, data: payload.data });
+    return n;
+  } catch (err) {
+    logger.error('Failed to persist notification:', err);
+    return null;
+  }
+}
 
 // Create AI-generated notification
 export const createAINotification = async (_req: AuthenticatedRequest, res: Response) => {
@@ -25,24 +45,30 @@ export const createAINotification = async (_req: AuthenticatedRequest, res: Resp
 };
 
 // Get user notifications
-export const getUserNotifications = async (_req: AuthenticatedRequest, res: Response) => {
-  return res.status(501).json({ success: false, message: 'Notifications are not available in this deployment.' });
+export const getUserNotifications = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+    const page = Number((req.query.page as string) || 1);
+    const limit = Math.min(Number((req.query.limit as string) || 20), 50);
+    const skip = (page - 1) * limit;
+
+    const filter: any = { userId };
+    if (req.query.type) filter.type = req.query.type;
+    if (req.query.status === 'read') filter.isRead = true;
+    if (req.query.status === 'unread') filter.isRead = false;
+
+    const [items, total] = await Promise.all([
+      Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Notification.countDocuments(filter),
+    ]);
+
+    return res.json({ success: true, data: { notifications: items, total } });
+  } catch (error) {
+    logger.error('Error fetching notifications:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch notifications' });
+  }
 };
 
-// Mark notification as read
-export const markNotificationAsRead = async (_req: AuthenticatedRequest, res: Response) => {
-  return res.status(501).json({ success: false, message: 'Notifications are not available in this deployment.' });
-};
-
-// Mark all notifications as read
-export const markAllNotificationsAsRead = async (_req: AuthenticatedRequest, res: Response) => {
-  return res.status(501).json({ success: false, message: 'Notifications are not available in this deployment.' });
-};
-
-// Delete notification
-export const deleteNotification = async (_req: AuthenticatedRequest, res: Response) => {
-  return res.status(501).json({ success: false, message: 'Notifications are not available in this deployment.' });
-};
 
 // Get notification preferences
 export const getNotificationPreferences = async (req: AuthenticatedRequest, res: Response) => {
@@ -179,6 +205,51 @@ export const processScheduledNotifications = async () => { logger.info('Notifica
 
 // Helper function to send notification immediately
 async function sendNotificationNow(_notification: any): Promise<void> { /* no-op */ }
+
+// Mark a single notification as read
+export const markNotificationAsRead = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+    const { notificationId } = req.params as any;
+    const updated = await Notification.findOneAndUpdate(
+      { _id: notificationId, userId },
+      { $set: { isRead: true } },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ success: false, message: 'Notification not found' });
+    return res.json({ success: true, data: { notification: updated } });
+  } catch (error) {
+    logger.error('Error marking notification as read:', error);
+    return res.status(500).json({ success: false, message: 'Failed to mark notification as read' });
+  }
+};
+
+// Mark all notifications as read for the user
+export const markAllNotificationsAsRead = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+  const result: any = await Notification.updateMany({ userId, isRead: false }, { $set: { isRead: true } });
+  const modified = result?.modifiedCount ?? result?.nModified ?? 0;
+  return res.json({ success: true, data: { modifiedCount: modified } });
+  } catch (error) {
+    logger.error('Error marking all notifications as read:', error);
+    return res.status(500).json({ success: false, message: 'Failed to mark all notifications as read' });
+  }
+};
+
+// Delete a notification
+export const deleteNotification = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+    const { notificationId } = req.params as any;
+    const result = await Notification.deleteOne({ _id: notificationId, userId });
+    if (result.deletedCount === 0) return res.status(404).json({ success: false, message: 'Notification not found' });
+    return res.json({ success: true, message: 'Notification deleted' });
+  } catch (error) {
+    logger.error('Error deleting notification:', error);
+    return res.status(500).json({ success: false, message: 'Failed to delete notification' });
+  }
+};
 
 // Validation rules
 export const createNotificationValidation = [
