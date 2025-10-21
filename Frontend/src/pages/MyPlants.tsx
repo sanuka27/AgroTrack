@@ -849,8 +849,8 @@ const MyPlants = () => {
                           </div>
                           <div>
                             <p className="font-medium text-blue-800">{rem.title}</p>
-                            <p className="text-sm text-blue-600">{rem.description || rem.reminderType}</p>
-                            <p className="text-xs text-gray-500">Due: {new Date(rem.nextDueDate).toLocaleString()}</p>
+                            <p className="text-sm text-blue-600">{rem.notes || 'Reminder'}</p>
+                            <p className="text-xs text-gray-500">Due: {new Date(rem.dueAt).toLocaleString()}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -882,8 +882,8 @@ const MyPlants = () => {
                           <Sun className="w-4 h-4 text-yellow-500" />
                           <div>
                             <p className="font-medium text-yellow-800">{rem.title}</p>
-                            <p className="text-sm text-yellow-600">{rem.description || rem.reminderType}</p>
-                            <p className="text-xs text-gray-500">Overdue since: {new Date(rem.nextDueDate).toLocaleString()}</p>
+                            <p className="text-sm text-yellow-600">{rem.notes || 'Reminder'}</p>
+                            <p className="text-xs text-gray-500">Overdue since: {new Date(rem.dueAt).toLocaleString()}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
