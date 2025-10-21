@@ -21,19 +21,12 @@ import api, { getErrorMessage } from '../api';
 export interface Reminder {
   _id: string;
   userId: string;
-  plantId: string;
   title: string;
-  description?: string;
-  reminderType: 'watering' | 'fertilizing' | 'pruning' | 'repotting' | 'pest_control' | 'custom';
-  frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
-  customFrequencyDays?: number;
-  nextDueDate: string;
-  lastCompletedDate?: string;
-  status: 'pending' | 'completed' | 'snoozed' | 'cancelled';
-  priority: 'low' | 'medium' | 'high';
-  isRecurring: boolean;
-  notificationChannels?: Array<'push' | 'email' | 'sms'>;
-  completedCount?: number;
+  dueAt: string;
+  notes?: string;
+  plantId?: string | null;
+  completed: boolean;
+  completedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,16 +60,16 @@ export const remindersApi = {
    */
   async getReminders(filters?: {
     plantId?: string;
-    status?: string;
-    reminderType?: string;
-    upcoming?: boolean; // Get only upcoming reminders
+    status?: 'pending' | 'completed';
+    upcoming?: boolean;
+    overdue?: boolean;
   }): Promise<Reminder[]> {
     try {
       const params = new URLSearchParams();
       if (filters?.plantId) params.append('plantId', filters.plantId);
       if (filters?.status) params.append('status', filters.status);
-      if (filters?.reminderType) params.append('reminderType', filters.reminderType);
       if (filters?.upcoming) params.append('upcoming', 'true');
+  if (filters?.overdue) params.append('overdue', 'true');
 
       const response = await api.get<RemindersListResponse>(`/reminders?${params.toString()}`);
       return response.data.data.reminders;
@@ -113,16 +106,10 @@ export const remindersApi = {
    * @returns Promise with created reminder
    */
   async createReminder(reminderData: {
-    plantId: string;
     title: string;
-    description?: string;
-    reminderType: 'watering' | 'fertilizing' | 'pruning' | 'repotting' | 'pest_control' | 'custom';
-    frequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
-    customFrequencyDays?: number;
-    nextDueDate: string;
-    priority?: 'low' | 'medium' | 'high';
-    isRecurring?: boolean;
-    notificationChannels?: Array<'push' | 'email' | 'sms'>;
+    dueAt: string;
+    notes?: string;
+    plantId?: string;
   }): Promise<Reminder> {
     try {
       const response = await api.post<ReminderResponse>('/reminders', reminderData);
@@ -144,17 +131,7 @@ export const remindersApi = {
    */
   async updateReminder(
     id: string,
-    reminderData: Partial<{
-      title: string;
-      description: string;
-      reminderType: string;
-      frequency: string;
-      customFrequencyDays: number;
-      nextDueDate: string;
-      priority: string;
-      isRecurring: boolean;
-      notificationChannels: Array<'push' | 'email' | 'sms'>;
-    }>
+    reminderData: Partial<{ title: string; dueAt: string; notes: string; plantId: string }>
   ): Promise<Reminder> {
     try {
       const response = await api.put<ReminderResponse>(`/reminders/${id}`, reminderData);
@@ -191,9 +168,9 @@ export const remindersApi = {
    * @param notes - Optional completion notes
    * @returns Promise with updated reminder
    */
-  async completeReminder(id: string, notes?: string): Promise<Reminder> {
+  async completeReminder(id: string, _notes?: string): Promise<Reminder> {
     try {
-      const response = await api.post<ReminderResponse>(`/reminders/${id}/complete`, { notes });
+      const response = await api.post<ReminderResponse>(`/reminders/${id}/complete`, { notes: _notes });
       return response.data.data.reminder;
     } catch (error) {
       console.error('Error completing reminder:', getErrorMessage(error));
@@ -212,7 +189,9 @@ export const remindersApi = {
    */
   async snoozeReminder(id: string, snoozeUntil: string): Promise<Reminder> {
     try {
-      const response = await api.post<ReminderResponse>(`/reminders/${id}/snooze`, { snoozeUntil });
+      // backend expects hours; compute hours between now and snoozeUntil
+      const hours = Math.max(1, Math.round((new Date(snoozeUntil).getTime() - Date.now()) / (60 * 60 * 1000)));
+      const response = await api.post<ReminderResponse>(`/reminders/${id}/snooze`, { hours });
       return response.data.data.reminder;
     } catch (error) {
       console.error('Error snoozing reminder:', getErrorMessage(error));
