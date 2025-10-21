@@ -66,6 +66,34 @@ const detectDiseaseValidation = [
     .isMongoId()
     .withMessage('Plant ID must be a valid MongoDB ObjectId'),
   
+  body('plantName')
+    .optional()
+    .isString()
+    .isLength({ min: 1, max: 120 })
+    .withMessage('Plant name must be a string up to 120 chars')
+    .trim(),
+  
+  body('imageStoragePath')
+    .optional()
+    .isString()
+    .isLength({ min: 1, max: 255 })
+    .withMessage('Image storage path must be a string up to 255 chars')
+    .trim(),
+  
+  body('description')
+    .optional()
+    .isString()
+    .isLength({ min: 3, max: 1000 })
+    .withMessage('Description must be 3-1000 characters')
+    .trim(),
+  
+  body('selectedSymptoms')
+    .optional()
+    .isArray({ max: 20 })
+    .withMessage('selectedSymptoms must be an array')
+    .custom((arr) => Array.isArray(arr) && arr.every((s: any) => typeof s === 'string' && s.length > 0 && s.length <= 120))
+    .withMessage('Each symptom must be a non-empty string up to 120 characters'),
+  
   body('originalFileName')
     .optional()
     .isLength({ min: 1, max: 255 })
@@ -142,17 +170,14 @@ const submitFeedbackValidation = [
     .withMessage('Helpful field is required')
     .isBoolean()
     .withMessage('Helpful must be a boolean'),
-  
   body('accuracyRating')
     .optional()
     .isInt({ min: 1, max: 5 })
     .withMessage('Accuracy rating must be between 1 and 5'),
-  
   body('treatmentEffective')
     .optional()
     .isBoolean()
     .withMessage('Treatment effective must be a boolean'),
-  
   body('additionalNotes')
     .optional()
     .isLength({ max: 1000 })

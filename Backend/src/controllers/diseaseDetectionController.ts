@@ -5,6 +5,7 @@ import { UserAnalytics } from '../models/UserAnalytics';
 import mongoose from 'mongoose';
 import { logger } from '../config/logger';
 import { validateAgriculturalImage } from '../ai/gemini';
+import { AIRecommendation } from '../models/AIRecommendation';
 
 // Define interfaces for disease detection data structures
 interface DiseaseDetection {
@@ -211,9 +212,10 @@ export class DiseaseDetectionController {
         ? new mongoose.Types.ObjectId('507f1f77bcf86cd799439011') // Guest user ID
         : new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
-      const { imageUrl, plantId, originalFileName } = req.body;
+  const { imageUrl, plantId, originalFileName, plantName: plantNameBody, imageStoragePath, description, selectedSymptoms } = req.body;
 
       // For guest users, skip plant validation (they don't have plants)
+  let plantName: string | null = plantNameBody || null;
       if (!isGuest && plantId) {
         const plant = await Plant.findOne({ _id: plantId, userId });
         if (!plant) {
@@ -223,6 +225,7 @@ export class DiseaseDetectionController {
           });
           return;
         }
+        plantName = plant.name;
       }
 
       // Validate that the image contains agricultural/plant content
@@ -284,7 +287,10 @@ export class DiseaseDetectionController {
       const processingStartTime = Date.now();
       
       // Mock AI analysis - in production, this would be replaced with actual AI/ML service
-      const aiResults = await this.simulateAIDetection(imageUrl);
+      const aiResults = await DiseaseDetectionController.simulateAIDetection(
+        imageUrl,
+        { description: req.body?.description, selectedSymptoms: req.body?.selectedSymptoms }
+      );
       
       const processingTime = Date.now() - processingStartTime;
 
@@ -296,7 +302,7 @@ export class DiseaseDetectionController {
 
       // Generate treatment recommendations based on detection
       if (aiResults.diseaseDetected && aiResults.primaryDisease) {
-        const recommendations = await this.generateTreatmentRecommendations(
+        const recommendations = await DiseaseDetectionController.generateTreatmentRecommendations(
           aiResults.primaryDisease.name,
           aiResults.primaryDisease.severity,
           plantId
@@ -306,7 +312,7 @@ export class DiseaseDetectionController {
 
       // Update plant information
       if (aiResults.diseaseDetected && aiResults.primaryDisease) {
-        detection.plantInformation = await this.analyzePlantCondition(
+        detection.plantInformation = await DiseaseDetectionController.analyzePlantCondition(
           aiResults.primaryDisease.name,
           aiResults.primaryDisease.severity
         );
@@ -330,6 +336,27 @@ export class DiseaseDetectionController {
         },
         { upsert: true }
       );
+
+      // Persist AI analysis recommendation record for later review
+      try {
+        const rec = new AIRecommendation({
+          userId: isGuest ? null : new mongoose.Types.ObjectId(userId),
+          plantId: plantId ? new mongoose.Types.ObjectId(plantId) : null,
+          plantName,
+          imageUrl,
+          imageStoragePath: imageStoragePath || null,
+          originalFileName: originalFileName || 'uploaded_image.jpg',
+          description: description || null,
+          selectedSymptoms: Array.isArray(selectedSymptoms) ? selectedSymptoms : undefined,
+          detectionResults: detection.detectionResults,
+          recommendations: detection.treatmentRecommendations,
+          plantInformation: detection.plantInformation,
+          status: detection.status
+        });
+        await rec.save();
+      } catch (persistErr) {
+        logger.warn('Failed to persist AI recommendation record:', persistErr);
+      }
 
       logger.info(`Disease detection completed: ${detection._id} for user ${userId}`);
 
@@ -808,7 +835,7 @@ export class DiseaseDetectionController {
   /**
    * Simulate AI disease detection (mock implementation)
    */
-  private static async simulateAIDetection(imageUrl: string): Promise<any> {
+  private static async simulateAIDetection(imageUrl: string, context?: { description?: string; selectedSymptoms?: string[] }): Promise<any> {
     // Simulate processing delay
     await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -841,7 +868,12 @@ export class DiseaseDetectionController {
       }
     ];
 
-    // Return random result for demo
+    // Simple heuristic: if user mentions powdery/white spots, bias toward mildew
+    const text = `${context?.description || ''} ${(context?.selectedSymptoms || []).join(' ')}`.toLowerCase();
+    if (/powdery|white\s+spots|mildew/.test(text)) {
+      return mockResults[0];
+    }
+    // Otherwise random for demo
     return Math.random() > 0.3 ? mockResults[0] : mockResults[1];
   }
 
