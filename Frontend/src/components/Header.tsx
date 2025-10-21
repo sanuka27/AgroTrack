@@ -20,10 +20,10 @@ export function Header() {
     { label: "Community", href: "/community", icon: MessageSquare, permission: null },
   ];
 
-  // User-specific navigation items
+  // User-specific navigation items (Dashboard handled separately for placement)
+  // Note: We intentionally exclude "My Plants" here to avoid a duplicate with the Dashboard link,
+  // which points to the same route and is shown in a primary position when authenticated.
   const userNavItems = [
-  { label: "Dashboard", href: "/plants", icon: Leaf, permission: "view_plants" },
-    { label: "My Plants", href: "/plants", icon: Leaf, permission: "view_plants" },
     { label: "AI Assistant", href: "/assistant", icon: Bot, permission: "view_assistant" },
     { label: "Analytics", href: "/analytics", icon: BarChart3, permission: "view_analytics" },
   ];
@@ -36,7 +36,12 @@ export function Header() {
   // Filter navigation items based on permissions
   const getVisibleNavItems = () => {
     const items = [...baseNavItems];
-    
+
+    // If authenticated, insert a Dashboard link before Features regardless of specific permissions
+    if (user) {
+      items.unshift({ label: "Dashboard", href: "/plants", icon: Leaf } as any);
+    }
+
     userNavItems.forEach(item => {
       if (!item.permission || hasPermission(item.permission)) {
         items.push(item);
