@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,8 +9,11 @@ import { GeminiLogo } from "@/components/ui/gemini-logo";
 import { useAuth } from "@/hooks/useAuth";
 import { Camera, Image as ImageIcon, Send, Sparkles, Bot, Loader2, Leaf, AlertTriangle, Lock, Users, TrendingUp, X } from "lucide-react";
 import api, { analyzePlant } from "@/lib/api";
+import plantsApi from "@/lib/api/plants";
 import { PlantAnalysis } from "@/types/plant";
 import PlantAnalysisCard from "./PlantAnalysisCard";
+import { Label } from "./ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 interface AnalysisResult extends PlantAnalysis {
   error?: string;
@@ -26,6 +29,20 @@ export function AIAssistant() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [plantId, setPlantId] = useState<string>("");
+  const [plantName, setPlantName] = useState<string>("");
+  const [plants, setPlants] = useState<Array<{ id: string; name: string }>>([]);
+  const commonSymptoms = [
+    'Yellowing leaves',
+    'Brown spots',
+    'Wilting',
+    'Powdery white coating',
+    'Black mold',
+    'Leaf curling',
+    'Holes in leaves',
+    'Stunted growth',
+  ];
+  const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +51,23 @@ export function AIAssistant() {
   });
 
   const GUEST_USAGE_LIMIT = 2;
+
+  // Load user's plants for selection
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await plantsApi.getPlants({ limit: 100 });
+        if (cancelled) return;
+        const mapped = list.map((p: any) => ({ id: p._id || p.id, name: p.name || 'Unnamed plant' })).filter((p: any) => p.id);
+        setPlants(mapped);
+      } catch (e) {
+        // Silently ignore in guest mode or if not authenticated
+        setPlants([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
 
   const handleFile = (f: File | null) => {
     setFile(f);
@@ -91,8 +125,12 @@ export function AIAssistant() {
       if (file) {
         const formData = new FormData();
         formData.append('photo', file);
-        if (prompt.trim()) {
-          formData.append('description', prompt);
+        if (prompt.trim()) formData.append('description', prompt);
+        if (selectedSymptoms.length) selectedSymptoms.forEach(s => formData.append('selectedSymptoms', s));
+        // Pass along selected plant context if available
+        if (plantId) {
+          formData.append('plantId', plantId);
+          formData.append('plantName', plantName || (plants.find(p => p.id === plantId)?.name || ''));
         }
 
         const analysis: PlantAnalysis = await analyzePlant(formData);
@@ -212,6 +250,30 @@ export function AIAssistant() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Plant Selector (optional) */}
+              {user && plants.length > 0 && (
+                <div className="grid gap-2">
+                  <Label htmlFor="plant-select">Select your plant (optional)</Label>
+                  <Select
+                    value={plantId}
+                    onValueChange={(val) => {
+                      setPlantId(val);
+                      const found = plants.find(p => p.id === val);
+                      setPlantName(found?.name || "");
+                    }}
+                  >
+                    <SelectTrigger id="plant-select" className="w-full">
+                      <SelectValue placeholder="Choose a plant to analyze" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plants.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* File Upload */}
               <div className="border-2 border-dashed border-border rounded-lg p-6 hover:border-primary/50 transition-colors">
                 <div className="text-center">
@@ -236,6 +298,26 @@ export function AIAssistant() {
                     />
                   </div>
                 )}
+              </div>
+
+              {/* Predefined Symptoms */}
+              <div className="space-y-2">
+                <Label className="block text-sm font-medium text-foreground">Common symptoms (optional)</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {commonSymptoms.map(sym => (
+                    <label key={sym} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={selectedSymptoms.includes(sym)}
+                        onChange={(e) => {
+                          setSelectedSymptoms(prev => e.target.checked ? [...prev, sym] : prev.filter(s => s !== sym));
+                        }}
+                      />
+                      <span>{sym}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               {/* Text Description */}

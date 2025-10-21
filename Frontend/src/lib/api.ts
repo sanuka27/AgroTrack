@@ -150,15 +150,73 @@ export const clearAuth = () => {
  * Analyze plant health from image and/or description
  */
 export const analyzePlant = async (formData: FormData) => {
-  const response = await fetch(`${API_BASE_URL}/ai/plant/analyze`, {
+  // Step 1: upload to disease-detection (stores in Firebase, returns public URL + storage path)
+  const uploadResp = await fetch(`${API_BASE_URL}/disease-detection/upload`, {
     method: 'POST',
-    body: formData,
+    body: (() => {
+      const fd = new FormData();
+      // Map incoming keys: expects 'photo' from UI; backend expects 'image'
+      const photo = formData.get('photo');
+      if (photo) fd.append('image', photo as Blob);
+      return fd;
+    })(),
+    credentials: 'include',
   });
-  const json = await response.json();
-  if (!json.success) {
-    throw new Error(json.message || 'Analysis failed');
+  const uploadJson = await uploadResp.json();
+  if (!uploadJson.success) {
+    throw new Error(uploadJson.message || 'Image upload failed');
   }
-  return json.data;
+  const { imageUrl, filename } = uploadJson.data || {};
+  if (!imageUrl) throw new Error('Upload did not return imageUrl');
+
+  // Step 2: detect disease with selected plant context
+  const detectBody: any = {
+    imageUrl,
+    originalFileName: formData.get('description') ? 'uploaded_image.jpg' : (formData.get('photo') as any)?.name || 'uploaded_image.jpg',
+  };
+  const pid = formData.get('plantId');
+  const pname = formData.get('plantName');
+  if (pid) detectBody.plantId = pid;
+  if (pname) detectBody.plantName = pname;
+  if (formData.get('description')) detectBody.description = formData.get('description');
+
+  const detectResp = await fetch(`${API_BASE_URL}/disease-detection/detect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(detectBody),
+    credentials: 'include',
+  });
+  const detectJson = await detectResp.json();
+  if (!detectJson.success) {
+    throw new Error(detectJson.message || 'Detection failed');
+  }
+  // Map disease-detection controller output to expected PlantAnalysis
+  const det = detectJson.data?.detection;
+  if (det?.detectionResults) {
+    const r = det.detectionResults;
+    const result = {
+      likelyDiseases: [] as { name: string; confidence: 'low'|'medium'|'high'; why: string }[],
+      urgency: 'low' as 'low'|'medium'|'high',
+      careSteps: [] as string[],
+      prevention: [] as string[],
+    };
+    if (r.diseaseDetected && r.primaryDisease) {
+      result.likelyDiseases = [
+        { name: r.primaryDisease.name, confidence: (r.confidence>0.66?'high':r.confidence>0.33?'medium':'low'), why: r.primaryDisease.category || 'Detected by AI' }
+      ];
+      result.urgency = (det.treatmentRecommendations?.followUpRequired ? (r.primaryDisease.severity==='severe'||r.primaryDisease.severity==='critical'?'high':'medium') : 'low');
+    }
+    if (det.treatmentRecommendations) {
+      result.careSteps = [
+        ...det.treatmentRecommendations.immediateActions || [],
+        ...((det.treatmentRecommendations.treatments||[]).map((t:any)=>`${t.type}: ${t.name}${t.applicationMethod?` (${t.applicationMethod})`:''}`))
+      ];
+      result.prevention = det.treatmentRecommendations.preventionMeasures || [];
+    }
+    return result;
+  }
+  // Fallback to AI chat format if not present
+  return detectJson.data;
 };
 
 export default api;
