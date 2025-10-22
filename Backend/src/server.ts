@@ -8,6 +8,7 @@ import passport from 'passport';
 import session from 'express-session';
 import path from 'path';
 import fs from 'fs';
+import * as admin from 'firebase-admin';
 
 // Load environment variables FIRST
 const envPath = path.resolve(__dirname, '../.env');
@@ -146,6 +147,44 @@ app.use('/api/realtime', realtimeRoutes);
 if (process.env.NODE_ENV === 'development') {
   app.use('/api/dev', devAuthRoutes);
 }
+
+// FCM Token storage endpoint
+app.post('/api/store-token', async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ error: 'Token is required' });
+    }
+    // Store token in database (e.g., update user document)
+    // Example: await User.findOneAndUpdate({ userId: req.user.id }, { fcmToken: token });
+    // For now, just log it
+    console.log('FCM Token stored:', token);
+    res.status(200).json({ message: 'Token stored successfully' });
+  } catch (error) {
+    console.error('Error storing token:', error);
+    res.status(500).json({ error: 'Failed to store token' });
+  }
+});
+
+// Function to send notification
+const sendNotification = async (token: string, title: string, body: string) => {
+  const message = {
+    token: token,
+    notification: {
+      title: title,
+      body: body,
+    },
+  };
+
+  try {
+    const response = await admin.messaging().send(message);
+    console.log('Notification sent:', response);
+    return response;
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    throw error;
+  }
+};
 
 // Serve uploaded files (now using Firebase Storage instead of local files)
 // app.use('/uploads', express.static('uploads'));
