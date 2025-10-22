@@ -7,13 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plant, Category, Sunlight, Health } from '@/types/plant';
-import { CareLog, CareType } from '@/types/care';
 import { ReminderPreferences } from '@/types/reminders';
-import { Bell, Settings, TestTube, CheckCircle, Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Bell, Settings, TestTube, CheckCircle, Loader2, RefreshCw } from 'lucide-react';
 import Notifications from '../components/Notifications';
 import { plantsApi } from '@/lib/api/plants';
-import careLogsApi from '@/lib/api/careLogs';
-import type { Plant as APIPlant, CareLog as APICareLog } from '@/types/api';
+import type { Plant as APIPlant } from '@/types/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
@@ -32,27 +30,13 @@ const convertAPIPlantToPlant = (apiPlant: APIPlant): Plant => {
   };
 };
 
-// Helper function to convert API CareLog to component CareLog
-const convertAPICareLogToCareLog = (apiLog: APICareLog): CareLog => {
-  return {
-    id: apiLog._id,
-    plantId: apiLog.plantId,
-    careType: 'watering' as CareType,
-    date: new Date(apiLog.createdAt).toISOString(),
-    notes: apiLog.notes,
-    createdAt: new Date(apiLog.createdAt).toISOString(),
-  };
-};
-
 const ReminderTestPage = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
   const [plants, setPlants] = useState<Plant[]>([]);
-  const [careLogs, setCareLogs] = useState<CareLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [careLogsUnavailable, setCareLogsUnavailable] = useState(false); // Track if care-logs API is unavailable
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
 
   // Fetch plants and care logs from real API with retry/backoff for rate limits
@@ -79,36 +63,12 @@ const ReminderTestPage = () => {
       try {
         setLoading(true);
         setError(null);
-        setCareLogsUnavailable(false);
 
         // Fetch plants with retry
         const plantsResp = await fetchWithRetry(() => plantsApi.getPlants({ limit: 100 }));
         const convertedPlants = (plantsResp || []).map((p: any) => convertAPIPlantToPlant(p as APIPlant));
         setPlants(convertedPlants);
 
-        // Fetch care logs best-effort (don't fail page if unavailable)
-        try {
-          const careLogsResp = await careLogsApi.getRecentCareLogs(50);
-          const convertedCareLogs = (careLogsResp || []).map((l: any) => convertAPICareLogToCareLog(l as APICareLog));
-          setCareLogs(convertedCareLogs);
-        } catch (err: any) {
-          const status = err?.response?.status;
-          if (status === 401) {
-            // If unauthorized specifically for care-logs but plants succeeded, treat as unavailable
-            setCareLogs([]);
-            setCareLogsUnavailable(true);
-          } else if (status === 404 || status === 501) {
-            // Endpoint missing/not implemented
-            setCareLogs([]);
-            setCareLogsUnavailable(true);
-          } else if (status === 429) {
-            // Rate limited on care logs; degrade gracefully
-            setCareLogs([]);
-          } else {
-            console.warn('Care logs fetch failed:', err?.message || err);
-            setCareLogs([]);
-          }
-        }
         setLastRefreshedAt(new Date());
       } catch (err: any) {
         const status = err?.response?.status;
@@ -136,19 +96,10 @@ const ReminderTestPage = () => {
     setError(null);
     setLoading(true);
     try {
-      // Re-run the same fetch logic: fetch plants then try care logs
+      // Re-run the same fetch logic: fetch plants
       const plantsResp = await plantsApi.getPlants({ limit: 100 });
       const convertedPlants = (plantsResp || []).map((p: any) => convertAPIPlantToPlant(p as APIPlant));
       setPlants(convertedPlants);
-      try {
-        const careLogsResp = await careLogsApi.getRecentCareLogs(50);
-        const convertedCareLogs = (careLogsResp || []).map((l: any) => convertAPICareLogToCareLog(l as APICareLog));
-        setCareLogs(convertedCareLogs);
-        setCareLogsUnavailable(false);
-      } catch (err: any) {
-        setCareLogs([]);
-        setCareLogsUnavailable(true);
-      }
       setLastRefreshedAt(new Date());
     } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to refresh data');
@@ -250,15 +201,6 @@ const ReminderTestPage = () => {
                 <div className="flex items-center gap-2 text-sm text-green-800">
                   <CheckCircle className="w-4 h-4" />
                   <span>Using <strong>real data</strong></span>
-                </div>
-              </div>
-            )}
-
-            {careLogsUnavailable && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                <div className="flex items-center gap-2 text-sm text-yellow-800">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>Care logs unavailable — showing reminders from plant schedules only</span>
                 </div>
               </div>
             )}
