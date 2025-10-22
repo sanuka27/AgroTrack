@@ -9,7 +9,7 @@
  */
 
 export { plantsApi } from './plants';
-export { careLogsApi } from './careLogs';
+// export { careLogsApi } from './careLogs'; // Removed - using src/api/careLogs.ts instead
 export { usersApi } from './users';
 export { remindersApi } from './reminders';
 export { communityApi } from './community';

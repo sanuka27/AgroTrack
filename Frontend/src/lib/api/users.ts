@@ -28,9 +28,9 @@ export interface User {
   location?: string;
   phoneNumber?: string;
   isEmailVerified: boolean;
+  authProvider?: 'local' | 'google' | 'firebase';
   preferences?: {
-    theme?: 'light' | 'dark' | 'system';
-    units?: 'metric' | 'imperial';
+    // preferences shape kept minimal: notifications etc. Appearance removed
     language?: string;
   };
   notificationSettings?: {
@@ -85,10 +85,7 @@ export const usersApi = {
     bio?: string;
     location?: string;
     phoneNumber?: string;
-    preferences?: {
-      theme?: 'light' | 'dark' | 'system';
-      units?: 'metric' | 'imperial';
-    };
+    preferences?: any;
   }): Promise<User> {
     try {
       const response = await api.put<UserResponse>('/users/profile', profileData);
@@ -106,7 +103,7 @@ export const usersApi = {
   /**
    * Upload user avatar/profile picture
    * 
-   * POST /api/users/avatar
+   * POST /api/users/profile/avatar
    * 
    * @param imageFile - Avatar image file
    * @returns Promise with updated user
@@ -116,7 +113,7 @@ export const usersApi = {
       const formData = new FormData();
       formData.append('avatar', imageFile);
 
-      const response = await api.post<UserResponse>('/users/avatar', formData, {
+      const response = await api.post<UserResponse>('/users/profile/avatar', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

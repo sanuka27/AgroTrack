@@ -21,6 +21,7 @@ import plantsApi from '@/lib/api/plants';
 import { uploadPlantImage } from '@/utils/firebaseStorage';
 import { analyticsApi } from '@/lib/api/analytics';
 import { remindersApi, Reminder as ReminderType } from '@/lib/api/reminders';
+import aiRecommendationApi, { AiRecommendation } from '@/lib/api/aiRecommendations';
 import { useToast } from '@/hooks/use-toast';
 
 // Helper function to map API category to frontend Category type
@@ -72,6 +73,7 @@ const MyPlants = () => {
   const [analyticsData, setAnalyticsData] = useState<any | null>(null);
   const [upcomingReminders, setUpcomingReminders] = useState<ReminderType[]>([]);
   const [overdueReminders, setOverdueReminders] = useState<ReminderType[]>([]);
+  const [aiRecommendations, setAiRecommendations] = useState<AiRecommendation[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Filters state
@@ -120,10 +122,16 @@ const MyPlants = () => {
           imageUrl: apiPlant.imageUrl,
           lastWatered: (apiPlant as any).lastWatered || undefined,
           health: (apiPlant as any).health || "Good",
-          growthRatePctThisMonth: (apiPlant as any).growthRatePctThisMonth ?? undefined,
+          
         }));
   setPlants(convertedPlants);
   savePlantsToLocalStorage(convertedPlants);
+      // Debug: log loaded plants and their imageUrl fields to aid troubleshooting
+      try {
+        console.debug('[MyPlants] Loaded plants:', convertedPlants.map(p => ({ id: p.id, name: p.name, imageUrl: p.imageUrl })));
+      } catch (e) {
+        console.warn('[MyPlants] Failed to log loaded plants', e);
+      }
       } catch (err) {
         console.error('Error loading plants:', err);
         setError('Failed to load plants. Please try again.');
@@ -147,18 +155,30 @@ const MyPlants = () => {
             recentCareLogs: analytics.careThisWeek || 0,
           }
         });
-        // fetch real reminders
+        // fetch real reminders - always use fallback method to get ALL pending reminders
         try {
-          const [upcoming, overdue] = await Promise.all([
-            remindersApi.getUpcomingReminders(),
-            remindersApi.getOverdueReminders()
-          ]);
-          setUpcomingReminders(upcoming || []);
-          setOverdueReminders(overdue || []);
+          const pending = await remindersApi.getReminders({ status: 'pending' });
+          const now = Date.now();
+          const localUpcoming = (pending || []).filter(r => new Date(r.dueAt).getTime() >= now);
+          const localOverdue = (pending || []).filter(r => new Date(r.dueAt).getTime() < now);
+          console.log('[MyPlants] Loaded reminders:', { 
+            total: pending?.length || 0, 
+            upcoming: localUpcoming.length, 
+            overdue: localOverdue.length 
+          });
+          setUpcomingReminders(localUpcoming);
+          setOverdueReminders(localOverdue);
         } catch (remErr) {
-          console.warn('Failed to load reminders from API', remErr);
+          console.warn('[MyPlants] Failed to load reminders from API', remErr);
           setUpcomingReminders([]);
           setOverdueReminders([]);
+        }
+        // Load AI recommendations (recent)
+        try {
+          const recs = await aiRecommendationApi.getRecommendations({ limit: 5 });
+          setAiRecommendations(recs || []);
+        } catch (aiErr) {
+          console.warn('Failed to load AI recommendations', aiErr);
         }
       } catch (err) {
         // ignore analytics failure
@@ -170,6 +190,22 @@ const MyPlants = () => {
 
     loadAnalytics();
   }, []);
+
+  // Helper: retry an async function with exponential backoff
+  async function retry<T>(fn: () => Promise<T>, attempts = 3, baseDelay = 400): Promise<T> {
+    let lastErr: any;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await fn();
+      } catch (err) {
+        lastErr = err;
+        const delay = baseDelay * Math.pow(2, i);
+        console.warn('[MyPlants] retry attempt', i + 1, 'failed, retrying in', delay, 'ms', err);
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+    throw lastErr;
+  }
 
   // CRUD operations
   const handleCreatePlant = async (newPlant: Plant, imageFile?: File | null) => {
@@ -186,7 +222,25 @@ const MyPlants = () => {
         notes: newPlant.notes || '',
       } as any;
 
-      const createdPlant = await plantsApi.createPlant(payload);
+      let createdPlant: any;
+
+      // If imageFile is provided, send it in FormData so backend can persist imageUrl atomically
+      if (imageFile) {
+        try {
+          const form = new FormData();
+          Object.keys(payload).forEach(key => {
+            const val = (payload as any)[key];
+            if (val !== undefined && val !== null) form.append(key, String(val));
+          });
+          form.append('image', imageFile);
+          createdPlant = await plantsApi.createPlant(form as any);
+        } catch (e) {
+          console.warn('[MyPlants] create with file failed, falling back to metadata-only create', e);
+          createdPlant = await plantsApi.createPlant(payload);
+        }
+      } else {
+        createdPlant = await plantsApi.createPlant(payload);
+      }
 
       const frontendPlant: Plant = {
         id: createdPlant._id,
@@ -201,7 +255,7 @@ const MyPlants = () => {
         imageUrl: createdPlant.imageUrl ?? undefined,
         lastWatered: (createdPlant as any).lastWatered ?? undefined,
         health: (createdPlant as any).health || 'Good',
-        growthRatePctThisMonth: (createdPlant as any).growthRatePctThisMonth ?? undefined,
+        
       };
 
       setPlants(prev => {
@@ -210,19 +264,29 @@ const MyPlants = () => {
         return next;
       });
 
-      // If an image was provided, upload in the background and then patch the plant
-      if (imageFile) {
+  // If an image was provided but the server didn't persist it (edge case), upload in the background and then patch the plant
+  if (imageFile && !frontendPlant.imageUrl) {
         (async () => {
           try {
             const userId = (window as any).__AGROTRACK__?.userId || 'anonymous';
+            console.debug('[MyPlants] Background upload start for created plant', createdPlant._id);
             const img = await uploadPlantImage(imageFile, userId, (progress) => {});
+            console.debug('[MyPlants] Firebase upload complete for plant', createdPlant._id, 'url=', img?.url);
             if (img?.url) {
-              await plantsApi.updatePlant(createdPlant._id, { imageUrl: img.url } as any);
-              setPlants(prev => {
-                const next = prev.map(p => p.id === createdPlant._id ? { ...p, imageUrl: img.url } : p);
-                savePlantsToLocalStorage(next);
-                return next;
-              });
+              try {
+                // Retry updating the plant record in case of transient failures
+                const updated = await retry(() => plantsApi.updatePlant(createdPlant._id, { imageUrl: img.url } as any), 3, 500);
+                const savedUrl = updated?.imageUrl || (img.url as string);
+                console.info('[MyPlants] Successfully patched plant with imageUrl', createdPlant._id, savedUrl);
+                setPlants(prev => {
+                  const next = prev.map(p => p.id === createdPlant._id ? { ...p, imageUrl: savedUrl } : p);
+                  savePlantsToLocalStorage(next);
+                  return next;
+                });
+              } catch (updateErr) {
+                console.error('[MyPlants] Failed to patch plant imageUrl after upload', updateErr);
+                toast({ title: 'Image upload failed', description: 'Image uploaded but updating plant record failed. You can retry from the plant editor.' });
+              }
             }
           } catch (err) {
             console.error('Background image upload failed', err);
@@ -263,31 +327,52 @@ const MyPlants = () => {
         return next;
       });
 
-      // Send metadata update to server (non-blocking)
-      plantsApi.updatePlant(updatedPlant.id, payload).catch(err => {
-        console.error('Failed to update plant metadata', err);
-        toast({ title: 'Update failed', description: 'Failed to save changes. Please retry.' });
-      });
-
-      // If image supplied, upload in background and patch imageUrl
+      // If imageFile provided, send metadata+file together so server persists imageUrl immediately.
       if (imageFile) {
-        (async () => {
-          try {
-            const userId = (window as any).__AGROTRACK__?.userId || 'anonymous';
-            const img = await uploadPlantImage(imageFile, userId, (progress) => {});
-            if (img?.url) {
-              await plantsApi.updatePlant(updatedPlant.id, { imageUrl: img.url } as any);
-              setPlants(prev => {
-                const next = prev.map(p => p.id === updatedPlant.id ? { ...p, imageUrl: img.url } : p);
-                savePlantsToLocalStorage(next);
-                return next;
-              });
-            }
-          } catch (err) {
-            console.error('Background image upload failed', err);
-            toast({ title: 'Image upload failed', description: 'Image upload failed in background. You can retry from the plant editor.' });
+        try {
+          const form = new FormData();
+          Object.keys(payload).forEach(key => {
+            const val = (payload as any)[key];
+            if (val !== undefined && val !== null) form.append(key, String(val));
+          });
+          form.append('image', imageFile);
+          const updatedResp = await plantsApi.updatePlant(updatedPlant.id, form as any);
+          const savedUrl = updatedResp?.imageUrl;
+          if (savedUrl) {
+            setPlants(prev => {
+              const next = prev.map(p => p.id === updatedPlant.id ? { ...p, imageUrl: savedUrl } : p);
+              savePlantsToLocalStorage(next);
+              return next;
+            });
           }
-        })();
+        } catch (err) {
+          console.warn('[MyPlants] Update with file failed, falling back to background upload', err);
+          // Fallback to previous behavior (background upload + patch)
+          (async () => {
+            try {
+              const userId = (window as any).__AGROTRACK__?.userId || 'anonymous';
+              const img = await uploadPlantImage(imageFile, userId, (progress) => {});
+              if (img?.url) {
+                const updated = await retry(() => plantsApi.updatePlant(updatedPlant.id, { imageUrl: img.url } as any), 3, 500);
+                const savedUrl = updated?.imageUrl || img.url;
+                setPlants(prev => {
+                  const next = prev.map(p => p.id === updatedPlant.id ? { ...p, imageUrl: savedUrl } : p);
+                  savePlantsToLocalStorage(next);
+                  return next;
+                });
+              }
+            } catch (bgErr) {
+              console.error('[MyPlants] Background upload fallback failed', bgErr);
+              toast({ title: 'Image upload failed', description: 'Image upload failed in background. You can retry from the plant editor.' });
+            }
+          })();
+        }
+      } else {
+        // No file: just send metadata non-blocking
+        plantsApi.updatePlant(updatedPlant.id, payload).catch(err => {
+          console.error('Failed to update plant metadata', err);
+          toast({ title: 'Update failed', description: 'Failed to save changes. Please retry.' });
+        });
       }
     } catch (error: any) {
       console.error('Error updating plant:', error);
@@ -492,18 +577,28 @@ const MyPlants = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Active Reminders</p>
-                  <p className="text-3xl font-bold text-gray-900">{analyticsData?.dashboard.activeReminders || 0}</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {(() => {
+                      const total = (upcomingReminders?.length || 0) + (overdueReminders?.length || 0);
+                      return total > 0 ? total : (analyticsData?.dashboard?.activeReminders || 0);
+                    })()}
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <Bell className="w-6 h-6 text-blue-600" />
                 </div>
               </div>
               <div className="mt-3 flex items-center text-sm">
-                {analyticsData?.dashboard.overdueReminders > 0 ? (
-                  <span className="text-red-600 font-medium">⚠️ {analyticsData?.dashboard.overdueReminders} overdue</span>
-                ) : (
-                  <span className="text-gray-500">All up to date</span>
-                )}
+                {(() => {
+                  const overdueCount = overdueReminders?.length || 0;
+                  const fallbackOverdue = analyticsData?.dashboard?.overdueReminders || 0;
+                  const displayOverdue = overdueCount > 0 ? overdueCount : fallbackOverdue;
+                  return displayOverdue > 0 ? (
+                    <span className="text-red-600 font-medium">⚠️ {displayOverdue} overdue</span>
+                  ) : (
+                    <span className="text-gray-500">All up to date</span>
+                  );
+                })()}
               </div>
             </CardContent>
           </Card>
@@ -617,12 +712,33 @@ const MyPlants = () => {
                       <h3 className="text-xl font-bold text-orange-800 group-hover:text-orange-900">
                         Reminders Center
                       </h3>
-                      <p className="text-sm text-orange-700">
-                        {`${analyticsData?.dashboard?.activeReminders ?? 0} active`}
-                        {typeof analyticsData?.dashboard?.overdueReminders === 'number' && analyticsData?.dashboard?.overdueReminders > 0
-                          ? ` • ${analyticsData.dashboard.overdueReminders} overdue`
-                          : ''}
-                      </p>
+                      {(() => {
+                        const upcomingCount = (upcomingReminders?.length ?? 0);
+                        const overdueCount = (overdueReminders?.length ?? 0);
+                        const analyticsActive = analyticsData?.dashboard?.activeReminders ?? 0;
+                        const analyticsOverdue = analyticsData?.dashboard?.overdueReminders ?? 0;
+                        const activeCount = (upcomingCount + overdueCount) > 0 ? (upcomingCount + overdueCount) : analyticsActive;
+                        const overdueDisplay = overdueCount > 0 ? overdueCount : (analyticsOverdue > 0 ? analyticsOverdue : 0);
+                        
+                        // Debug logging
+                        console.log('[MyPlants Reminders Center]', {
+                          upcomingCount,
+                          overdueCount,
+                          analyticsActive,
+                          analyticsOverdue,
+                          activeCount,
+                          overdueDisplay,
+                          upcomingReminders,
+                          overdueReminders
+                        });
+                        
+                        return (
+                          <p className="text-sm text-orange-700">
+                            {`${activeCount} active`}
+                            {overdueDisplay > 0 ? ` • ${overdueDisplay} overdue` : ''}
+                          </p>
+                        );
+                      })()}
                     </div>
                   </div>
                   <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
@@ -672,7 +788,11 @@ const MyPlants = () => {
               <div className="flex items-center justify-between mb-2">
                 <Bell className="w-6 h-6 text-orange-600" />
                 <span className="text-2xl font-bold text-orange-700">
-                  {filterAndSortPlants(plants, { ...filters, careNeeds: 'overdue' }).length}
+                  {(() => {
+                    const overdueCount = overdueReminders?.length || 0;
+                    const overdueFilterCount = filterAndSortPlants(plants, { ...filters, careNeeds: 'overdue' }).length;
+                    return Math.max(overdueCount, overdueFilterCount);
+                  })()}
                 </span>
               </div>
               <p className="text-sm font-medium text-gray-600">Needs Attention</p>
@@ -865,8 +985,10 @@ const MyPlants = () => {
                                   recentCareLogs: (ad?.dashboard?.recentCareLogs || 0) + 1
                                 }
                               }));
-                            } catch (err) {
-                              console.error('Failed to complete reminder', err);
+                              toast({ title: 'Reminder completed', description: `Marked "${rem.title}" as done.` });
+                            } catch (err: any) {
+                              console.error('Failed to complete reminder', err, err?.response?.data || err?.message);
+                              toast({ title: 'Failed to complete reminder', description: (err?.response?.data?.message || err?.message || 'See console for details') });
                             }
                           }}>Done</Button>
                           <Button size="sm" variant="ghost" asChild>
@@ -898,8 +1020,10 @@ const MyPlants = () => {
                                   recentCareLogs: (ad?.dashboard?.recentCareLogs || 0) + 1
                                 }
                               }));
-                            } catch (err) {
-                              console.error('Failed to complete reminder', err);
+                              toast({ title: 'Reminder completed', description: `Marked "${rem.title}" as done.` });
+                            } catch (err: any) {
+                              console.error('Failed to complete reminder', err, err?.response?.data || err?.message);
+                              toast({ title: 'Failed to complete reminder', description: (err?.response?.data?.message || err?.message || 'See console for details') });
                             }
                           }}>Done</Button>
                           <Button size="sm" variant="ghost" asChild>
@@ -920,20 +1044,48 @@ const MyPlants = () => {
               <CardDescription>Personalized care tips</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border">
-                <p className="text-sm font-medium text-green-800 mb-1">💡 Pro Tip</p>
-                <p className="text-sm text-green-700">Your Fiddle Leaf Fig shows signs of overwatering. Reduce frequency by 2 days.</p>
-              </div>
-              
-              <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border">
-                <p className="text-sm font-medium text-purple-800 mb-1">🌱 Growth Insight</p>
-                <p className="text-sm text-purple-700">Plants near the east window are growing 23% faster this month!</p>
-              </div>
-              
-              <div className="p-3 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg border">
-                <p className="text-sm font-medium text-orange-800 mb-1">⚠️ Alert</p>
-                <p className="text-sm text-orange-700">Basil leaves showing early pest signs. Check undersides.</p>
-              </div>
+              {aiRecommendations && aiRecommendations.length > 0 ? (
+                aiRecommendations.slice(0, 3).map((rec) => {
+                  // Determine a simple label based on recommendation content
+                  const label = rec.recommendations?.followUpRequired ? '⚠️ Alert' : (rec.recommendations?.immediateActions?.length ? '💡 Pro Tip' : '🌱 Insight');
+                  const bg = label.includes('Alert') ? 'from-orange-50 to-yellow-50' : label.includes('Pro Tip') ? 'from-green-50 to-blue-50' : 'from-purple-50 to-pink-50';
+                  const textColor = label.includes('Alert') ? 'text-orange-800' : label.includes('Pro Tip') ? 'text-green-800' : 'text-purple-800';
+                  const summary = (
+                    rec.recommendations?.immediateActions?.[0]
+                    || rec.recommendations?.preventionMeasures?.[0]
+                    || rec.detectionResults?.primaryDisease?.name
+                    || rec.description
+                    || 'Recommendation available'
+                  );
+
+                  return (
+                    <div key={rec._id} className={`p-3 bg-gradient-to-r ${bg} rounded-lg border`}>
+                      <p className={`text-sm font-medium ${textColor} mb-1`}>{label}</p>
+                      <p className="text-sm text-muted-foreground">{summary}</p>
+                      <div className="mt-2">
+                        <Link to={`/ai-assistant?rec=${rec._id}`} className="text-sm text-blue-600">View details</Link>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <>
+                  <div className="p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border">
+                    <p className="text-sm font-medium text-green-800 mb-1">💡 Pro Tip</p>
+                    <p className="text-sm text-green-700">Your Fiddle Leaf Fig shows signs of overwatering. Reduce frequency by 2 days.</p>
+                  </div>
+                  
+                  <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border">
+                    <p className="text-sm font-medium text-purple-800 mb-1">🌱 Growth Insight</p>
+                    <p className="text-sm text-purple-700">Plants near the east window are growing 23% faster this month!</p>
+                  </div>
+                  
+                  <div className="p-3 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg border">
+                    <p className="text-sm font-medium text-orange-800 mb-1">⚠️ Alert</p>
+                    <p className="text-sm text-orange-700">Basil leaves showing early pest signs. Check undersides.</p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

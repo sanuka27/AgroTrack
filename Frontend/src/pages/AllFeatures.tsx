@@ -29,110 +29,104 @@ import {
 
 const featureCategories = [
   {
-    title: "AI-Powered Plant Care",
-    description: "Advanced artificial intelligence to help you care for your plants",
+    title: "Plant Management",
+    description: "Comprehensive tools to organize and track your plant collection",
+    features: [
+      {
+        icon: Leaf,
+        title: "Plant Library",
+        description: "Create and manage your personal plant collection with detailed information for each plant.",
+        example: "Add your Monstera with custom care instructions, location, photos, and track its growth over time with organized notes.",
+        benefits: ["Unlimited plants", "Custom care plans", "Photo galleries"]
+      },
+
+      {
+        icon: Bell,
+        title: "Smart Reminders",
+        description: "Never forget to care for your plants with customizable reminders and notifications.",
+        example: "Get reminded to water your succulents every 2 weeks or fertilize your tomatoes monthly during growing season.",
+        benefits: ["Customizable schedules", "Push notifications", "Plant-specific alerts"]
+      }
+    ]
+  },
+  {
+    title: "AI-Powered Features",
+    description: "Leverage artificial intelligence for expert plant care assistance",
     features: [
       {
         icon: Brain,
-        title: "Smart Plant Identification",
-        description: "Instantly identify any plant species using advanced AI image recognition technology.",
-        example: "Take a photo of an unknown plant in your garden, and our AI will identify it as 'Monstera Deliciosa' with 98% confidence, providing immediate care instructions.",
-        benefits: ["99% accuracy rate", "Supports 10,000+ species", "Works offline"]
+        title: "AI Chat Assistant",
+        description: "Get instant answers to plant care questions powered by Google Gemini AI.",
+        example: "Ask 'Why are my tomato leaves turning yellow?' and receive detailed diagnosis with treatment recommendations.",
+        benefits: ["24/7 availability", "Expert knowledge", "Personalized advice"]
       },
       {
         icon: Camera,
         title: "Disease Detection",
-        description: "Early detection of plant diseases and pests through image analysis.",
-        example: "Upload a photo of yellowing leaves, and the AI detects 'Early Blight' in tomatoes, suggesting organic treatment options and prevention methods.",
-        benefits: ["Early intervention", "Reduce plant loss", "Organic solutions"]
-      },
-      {
-        icon: Droplets,
-        title: "Watering Intelligence",
-        description: "AI-driven watering recommendations based on plant type, season, and environment.",
-        example: "Your fiddle leaf fig gets a notification: 'Water in 2 days based on humidity levels and recent rainfall in your area.'",
-        benefits: ["Prevent overwatering", "Seasonal adjustments", "Location-aware"]
+        description: "Upload plant photos to detect diseases, pests, and nutrient deficiencies with AI analysis.",
+        example: "Take a photo of brown spots on your rose leaves to identify fungal infection and get organic treatment options.",
+        benefits: ["Early detection", "Treatment plans", "Prevention tips"]
       }
     ]
   },
   {
-    title: "Smart Monitoring & Analytics",
-    description: "Comprehensive tracking and insights for optimal plant health",
+    title: "Analytics & Insights",
+    description: "Data-driven insights to optimize your gardening success",
     features: [
       {
         icon: BarChart3,
         title: "Plant Health Analytics",
-        description: "Track growth patterns, health metrics, and care history with detailed analytics.",
-        example: "View a 6-month growth chart showing your snake plant grew 15% faster after adjusting light exposure based on our recommendations.",
-        benefits: ["Growth tracking", "Health trends", "Care optimization"]
+        description: "Visualize plant health trends, care patterns, and collection statistics over time.",
+        example: "View dashboard showing 85% of your plants are healthy, with charts tracking watering frequency and growth milestones.",
+        benefits: ["Visual dashboards", "Health tracking", "Care optimization"]
       },
-      {
-        icon: Calendar,
-        title: "Smart Care Calendar",
-        description: "Personalized care schedules that adapt to your plants' specific needs.",
-        example: "Your calendar shows: 'Fertilize roses (due today)', 'Repot monstera (next week)', 'Check for aphids on herbs (tomorrow)'.",
-        benefits: ["Never miss care tasks", "Seasonal reminders", "Custom schedules"]
-      },
-      {
-        icon: Bell,
-        title: "Intelligent Notifications",
-        description: "Timely alerts for watering, fertilizing, repotting, and seasonal care.",
-        example: "Get a push notification: 'Your orchid needs watering - soil moisture is at 20%. Ideal time is now based on humidity forecast.'",
-        benefits: ["Perfect timing", "Weather-aware", "Customizable alerts"]
-      }
+
     ]
   },
   {
-    title: "Community & Learning",
-    description: "Connect with fellow gardeners and expand your plant knowledge",
+    title: "Community & Sharing",
+    description: "Connect with fellow gardeners and share your plant journey",
     features: [
       {
         icon: Users,
-        title: "Expert Community",
-        description: "Connect with master gardeners, botanists, and plant enthusiasts worldwide.",
-        example: "Post a question about your struggling orchid and receive advice from a certified orchid specialist within 30 minutes.",
-        benefits: ["Expert advice", "Global community", "Fast responses"]
+        title: "Community Forum",
+        description: "Post questions, share experiences, and learn from a community of plant enthusiasts.",
+        example: "Share photos of your blooming orchids, ask for propagation tips, and vote on helpful community posts.",
+        benefits: ["Q&A support", "Photo sharing", "Expert members"]
+      },
+      {
+        icon: MessageSquare,
+        title: "Comments & Discussions",
+        description: "Engage in conversations with threaded comments and community interactions.",
+        example: "Join discussions about indoor gardening techniques and get feedback on your plant setup from experienced growers.",
+        benefits: ["Active discussions", "Knowledge sharing", "Helpful community"]
       },
       {
         icon: Share2,
-        title: "Plant Journey Sharing",
-        description: "Document and share your plant's growth journey with beautiful timelines.",
-        example: "Share a time-lapse of your avocado growing from seed to 3-foot plant over 8 months, inspiring 200+ fellow gardeners.",
-        benefits: ["Visual progress", "Inspire others", "Build community"]
-      },
-      {
-        icon: BookOpen,
-        title: "Learning Hub",
-        description: "Access comprehensive plant care guides, tutorials, and expert articles.",
-        example: "Learn advanced propagation techniques through our step-by-step video series, with 50+ plant-specific guides.",
-        benefits: ["Expert knowledge", "Video tutorials", "Regular updates"]
+        title: "Social Features",
+        description: "Vote on helpful posts, report issues, and contribute to community knowledge.",
+        example: "Upvote helpful advice about pest control and help build a knowledge base for other gardeners.",
+        benefits: ["Voting system", "Quality content", "Community moderation"]
       }
     ]
   },
   {
-    title: "Advanced Tools",
-    description: "Professional-grade tools for serious plant enthusiasts",
+    title: "Data & Privacy",
+    description: "Full control over your data with powerful export and privacy tools",
     features: [
       {
+        icon: Shield,
+        title: "Data Export & Import",
+        description: "Export your entire plant collection and data in JSON or CSV format for backup or migration.",
+        example: "Download all your plant data including photos, care logs, and notes as a backup or to share with others.",
+        benefits: ["JSON & CSV formats", "Complete backups", "Easy migration"]
+      },
+      {
         icon: Search,
-        title: "Plant Database",
-        description: "Access detailed information on 50,000+ plant species with care requirements.",
-        example: "Search 'low light houseplants' and discover 200+ species with difficulty ratings, care guides, and user reviews.",
-        benefits: ["Comprehensive database", "Detailed care info", "User reviews"]
-      },
-      {
-        icon: Sun,
-        title: "Environmental Tracking",
-        description: "Monitor light, humidity, temperature, and other environmental factors.",
-        example: "Track that your snake plant gets 6 hours of indirect sunlight daily, with humidity averaging 45% - perfect conditions.",
-        benefits: ["Optimal placement", "Environmental insights", "Health correlation"]
-      },
-      {
-        icon: Smartphone,
-        title: "Mobile Integration",
-        description: "Full-featured mobile app with offline capabilities and camera integration.",
-        example: "Use your phone to scan a QR code on plant pots for instant care reminders, even without internet connection.",
-        benefits: ["Works anywhere", "Instant access", "Camera features"]
+        title: "Advanced Search",
+        description: "Quickly find plants, posts, and care logs with powerful search and filtering.",
+        example: "Search for 'succulents needing water' or filter community posts by category to find exactly what you need.",
+        benefits: ["Fast results", "Smart filters", "Cross-collection search"]
       }
     ]
   }
@@ -176,10 +170,10 @@ const AllFeatures = () => {
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{category.description}</p>
               </div>
 
-              {/* Features Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Features Grid: use 2 columns for categories with exactly 2 features, otherwise 3 */}
+              <div className={`grid grid-cols-1 ${category.features.length === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-8 items-stretch`}>
                 {category.features.map((feature, featureIndex) => (
-                  <Card key={featureIndex} className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/20">
+                  <Card key={featureIndex} className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/20 h-full">
                     <CardHeader>
                       <div className="flex items-center space-x-3 mb-3">
                         <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
@@ -266,20 +260,20 @@ const AllFeatures = () => {
         {/* Quick Stats */}
         <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           <div className="space-y-2">
-            <div className="text-3xl font-bold text-primary">50K+</div>
-            <div className="text-sm text-muted-foreground">Plant Species</div>
+            <div className="text-3xl font-bold text-primary">15+</div>
+            <div className="text-sm text-muted-foreground">Core Features</div>
           </div>
           <div className="space-y-2">
-            <div className="text-3xl font-bold text-primary">99%</div>
-            <div className="text-sm text-muted-foreground">AI Accuracy</div>
+            <div className="text-3xl font-bold text-primary">AI</div>
+            <div className="text-sm text-muted-foreground">Powered Assistant</div>
           </div>
           <div className="space-y-2">
             <div className="text-3xl font-bold text-primary">24/7</div>
-            <div className="text-sm text-muted-foreground">Smart Monitoring</div>
+            <div className="text-sm text-muted-foreground">Plant Tracking</div>
           </div>
           <div className="space-y-2">
-            <div className="text-3xl font-bold text-primary">100K+</div>
-            <div className="text-sm text-muted-foreground">Happy Gardeners</div>
+            <div className="text-3xl font-bold text-primary">Free</div>
+            <div className="text-sm text-muted-foreground">Always & Forever</div>
           </div>
         </div>
       </main>

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Leaf, Droplets, Edit, Trash2, Sun } from 'lucide-react';
-import { formatLastWatered, getHealthStatusColor, getGrowthRateColor } from '@/utils/plantUtils';
+import { formatLastWatered, getHealthStatusColor } from '@/utils/plantUtils';
 import { useToast } from '@/hooks/use-toast';
 
 interface PlantCardProps {
@@ -51,7 +51,6 @@ export function PlantCard({
   };
 
   const healthColor = getHealthStatusColor(plant.health);
-  const growthColor = getGrowthRateColor(plant.growthRatePctThisMonth || 0);
   
   return (
     <Card className={`relative overflow-hidden transition-all duration-200 hover:shadow-lg ${healthColor.border} ${
@@ -149,12 +148,7 @@ export function PlantCard({
               </Badge>
             </div>
             
-            <div className="flex justify-between items-center">
-              <span>Growth rate:</span>
-              <span className={`font-medium ${growthColor}`}>
-                {plant.growthRatePctThisMonth >= 0 ? '+' : ''}{plant.growthRatePctThisMonth || 0}% this month
-              </span>
-            </div>
+            {/* Growth rate removed from UI */}
             
             <div className="flex justify-between items-center">
               <span>Light needs:</span>

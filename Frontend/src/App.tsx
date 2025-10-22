@@ -40,11 +40,9 @@ const BlogPage = lazy(() => import("./pages/BlogPage"));
 const BlogDetailPage = lazy(() => import("./pages/BlogDetailPage"));
 const StatusPage = lazy(() => import("./pages/StatusPage"));
 const AssistantPage = lazy(() => import("./pages/AssistantPage"));
-const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const CareTestPage = lazy(() => import("./pages/CareTestPage"));
 const ReminderTestPage = lazy(() => import("./pages/ReminderTestPage"));
-const WeatherPage = lazy(() => import("./pages/WeatherPage"));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
@@ -118,7 +116,7 @@ const App = () => {
               } />
               <Route path="/profile" element={
                 <ProtectedRoute>
-                  <ProfilePage />
+                  <SettingsPage />
                 </ProtectedRoute>
               } />
               <Route path="/admin" element={
@@ -145,7 +143,6 @@ const App = () => {
               <Route path="/assistant" element={<AssistantPage />} />
               <Route path="/care-test" element={<CareTestPage />} />
               <Route path="/reminder-test" element={<ReminderTestPage />} />
-              <Route path="/weather" element={<WeatherPage />} />
               <Route path="/search" element={<SearchPage />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

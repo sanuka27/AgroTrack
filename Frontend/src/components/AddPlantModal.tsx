@@ -33,15 +33,16 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
     fertilizerEveryWeeks: '',
     soil: '',
     notes: '',
-    health: 'Good' as Health,
-    growthRatePctThisMonth: '0'
+    health: 'Good' as Health
   });
   
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>(''); // Track actual Firebase URL separately from blob preview
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [skipUpload, setSkipUpload] = useState(false);
+  // Default to server-side upload path to avoid client-side stalls
+  const [skipUpload, setSkipUpload] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [isValid, setIsValid] = useState(false);
   // AI suggestion state
   const [aiSuggestion, setAiSuggestion] = useState<any | null>(null);
@@ -190,7 +191,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
         soil: initial.soil || '',
         notes: initial.notes || '',
         health: initial.health || 'Good',
-        growthRatePctThisMonth: initial.growthRatePctThisMonth?.toString() || '0'
+        
       });
       setImagePreview(initial.imageUrl || '');
       setUploadedImageUrl(initial.imageUrl || ''); // Set uploaded URL for edit mode
@@ -206,7 +207,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
         soil: '',
         notes: '',
         health: 'Good' as Health,
-        growthRatePctThisMonth: '0'
+        
       });
       setImageFile(null);
       setImagePreview('');
@@ -288,7 +289,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
       soil: '',
       notes: '',
       health: 'Good' as Health,
-      growthRatePctThisMonth: '0'
+      
     });
     setImageFile(null);
     setImagePreview('');
@@ -305,6 +306,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
 
   const handleSave = async () => {
     if (!isValid) return;
+    setIsSaving(true);
 
     const plantData: Plant = {
       id: mode === 'edit' && initial?.id ? initial.id : crypto.randomUUID(),
@@ -319,10 +321,10 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
       imageUrl: uploadedImageUrl || (mode === 'edit' && initial?.imageUrl ? initial.imageUrl : undefined), // Use uploaded Firebase URL, NOT blob preview
       lastWatered: mode === 'edit' && initial?.lastWatered ? initial.lastWatered : null,
       health: formData.health as Health,
-      growthRatePctThisMonth: formData.growthRatePctThisMonth && !isNaN(Number(formData.growthRatePctThisMonth)) ? Number(formData.growthRatePctThisMonth) : 0
+      
     };
 
-    // If a new local image file was chosen and the user hasn't chosen to skip client upload,
+  // If a new local image file was chosen and the user hasn't chosen to skip client upload,
     // try uploading it to Firebase Storage first and use that URL.
     // If the client upload stalls or fails, fall back to sending the file to the backend (passFile below).
     let finalImageUrl = plantData.imageUrl;
@@ -348,6 +350,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
     });
 
     handleClose();
+    setIsSaving(false);
   };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
@@ -554,7 +557,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
             </div>
           </div>
 
-          {/* Health and Growth Rate */}
+          {/* Health */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="plant-health" className="text-sm font-medium text-gray-700">
@@ -576,20 +579,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="growth-rate" className="text-sm font-medium text-gray-700">
-                Growth Rate (% this month)
-              </Label>
-              <Input
-                id="growth-rate"
-                type="text"
-                value={formData.growthRatePctThisMonth}
-                onChange={(e) => handleInputChange('growthRatePctThisMonth', e.target.value)}
-                placeholder="0"
-                className="w-full bg-gray-50"
-              />
-            </div>
+            {/* Removed Growth Rate field per product decision */}
           </div>
 
           {/* Image upload handled by circular uploader at the top */}
@@ -622,7 +612,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
             disabled={!isValid}
             className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
           >
-            {mode === 'create' ? 'Save Plant' : 'Update Plant'}
+            {isSaving ? 'Saving…' : (mode === 'create' ? 'Save Plant' : 'Update Plant')}
           </Button>
         </div>
       </div>

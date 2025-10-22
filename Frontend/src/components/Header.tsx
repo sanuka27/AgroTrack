@@ -15,9 +15,10 @@ export function Header() {
   };
 
   // Base navigation items available to all users
+  // Order: Community, Features - Dashboard is inserted before these when authenticated
   const baseNavItems = [
-    { label: "Features", href: "/features", icon: Leaf, permission: null },
     { label: "Community", href: "/community", icon: MessageSquare, permission: null },
+    { label: "Features", href: "/features", icon: Leaf, permission: null },
   ];
 
   // User-specific navigation items (Dashboard handled separately for placement)
@@ -39,7 +40,8 @@ export function Header() {
 
     // If authenticated, insert a Dashboard link before Features regardless of specific permissions
     if (user) {
-      items.unshift({ label: "Dashboard", href: "/plants", icon: Leaf } as any);
+      // Use a distinct icon for Dashboard so it differs from the Features leaf icon
+      items.unshift({ label: "Dashboard", href: "/plants", icon: BarChart3 } as any);
     }
 
     userNavItems.forEach(item => {
@@ -127,12 +129,7 @@ export function Header() {
                     Settings
                   </NavLink>
                 </Button>
-                <Button variant="ghost" size="sm" asChild>
-                  <NavLink to="/profile">
-                    <User className="w-4 h-4 mr-2" />
-                    Profile
-                  </NavLink>
-                </Button>
+                {/* Profile link removed — profile is now merged into Settings */}
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Logout
@@ -201,12 +198,7 @@ export function Header() {
                         Settings
                       </NavLink>
                     </Button>
-                    <Button variant="ghost" size="sm" className="justify-start" asChild>
-                      <NavLink to="/profile" onClick={() => setIsMenuOpen(false)}>
-                        <User className="w-4 h-4 mr-2" />
-                        Profile
-                      </NavLink>
-                    </Button>
+                    {/* Profile link removed from mobile menu (merged into Settings) */}
                     <Button variant="ghost" size="sm" className="justify-start" onClick={handleLogout}>
                       <LogOut className="w-4 h-4 mr-2" />
                       Logout
