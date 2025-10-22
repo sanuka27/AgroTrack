@@ -9,13 +9,53 @@ import { CareLog, PlantCareHistory } from '@/types/care';
 import { Plant } from '@/types/plant';
 import { generatePlantCareHistory } from '@/utils/careUtils';
 import { Plus, TrendingUp, Calendar, Activity } from 'lucide-react';
+import { careLogsApi } from '@/api/careLogs';
+import type { CareLog as APICareLog, UpdateCareLogData } from '@/api/careLogs';
+import { CareType } from '@/types/care';
+
+// Mapping between frontend CareType and API careType
+const mapFrontendToApiCareType = (careType: CareType): 'watering' | 'fertilizing' | 'pruning' | 'repotting' | 'pestControl' | 'other' => {
+  switch (careType) {
+    case 'watering': return 'watering';
+    case 'fertilizing': return 'fertilizing';
+    case 'pruning': return 'pruning';
+    case 'repotting': return 'repotting';
+    case 'pest-treatment': return 'pestControl';
+    case 'soil-change': return 'repotting';
+    case 'location-change': return 'other';
+    case 'health-check': return 'other';
+    default: return 'other';
+  }
+};
+
+const mapApiToFrontendCareType = (careType: string): CareType => {
+  switch (careType) {
+    case 'watering': return 'watering';
+    case 'fertilizing': return 'fertilizing';
+    case 'pruning': return 'pruning';
+    case 'repotting': return 'repotting';
+    case 'pestControl': return 'pest-treatment';
+    default: return 'health-check'; // Default for 'other' or unknown
+  }
+};
+
+// Type converter to transform API CareLog to component CareLog
+const convertAPICareLogToCareLog = (apiLog: APICareLog): CareLog => ({
+  id: apiLog._id,
+  plantId: apiLog.plantId,
+  careType: mapApiToFrontendCareType(apiLog.careType),
+  date: apiLog.date,
+  notes: apiLog.notes,
+  photos: apiLog.photos,
+  metadata: apiLog.careData, // Map careData to metadata
+  createdAt: apiLog.createdAt,
+  updatedAt: apiLog.updatedAt
+});
 
 interface PlantCareSystemProps {
   plant: Plant;
   className?: string;
 }
-
-const CARE_STORAGE_KEY = 'agrotrack-care-logs';
 
 export const PlantCareSystem: React.FC<PlantCareSystemProps> = ({
   plant,
@@ -25,40 +65,83 @@ export const PlantCareSystem: React.FC<PlantCareSystemProps> = ({
   const [isAddingCare, setIsAddingCare] = useState(false);
   const [plantCareHistory, setPlantCareHistory] = useState<PlantCareHistory | undefined>();
   const [activeTab, setActiveTab] = useState<'timeline' | 'analytics'>('timeline');
+  const [loading, setLoading] = useState(true);
 
-  // Load care logs from localStorage
+  // Load care logs from API
   useEffect(() => {
-    try {
-      const storedLogs = localStorage.getItem(CARE_STORAGE_KEY);
-      if (storedLogs) {
-        const parsedLogs = JSON.parse(storedLogs) as CareLog[];
-        const plantLogs = parsedLogs.filter(log => log.plantId === plant.id);
-        setCareLogs(plantLogs);
+    const loadCareLogs = async () => {
+      try {
+        setLoading(true);
+        const plantLogs = await careLogsApi.getByPlant(plant.id);
+        const convertedLogs = plantLogs.map(convertAPICareLogToCareLog);
+        setCareLogs(convertedLogs);
+      } catch (error) {
+        console.error('Error loading care logs:', error);
+        setCareLogs([]);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error loading care logs:', error);
-    }
+    };
+
+    loadCareLogs();
   }, [plant.id]);
 
   // Generate plant care history when care logs change
   useEffect(() => {
     if (careLogs.length > 0) {
-      const history = generatePlantCareHistory(careLogs, plant.id);
+      const apiLogs = careLogs.map(log => ({
+        _id: log.id,
+        plantId: log.plantId,
+        userId: '', // Not needed for history generation
+        careType: mapFrontendToApiCareType(log.careType),
+        notes: log.notes,
+        photos: log.photos,
+        careData: log.metadata,
+        date: log.date,
+        createdAt: log.createdAt,
+        updatedAt: log.updatedAt
+      }));
+      const history = generatePlantCareHistory(apiLogs, plant.id);
       setPlantCareHistory(history);
     } else {
       setPlantCareHistory(undefined);
     }
   }, [careLogs, plant.id]);
 
-  // Save care logs to localStorage
-  const saveCareLog = (newLog: CareLog) => {
-    const allStoredLogs = JSON.parse(localStorage.getItem(CARE_STORAGE_KEY) || '[]') as CareLog[];
-    const updatedLogs = [...allStoredLogs, newLog];
-    localStorage.setItem(CARE_STORAGE_KEY, JSON.stringify(updatedLogs));
-    
-    // Update local state
-    const plantLogs = updatedLogs.filter(log => log.plantId === plant.id);
-    setCareLogs(plantLogs);
+  // Save care logs using API
+  const saveCareLog = async (newLog: CareLog) => {
+    try {
+      // Convert frontend CareLog to API format
+      const apiLogData = {
+        plantId: newLog.plantId,
+        careType: mapFrontendToApiCareType(newLog.careType),
+        notes: newLog.notes || '',
+        photos: newLog.photos,
+        careData: newLog.metadata, // Map metadata to careData
+        date: newLog.date,
+      };
+
+      const createdLog = await careLogsApi.create(apiLogData);
+
+      // Convert back to frontend format and add to state
+      const frontendLog: CareLog = {
+        id: createdLog._id,
+        plantId: createdLog.plantId,
+        careType: mapApiToFrontendCareType(createdLog.careType),
+        date: createdLog.date,
+        notes: createdLog.notes,
+        photos: createdLog.photos,
+        metadata: createdLog.careData, // Map careData back to metadata
+        createdAt: createdLog.createdAt,
+        updatedAt: createdLog.updatedAt
+      };
+
+      setCareLogs(prev => [...prev, frontendLog]);
+    } catch (error) {
+      console.error('Error saving care log:', error);
+      // Fallback: just add to local state
+      setCareLogs(prev => [...prev, newLog]);
+    }
   };
 
   const recentCareLogs = careLogs.slice(0, 5);
@@ -184,10 +267,13 @@ export const PlantCareSystem: React.FC<PlantCareSystemProps> = ({
       {/* Care Modal */}
       {isAddingCare && (
         <CareLogModal
-          open={isAddingCare}
-          plant={plant}
-          onSubmit={(careLog) => {
-            saveCareLog(careLog);
+          isOpen={isAddingCare}
+          plantId={plant.id}
+          onSave={async (data) => {
+            // Create the care log using the API
+            const createdLog = await careLogsApi.create(data as any);
+            const frontendLog = convertAPICareLogToCareLog(createdLog);
+            setCareLogs(prev => [...prev, frontendLog]);
             setIsAddingCare(false);
           }}
           onClose={() => setIsAddingCare(false)}

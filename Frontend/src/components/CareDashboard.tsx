@@ -11,22 +11,66 @@ import { CareLog, CareType, PlantCareHistory, CareMetadata } from '@/types/care'
 import { Plant } from '@/types/plant';
 import {
   generatePlantCareHistory,
-  createCareLog,
   getPlantCarePatterns,
   formatCareType
 } from '@/utils/careUtils';
 import { Plus, Calendar, BarChart3, Bell, History } from 'lucide-react';
 import mockApi from '@/lib/mockApi';
-import type { CareLog as APICareLog } from '@/types/api';
+import { careLogsApi } from '@/api/careLogs';
+import { remindersApi } from '@/lib/api/reminders';
+import type { CareLog as APICareLog, UpdateCareLogData } from '@/api/careLogs';
+
+// Mapping between frontend CareType and API careType
+const mapFrontendToApiCareType = (careType: CareType): 'watering' | 'fertilizing' | 'pruning' | 'repotting' | 'pestControl' | 'other' => {
+  switch (careType) {
+    case 'watering': return 'watering';
+    case 'fertilizing': return 'fertilizing';
+    case 'pruning': return 'pruning';
+    case 'repotting': return 'repotting';
+    case 'pest-treatment': return 'pestControl';
+    case 'soil-change': return 'repotting';
+    case 'location-change': return 'other';
+    case 'health-check': return 'other';
+    default: return 'other';
+  }
+};
+
+const mapApiToFrontendCareType = (careType: string): CareType => {
+  switch (careType) {
+    case 'watering': return 'watering';
+    case 'fertilizing': return 'fertilizing';
+    case 'pruning': return 'pruning';
+    case 'repotting': return 'repotting';
+    case 'pestControl': return 'pest-treatment';
+    default: return 'health-check'; // Default for 'other' or unknown
+  }
+};
 
 // Type converter to transform API CareLog to component CareLog
 const convertAPICareLogToCareLog = (apiLog: APICareLog): CareLog => ({
   id: apiLog._id,
   plantId: apiLog.plantId,
-  careType: apiLog.action as CareType,
-  date: typeof apiLog.date === 'string' ? apiLog.date : apiLog.date.toISOString(),
+  careType: mapApiToFrontendCareType(apiLog.careType),
+  date: apiLog.date,
   notes: apiLog.notes,
-  createdAt: typeof apiLog.createdAt === 'string' ? apiLog.createdAt : apiLog.createdAt.toISOString()
+  photos: apiLog.photos,
+  metadata: apiLog.careData, // Map careData to metadata
+  createdAt: apiLog.createdAt,
+  updatedAt: apiLog.updatedAt
+});
+
+// Type converter to transform component CareLog to API CareLog
+const convertCareLogToAPICareLog = (careLog: CareLog): APICareLog => ({
+  _id: careLog.id,
+  plantId: careLog.plantId,
+  userId: '', // Not needed for conversion
+  careType: mapFrontendToApiCareType(careLog.careType),
+  date: careLog.date,
+  notes: careLog.notes,
+  photos: careLog.photos,
+  careData: careLog.metadata, // Map metadata to careData
+  createdAt: careLog.createdAt,
+  updatedAt: careLog.updatedAt
 });
 
 interface CareDashboardProps {
@@ -44,11 +88,12 @@ export const CareDashboard: React.FC<CareDashboardProps> = ({
 }) => {
   const [careLogs, setCareLogs] = useState<CareLog[]>([]);
   const [isAddingCare, setIsAddingCare] = useState(false);
+  const [editingCareLog, setEditingCareLog] = useState<CareLog | null>(null);
   const [plantCareHistories, setPlantCareHistories] = useState<Record<string, PlantCareHistory>>({});
   const [activeTab, setActiveTab] = useState('timeline');
   const [loading, setLoading] = useState(true);
 
-  // Load care logs from mock API
+  // Load care logs from API
   useEffect(() => {
     const loadCareLogs = async () => {
       try {
@@ -58,7 +103,7 @@ export const CareDashboard: React.FC<CareDashboardProps> = ({
         // Get care logs for each plant
         for (const plant of plants) {
           try {
-            const plantLogs = await mockApi.careLogs.getByPlant(plant.id);
+            const plantLogs = await careLogsApi.getByPlant(plant.id);
             const convertedLogs = plantLogs.map(convertAPICareLogToCareLog);
             allLogs.push(...convertedLogs);
           } catch (error) {
@@ -84,35 +129,40 @@ export const CareDashboard: React.FC<CareDashboardProps> = ({
     plants.forEach(plant => {
       const plantLogs = careLogs.filter(log => log.plantId === plant.id);
       if (plantLogs.length > 0) {
-        histories[plant.id] = generatePlantCareHistory(careLogs, plant.id);
+        const apiLogs = plantLogs.map(convertCareLogToAPICareLog);
+        histories[plant.id] = generatePlantCareHistory(apiLogs, plant.id);
       }
     });
     
     setPlantCareHistories(histories);
   }, [careLogs, plants]);
 
-  // Save care logs using mock API
+  // Save care logs using API
   const saveCareLog = async (newLog: CareLog) => {
     try {
       // Convert frontend CareLog to API format
       const apiLogData = {
         plantId: newLog.plantId,
-        action: newLog.careType, // Map careType to action
+        careType: mapFrontendToApiCareType(newLog.careType),
         notes: newLog.notes || '',
-        date: new Date(newLog.date), // Convert to Date object
+        photos: newLog.photos,
+        careData: newLog.metadata, // Map metadata to careData
+        date: newLog.date,
       };
 
-      const createdLog = await mockApi.careLogs.create(apiLogData);
+      const createdLog = await careLogsApi.create(apiLogData);
 
       // Convert back to frontend format and add to state
       const frontendLog: CareLog = {
         id: createdLog._id,
         plantId: createdLog.plantId,
-        careType: createdLog.action as CareType, // Map back
-        date: typeof createdLog.date === 'string' ? createdLog.date : createdLog.date.toISOString(),
+        careType: mapApiToFrontendCareType(createdLog.careType),
+        date: createdLog.date,
         notes: createdLog.notes,
-        metadata: newLog.metadata, // Keep original metadata
-        createdAt: typeof createdLog.createdAt === 'string' ? createdLog.createdAt : createdLog.createdAt.toISOString()
+        photos: createdLog.photos,
+        metadata: createdLog.careData, // Map careData back to metadata
+        createdAt: createdLog.createdAt,
+        updatedAt: createdLog.updatedAt
       };
 
       setCareLogs(prev => [...prev, frontendLog]);
@@ -123,9 +173,56 @@ export const CareDashboard: React.FC<CareDashboardProps> = ({
     }
   };
 
+  // Handle editing a care log
+  const handleEditCareLog = (careLog: CareLog) => {
+    setEditingCareLog(careLog);
+  };
+
+  // Handle deleting a care log
+  const handleDeleteCareLog = async (id: string) => {
+    if (confirm('Are you sure you want to delete this care log?')) {
+      try {
+        await careLogsApi.delete(id);
+        setCareLogs(prev => prev.filter(log => log.id !== id));
+      } catch (error) {
+        console.error('Error deleting care log:', error);
+      }
+    }
+  };
+
+  // Handle updating a care log
+  const handleUpdateCareLog = async (updatedLog: CareLog) => {
+    try {
+      // Convert frontend CareLog to API format for update
+      const apiData = {
+        careType: mapFrontendToApiCareType(updatedLog.careType),
+        notes: updatedLog.notes || '',
+        photos: updatedLog.photos,
+        careData: updatedLog.metadata,
+        date: updatedLog.date,
+      };
+
+      const updatedApiLog = await careLogsApi.update(updatedLog.id, apiData);
+      const frontendLog = convertAPICareLogToCareLog(updatedApiLog);
+      
+      setCareLogs(prev => prev.map(log => log.id === updatedLog.id ? frontendLog : log));
+      setEditingCareLog(null);
+    } catch (error) {
+      console.error('Error updating care log:', error);
+    }
+  };
+
   // Handle adding new care log
   const handleAddCare = (plantId: string, careType: CareType, metadata: CareMetadata, notes?: string) => {
-    const newLog = createCareLog(plantId, careType, notes, metadata);
+    const newLog: CareLog = {
+      id: `temp-${Date.now()}`, // Temporary ID
+      plantId,
+      careType,
+      date: new Date().toISOString(),
+      notes: notes || '',
+      metadata,
+      createdAt: new Date().toISOString()
+    };
     saveCareLog(newLog);
     setIsAddingCare(false);
   };
@@ -137,14 +234,40 @@ export const CareDashboard: React.FC<CareDashboardProps> = ({
                          careType === 'fertilizing' ? { fertilizerType: 'liquid', concentration: 'as-directed' } :
                          careType === 'health-check' ? { overallHealth: 'good' } : {};
     
-    const newLog = createCareLog(plantId, careType, 'Marked complete from reminder', basicMetadata);
+    const newLog: CareLog = {
+      id: `temp-${Date.now()}`, // Temporary ID
+      plantId,
+      careType,
+      date: new Date().toISOString(),
+      notes: 'Marked complete from reminder',
+      metadata: basicMetadata,
+      createdAt: new Date().toISOString()
+    };
     saveCareLog(newLog);
   };
 
   // Handle snoozing reminder
-  const handleSnoozeReminder = (plantId: string, careType: CareType, days: number) => {
-    // In a real app, this would update the reminder system
-    console.log(`Snoozing ${formatCareType(careType)} for ${plants.find(p => p.id === plantId)?.name} by ${days} days`);
+  const handleSnoozeReminder = async (plantId: string, careType: CareType, days: number) => {
+    try {
+      const plant = plants.find(p => p.id === plantId);
+      if (!plant) return;
+
+      // Calculate snooze date
+      const snoozeDate = new Date();
+      snoozeDate.setDate(snoozeDate.getDate() + days);
+
+      // Create a reminder for this snoozed care task
+      await remindersApi.createReminder({
+        title: `${formatCareType(careType)} for ${plant.name}`,
+        dueAt: snoozeDate.toISOString(),
+        notes: `Snoozed care reminder - originally due based on care patterns`,
+        plantId: plantId
+      });
+
+      console.log(`Created snoozed reminder for ${formatCareType(careType)} for ${plant.name} (${days} days)`);
+    } catch (error) {
+      console.error('Error creating snoozed reminder:', error);
+    }
   };
 
   // Filter care logs based on selected plant
@@ -287,6 +410,8 @@ export const CareDashboard: React.FC<CareDashboardProps> = ({
           <CareTimeline 
             careLogs={filteredCareLogs} 
             showPlantName={showAllPlants || !selectedPlantId}
+            onEditCareLog={handleEditCareLog}
+            onDeleteCareLog={handleDeleteCareLog}
           />
         </TabsContent>
 
@@ -327,13 +452,44 @@ export const CareDashboard: React.FC<CareDashboardProps> = ({
       {/* Add Care Modal */}
       {isAddingCare && selectedPlant && (
         <CareLogModal
-          open={isAddingCare}
-          plant={selectedPlant}
-          onSubmit={(careLog) => {
-            saveCareLog(careLog);
+          isOpen={isAddingCare}
+          plantId={selectedPlant.id}
+          onSave={async (data) => {
+            // Create the care log using the API
+            const createdLog = await careLogsApi.create(data as any);
+            const frontendLog = convertAPICareLogToCareLog(createdLog);
+            setCareLogs(prev => [...prev, frontendLog]);
             setIsAddingCare(false);
           }}
           onClose={() => setIsAddingCare(false)}
+        />
+      )}
+
+      {/* Edit Care Modal */}
+      {editingCareLog && (
+        <CareLogModal
+          isOpen={!!editingCareLog}
+          plantId={editingCareLog.plantId}
+          careLog={{
+            _id: editingCareLog.id,
+            plantId: editingCareLog.plantId,
+            userId: '', // Not needed
+            careType: mapFrontendToApiCareType(editingCareLog.careType),
+            notes: editingCareLog.notes,
+            photos: editingCareLog.photos,
+            careData: editingCareLog.metadata,
+            date: editingCareLog.date,
+            createdAt: editingCareLog.createdAt,
+            updatedAt: editingCareLog.updatedAt
+          }}
+          onSave={async (data) => {
+            // Update the care log - data is API format
+            const updatedApiLog = await careLogsApi.update(editingCareLog.id, data as UpdateCareLogData);
+            const frontendLog = convertAPICareLogToCareLog(updatedApiLog);
+            setCareLogs(prev => prev.map(log => log.id === editingCareLog.id ? frontendLog : log));
+            setEditingCareLog(null);
+          }}
+          onClose={() => setEditingCareLog(null)}
         />
       )}
       

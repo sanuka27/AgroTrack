@@ -101,7 +101,12 @@ export default function SimpleReminders({ plants }: Props) {
       const newDue = new Date(Date.now() + hours * 3600 * 1000).toISOString();
       const updated = await remindersApi.snoozeReminder(id, newDue);
       setReminders(prev => prev.map(r => r._id === id ? updated : r).sort((a,b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime()));
-    } catch (e) { /* ignore */ }
+      toast({ title: 'Reminder snoozed', description: `Snoozed for ${hours} hours` });
+    } catch (e: any) {
+      console.error('Error snoozing reminder:', e);
+      setError(e?.message || 'Failed to snooze reminder');
+      toast({ title: 'Error', description: 'Failed to snooze reminder', variant: 'destructive' });
+    }
   };
 
   const upcoming = useMemo(() => reminders.filter(r => new Date(r.dueAt).getTime() >= Date.now()), [reminders]);
