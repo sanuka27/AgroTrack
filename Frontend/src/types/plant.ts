@@ -15,7 +15,6 @@ export interface Plant {
   imageUrl?: string;                // local preview only
   lastWatered?: string | null;      // ISO date string or null
   health: Health;                   // default "Good"
-  growthRatePctThisMonth?: number;  // default 0
 }
 
 export type Confidence = 'low' | 'medium' | 'high';

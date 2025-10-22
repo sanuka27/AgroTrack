@@ -21,8 +21,7 @@ export const exportPlantsToCSV = (plants: Plant[], filename: string = 'plants-ex
     'Soil Type',
     'Notes',
     'Last Watered',
-    'Health',
-    'Growth Rate (%)'
+    'Health'
   ];
 
   // Convert plants to CSV rows
@@ -36,8 +35,7 @@ export const exportPlantsToCSV = (plants: Plant[], filename: string = 'plants-ex
     plant.soil || '',
     plant.notes || '',
     plant.lastWatered || '',
-    plant.health || '',
-    plant.growthRatePctThisMonth?.toString() || ''
+    plant.health || ''
   ]);
 
   // Escape CSV values that contain commas or quotes

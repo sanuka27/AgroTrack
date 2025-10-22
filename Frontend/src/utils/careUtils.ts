@@ -1,244 +1,253 @@
-import { CareLog, CareType, CarePattern, PlantCareHistory, CareMetadata } from '@/types/care';
-import { Plant } from '@/types/plant';
+import { CareLog } from '../api/careLogs';
 
-/**
- * Generate a unique ID for care logs
- */
-export const generateCareLogId = (): string => {
-  return `care_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
-
-/**
- * Create a new care log entry
- */
-export const createCareLog = (
-  plantId: string,
-  careType: CareType,
-  notes?: string,
-  metadata?: CareMetadata,
-  photos?: string[]
-): CareLog => {
-  const now = new Date().toISOString();
-  
-  return {
-    id: generateCareLogId(),
-    plantId,
-    careType,
-    date: now,
-    notes,
-    photos: photos || [],
-    metadata,
-    createdAt: now,
+export const formatCareType = (careType: string): string => {
+  const types: Record<string, string> = {
+    watering: 'Watering',
+    fertilizing: 'Fertilizing',
+    pruning: 'Pruning',
+    repotting: 'Repotting',
+    pestControl: 'Pest Control',
+    other: 'Other'
   };
+  return types[careType] || careType;
 };
 
-/**
- * Get care logs for a specific plant
- */
-export const getPlantCareLogs = (careLogs: CareLog[], plantId: string): CareLog[] => {
-  return careLogs
-    .filter(log => log.plantId === plantId)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+export const getCareTypeColor = (careType: string): string => {
+  const colors: Record<string, string> = {
+    watering: 'blue',
+    fertilizing: 'green',
+    pruning: 'orange',
+    repotting: 'purple',
+    pestControl: 'red',
+    other: 'gray'
+  };
+  return colors[careType] || 'gray';
 };
 
-/**
- * Get care logs by type
- */
-export const getCareLogsByType = (careLogs: CareLog[], careType: CareType): CareLog[] => {
-  return careLogs
-    .filter(log => log.careType === careType)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+export const getCareTypeIcon = (careType: string): string => {
+  const icons: Record<string, string> = {
+    watering: '💧',
+    fertilizing: '🌱',
+    pruning: '✂️',
+    repotting: '🪴',
+    pestControl: '🐛',
+    other: '📝'
+  };
+  return icons[careType] || '📝';
 };
 
-/**
- * Get recent care logs (last 30 days)
- */
-export const getRecentCareLogs = (careLogs: CareLog[], days: number = 30): CareLog[] => {
+export const sortCareLogsByDate = (careLogs: CareLog[]): CareLog[] => {
+  return [...careLogs].sort((a, b) => {
+    return new Date(b.date).getTime() - new Date(a.date).getTime();
+  });
+};
+
+export const groupCareLogsByMonth = (careLogs: CareLog[]): Record<string, CareLog[]> => {
+  const grouped: Record<string, CareLog[]> = {};
+  
+  careLogs.forEach(log => {
+    const date = new Date(log.date);
+    const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    
+    if (!grouped[monthYear]) {
+      grouped[monthYear] = [];
+    }
+    grouped[monthYear].push(log);
+  });
+  
+  return grouped;
+};
+
+export const getLastCareDate = (careLogs: CareLog[], careType?: string): Date | null => {
+  const filtered = careType 
+    ? careLogs.filter(log => log.careType === careType)
+    : careLogs;
+  
+  if (filtered.length === 0) return null;
+  
+  const sorted = sortCareLogsByDate(filtered);
+  return new Date(sorted[0].date);
+};
+
+export const getCareFrequency = (careLogs: CareLog[], careType: string, days: number = 30): number => {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
   
-  return careLogs
-    .filter(log => new Date(log.date) >= cutoffDate)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const recentLogs = careLogs.filter(log => 
+    log.careType === careType && new Date(log.date) >= cutoffDate
+  );
+  
+  return recentLogs.length;
 };
 
-/**
- * Calculate care frequency for a plant
- */
-export const calculateCareFrequency = (careLogs: CareLog[], plantId: string, careType: CareType): number => {
-  const plantCareLog = careLogs
-    .filter(log => log.plantId === plantId && log.careType === careType)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+export const formatRelativeTime = (date: Date): string => {
+  const now = new Date();
+  const diffMs = now.getTime() - new Date(date).getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+  return `${Math.floor(diffDays / 365)} years ago`;
+};
 
-  if (plantCareLog.length < 2) return 0;
+export const getCareStatistics = (careLogs: CareLog[]) => {
+  const total = careLogs.length;
+  const byType: Record<string, number> = {};
+  
+  careLogs.forEach(log => {
+    byType[log.careType] = (byType[log.careType] || 0) + 1;
+  });
+  
+  return {
+    total,
+    byType,
+    mostCommon: Object.keys(byType).sort((a, b) => byType[b] - byType[a])[0] || null,
+  };
+};
 
+export const calculateCareFrequency = (careLogs: CareLog[], careType: string, days: number = 30): number => {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+  
+  const relevantLogs = careLogs.filter(log => 
+    log.careType === careType && new Date(log.date) >= cutoffDate
+  );
+  
+  if (relevantLogs.length < 2) return 0;
+  
+  const sortedLogs = relevantLogs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const intervals: number[] = [];
-  for (let i = 1; i < plantCareLog.length; i++) {
-    const current = new Date(plantCareLog[i].date).getTime();
-    const previous = new Date(plantCareLog[i - 1].date).getTime();
-    const daysDiff = Math.floor((current - previous) / (1000 * 60 * 60 * 24));
-    intervals.push(daysDiff);
+  
+  for (let i = 1; i < sortedLogs.length; i++) {
+    const diffMs = new Date(sortedLogs[i].date).getTime() - new Date(sortedLogs[i-1].date).getTime();
+    intervals.push(diffMs / (1000 * 60 * 60 * 24)); // Convert to days
   }
-
-  // Return average interval in days
-  return Math.round(intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length);
+  
+  const avgInterval = intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length;
+  return Math.round(avgInterval);
 };
 
-/**
- * Get care patterns for a plant
- */
-export const getPlantCarePatterns = (careLogs: CareLog[], plantId: string): CarePattern[] => {
-  const careTypes: CareType[] = ['watering', 'fertilizing', 'pruning', 'repotting', 'health-check'];
-  const patterns: CarePattern[] = [];
-
-  careTypes.forEach(careType => {
-    const plantCareLogs = careLogs.filter(log => log.plantId === plantId && log.careType === careType);
-    
-    if (plantCareLogs.length > 0) {
-      const lastCare = plantCareLogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-      const averageFrequency = calculateCareFrequency(careLogs, plantId, careType);
-      
-      let frequency: CarePattern['frequency'] = 'as-needed';
-      if (averageFrequency > 0) {
-        if (averageFrequency <= 1) frequency = 'daily';
-        else if (averageFrequency <= 7) frequency = 'weekly';
-        else if (averageFrequency <= 14) frequency = 'bi-weekly';
-        else if (averageFrequency <= 31) frequency = 'monthly';
-        else frequency = 'seasonal';
-      }
-
-      let nextSuggestedDate: string | undefined;
-      if (averageFrequency > 0) {
-        const nextDate = new Date(lastCare.date);
-        nextDate.setDate(nextDate.getDate() + averageFrequency);
-        nextSuggestedDate = nextDate.toISOString();
-      }
-
-      patterns.push({
-        careType,
-        averageFrequency,
-        lastCareDate: lastCare.date,
-        nextSuggestedDate,
-        frequency
-      });
+export const generatePlantCareHistory = (careLogs: CareLog[], plantId: string): any => {
+  const plantLogs = careLogs.filter(log => log.plantId === plantId);
+  const sortedLogs = sortCareLogsByDate(plantLogs);
+  
+  const history = {
+    plantId,
+    totalEntries: plantLogs.length,
+    lastCareDate: sortedLogs.length > 0 ? sortedLogs[0].date : null,
+    careTypes: {} as Record<string, any>,
+    timeline: sortedLogs.map(log => ({
+      date: log.date,
+      careType: log.careType,
+      notes: log.notes,
+      photos: log.photos,
+    })),
+  };
+  
+  // Group by care type
+  plantLogs.forEach(log => {
+    if (!history.careTypes[log.careType]) {
+      history.careTypes[log.careType] = {
+        count: 0,
+        lastDate: null,
+        frequency: 0,
+      };
+    }
+    history.careTypes[log.careType].count++;
+    if (!history.careTypes[log.careType].lastDate || new Date(log.date) > new Date(history.careTypes[log.careType].lastDate)) {
+      history.careTypes[log.careType].lastDate = log.date;
     }
   });
+  
+  // Calculate frequencies
+  Object.keys(history.careTypes).forEach(careType => {
+    history.careTypes[careType].frequency = calculateCareFrequency(plantLogs, careType);
+  });
+  
+  return history;
+};
 
+export const createCareLog = (data: {
+  plantId: string;
+  careType: string;
+  notes?: string;
+  photos?: string[];
+  careData?: Record<string, any>;
+  date?: string;
+}): CareLog => {
+  return {
+    _id: '', // Will be set by backend
+    userId: '', // Will be set by backend
+    plantId: data.plantId,
+    careType: data.careType as CareLog['careType'],
+    notes: data.notes,
+    photos: data.photos,
+    careData: data.careData,
+    date: data.date || new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+};
+
+export const getPlantCarePatterns = (careLogs: CareLog[], plantId: string): any => {
+  const plantLogs = careLogs.filter(log => log.plantId === plantId);
+  
+  if (plantLogs.length === 0) {
+    return {
+      plantId,
+      hasData: false,
+      patterns: [],
+      recommendations: [],
+    };
+  }
+  
+  const patterns = {
+    plantId,
+    hasData: true,
+    careTypes: {} as Record<string, any>,
+    seasonalPatterns: {} as Record<string, number>,
+    recommendations: [] as string[],
+  };
+  
+  // Analyze care types
+  plantLogs.forEach(log => {
+    if (!patterns.careTypes[log.careType]) {
+      patterns.careTypes[log.careType] = {
+        frequency: calculateCareFrequency(plantLogs, log.careType),
+        lastCare: getLastCareDate(plantLogs, log.careType),
+        totalCount: 0,
+      };
+    }
+    patterns.careTypes[log.careType].totalCount++;
+    
+    // Seasonal analysis
+    const month = new Date(log.date).getMonth();
+    patterns.seasonalPatterns[month] = (patterns.seasonalPatterns[month] || 0) + 1;
+  });
+  
+  // Generate recommendations
+  Object.entries(patterns.careTypes).forEach(([careType, data]: [string, any]) => {
+    if (data.frequency > 14) { // More than 2 weeks
+      patterns.recommendations.push(`Consider increasing ${formatCareType(careType)} frequency`);
+    } else if (data.frequency < 3) { // Less than 3 days
+      patterns.recommendations.push(`${formatCareType(careType)} is being done very frequently - check if necessary`);
+    }
+    
+    const daysSinceLast = data.lastCare ? 
+      Math.floor((new Date().getTime() - new Date(data.lastCare).getTime()) / (1000 * 60 * 60 * 24)) : 
+      null;
+    
+    if (daysSinceLast && daysSinceLast > data.frequency * 2) {
+      patterns.recommendations.push(`${formatCareType(careType)} is overdue`);
+    }
+  });
+  
   return patterns;
 };
 
-/**
- * Generate comprehensive care history for a plant
- */
-export const generatePlantCareHistory = (careLogs: CareLog[], plantId: string): PlantCareHistory => {
-  const plantCareLogs = getPlantCareLogs(careLogs, plantId);
-  const patterns = getPlantCarePatterns(careLogs, plantId);
-  
-  // Calculate overall average care frequency
-  const frequencies = patterns
-    .filter(p => p.averageFrequency > 0)
-    .map(p => p.averageFrequency);
-  const averageCareFrequency = frequencies.length > 0 
-    ? Math.round(frequencies.reduce((sum, freq) => sum + freq, 0) / frequencies.length)
-    : 0;
-
-  // Determine health trend based on recent care logs and health checks
-  let healthTrend: PlantCareHistory['healthTrend'] = 'unknown';
-  const recentHealthChecks = plantCareLogs
-    .filter(log => log.careType === 'health-check' && log.metadata?.overallHealth)
-    .slice(0, 3); // Last 3 health checks
-
-  if (recentHealthChecks.length >= 2) {
-    const latest = recentHealthChecks[0].metadata?.overallHealth;
-    const previous = recentHealthChecks[1].metadata?.overallHealth;
-    
-    const healthValues = { excellent: 5, good: 4, fair: 3, poor: 2, critical: 1 };
-    const latestValue = healthValues[latest as keyof typeof healthValues] || 3;
-    const previousValue = healthValues[previous as keyof typeof healthValues] || 3;
-    
-    if (latestValue > previousValue) healthTrend = 'improving';
-    else if (latestValue < previousValue) healthTrend = 'declining';
-    else healthTrend = 'stable';
-  }
-
-  return {
-    plantId,
-    careLogs: plantCareLogs,
-    patterns,
-    totalCareEvents: plantCareLogs.length,
-    lastCareDate: plantCareLogs.length > 0 ? plantCareLogs[0].date : undefined,
-    averageCareFrequency,
-    healthTrend
-  };
-};
-
-/**
- * Get care statistics for analytics
- */
-export const getCareStatistics = (careLogs: CareLog[]) => {
-  const totalCareEvents = careLogs.length;
-  const careTypeCount: Record<CareType, number> = {
-    'watering': 0,
-    'fertilizing': 0,
-    'pruning': 0,
-    'repotting': 0,
-    'health-check': 0,
-    'pest-treatment': 0,
-    'soil-change': 0,
-    'location-change': 0
-  };
-
-  careLogs.forEach(log => {
-    careTypeCount[log.careType]++;
-  });
-
-  const mostCommonCareType = Object.entries(careTypeCount)
-    .sort(([,a], [,b]) => b - a)[0]?.[0] as CareType;
-
-  const recentCareLogs = getRecentCareLogs(careLogs, 30);
-  const careFrequencyLast30Days = recentCareLogs.length;
-
-  return {
-    totalCareEvents,
-    careTypeCount,
-    mostCommonCareType,
-    careFrequencyLast30Days,
-    averageCarePerWeek: Math.round((careFrequencyLast30Days / 30) * 7 * 10) / 10,
-  };
-};
-
-/**
- * Format care type for display
- */
-export const formatCareType = (careType: CareType): string => {
-  const typeNames: Record<CareType, string> = {
-    'watering': '💧 Watering',
-    'fertilizing': '🌱 Fertilizing',
-    'pruning': '✂️ Pruning',
-    'repotting': '🪴 Repotting',
-    'health-check': '🩺 Health Check',
-    'pest-treatment': '🐛 Pest Treatment',
-    'soil-change': '🌱 Soil Change',
-    'location-change': '📍 Location Change'
-  };
-  
-  return typeNames[careType] || careType;
-};
-
-/**
- * Get care type color for UI
- */
-export const getCareTypeColor = (careType: CareType): string => {
-  const colors: Record<CareType, string> = {
-    'watering': 'text-blue-600 bg-blue-50 border-blue-200',
-    'fertilizing': 'text-green-600 bg-green-50 border-green-200',
-    'pruning': 'text-orange-600 bg-orange-50 border-orange-200',
-    'repotting': 'text-purple-600 bg-purple-50 border-purple-200',
-    'health-check': 'text-pink-600 bg-pink-50 border-pink-200',
-    'pest-treatment': 'text-red-600 bg-red-50 border-red-200',
-    'soil-change': 'text-yellow-600 bg-yellow-50 border-yellow-200',
-    'location-change': 'text-indigo-600 bg-indigo-50 border-indigo-200'
-  };
-  
-  return colors[careType] || 'text-gray-600 bg-gray-50 border-gray-200';
+export const getPlantCareLogs = (careLogs: CareLog[], plantId: string): CareLog[] => {
+  return careLogs.filter(log => log.plantId === plantId);
 };
