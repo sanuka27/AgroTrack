@@ -3,9 +3,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DemoProvider } from "@/contexts/DemoContext";
+import { askPermissionAndGetToken, listenForMessages } from "@/lib/notifications";
 import GuestCTABanner from "@/components/GuestCTABanner";
 import GuestFloatingCTA from "@/components/GuestFloatingCTA";
 import BackToTop from "@/components/BackToTop";
@@ -69,6 +70,11 @@ const ConditionalCTAComponents = () => {
 };
 
 const App = () => {
+  useEffect(() => {
+    askPermissionAndGetToken();
+    listenForMessages();
+  }, []);
+
   return (
   <AuthProvider>
     <DemoProvider>
