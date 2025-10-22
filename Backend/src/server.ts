@@ -37,12 +37,12 @@ import './config/passport'; // Initialize passport strategies
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import plantRoutes from './routes/plantRoutes';
-import careLogRoutes from './routes/careLogRoutes';
 import reminderRoutes from './routes/reminderRoutes';
+import careLogRoutes from './routes/careLogRoutes';
 import communityRoutes from './routes/communityRoutes';
 import expertRoutes from './routes/expertRoutes';
 import diseaseDetectionRoutes from './routes/diseaseDetectionRoutes';
-import weatherRoutes from './routes/weatherRoutes';
+import aiRecommendationRoutes from './routes/aiRecommendationRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import exportImportRoutes from './routes/exportImportRoutes';
@@ -124,12 +124,12 @@ setupSwagger(app);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/plants', plantRoutes);
-if (isFeatureEnabled('carelogs')) app.use('/api/care-logs', careLogRoutes);
 if (isFeatureEnabled('reminders')) app.use('/api/reminders', reminderRoutes);
+app.use('/api/care-logs', careLogRoutes);
 if (isFeatureEnabled('community')) app.use('/api/community', communityRoutes);
 app.use('/api/experts', expertRoutes);
 app.use('/api/disease-detection', diseaseDetectionRoutes);
-app.use('/api/weather', weatherRoutes);
+app.use('/api/ai-recommendations', aiRecommendationRoutes);
 if (isFeatureEnabled('notifications')) app.use('/api/notifications', notificationRoutes);
 if (isFeatureEnabled('analytics')) app.use('/api/analytics', analyticsRoutes);
 if (isFeatureEnabled('exportImport')) app.use('/api/export-import', exportImportRoutes);
@@ -173,13 +173,6 @@ app.get('/api/docs', (req, res) => {
         'GET /api/plants/:id': 'Get plant by ID',
         'PUT /api/plants/:id': 'Update plant',
         'DELETE /api/plants/:id': 'Delete plant'
-      },
-      careLogs: {
-        'GET /api/care-logs': 'Get care logs for user plants',
-        'POST /api/care-logs': 'Create new care log',
-        'GET /api/care-logs/:id': 'Get care log by ID',
-        'PUT /api/care-logs/:id': 'Update care log',
-        'DELETE /api/care-logs/:id': 'Delete care log'
       },
       reminders: {
         'GET /api/reminders': 'Get user reminders',

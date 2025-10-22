@@ -10,7 +10,7 @@ const model = genAI ? genAI.getGenerativeModel({ model: "gemini-pro" }) : null;
 
 interface PlantAnalysis {
   healthScore: number;
-  growthRate: number;
+  // growthRate removed from user-facing metrics
   needsWater: boolean;
   needsFertilizer: boolean;
   sunlightStatus: string;
@@ -69,7 +69,6 @@ export async function analyzePlantAndGenerateSuggestions(
           confidence: suggestion.confidence,
           analysisData: {
             healthScore: analysis.healthScore,
-            growthRate: analysis.growthRate,
             lastWatered: plant.lastWateredDate,
             lastFertilized: plant.lastFertilizedDate,
             sunlightExposure: plant.sunlightRequirements || plant.careInstructions?.sunlight,
@@ -113,8 +112,7 @@ function analyzePlantCondition(plant: IPlant): PlantAnalysis {
     healthScore = healthMap[plant.healthStatus] || 75;
   }
 
-  // Calculate growth rate
-  const growthRate = plant.growthRate || 0;
+  // Growth rate removed from DB; treat as neutral (0) or compute from measurements in future
 
   // Check watering status
   const wateringDays = plant.wateringEveryDays || plant.wateringFrequency || 7;
@@ -143,7 +141,7 @@ function analyzePlantCondition(plant: IPlant): PlantAnalysis {
 
   return {
     healthScore,
-    growthRate,
+    
     needsWater,
     needsFertilizer,
     sunlightStatus,
@@ -167,7 +165,6 @@ Plant: ${plant.name}
 Category: ${plant.category || 'Unknown'}
 Age: ${plant.ageYears ? `${plant.ageYears} years` : 'Unknown'}
 Health Score: ${analysis.healthScore}/100
-Growth Rate: ${analysis.growthRate}% this month
 Needs Water: ${analysis.needsWater ? 'Yes' : 'No'}
 Needs Fertilizer: ${analysis.needsFertilizer ? 'Yes' : 'No'}
 Sunlight: ${analysis.sunlightStatus}
@@ -199,15 +196,7 @@ Watering Frequency: Every ${plant.wateringEveryDays || plant.wateringFrequency |
       });
     }
 
-    // Growth insights
-    if (Math.abs(analysis.growthRate) > 15) {
-      prompts.push({
-        type: 'growth_insight',
-        prompt: `The ${plant.name} is ${analysis.growthRate > 0 ? 'growing rapidly at' : 'declining at'} ${Math.abs(analysis.growthRate)}% this month. Provide insight on what this means and what actions to take. Keep it under 100 words.`,
-        priority: analysis.growthRate < 0 ? 'high' : 'medium',
-        condition: true
-      });
-    }
+    // Growth insights removed
 
     // Pro tips for healthy plants
     if (analysis.healthScore >= 70 && !analysis.needsWater) {
@@ -249,12 +238,7 @@ Watering Frequency: Every ${plant.wateringEveryDays || plant.wateringFrequency |
               title = `Water ${plant.name}`;
               message = `Soil moisture for ${plant.name} may be low. Water thoroughly until water drains from the pot, then allow to dry slightly before next watering. Avoid waterlogging.`;
               break;
-            case 'growth_insight':
-              title = analysis.growthRate > 0 ? `${plant.name} growing faster` : `${plant.name} declining`;
-              message = analysis.growthRate > 0
-                ? `${plant.name} is showing a growth change of ${analysis.growthRate}% this month. Continue current care and consider light and feeding to support growth.`
-                : `${plant.name} is declining by ${Math.abs(analysis.growthRate)}% this month. Check for pests, root issues, and adjust watering/fertilizer.`;
-              break;
+            // growth_insight removed — growth metrics are not tracked in user-facing data
             case 'pro_tip':
               title = `Care tip for ${plant.name}`;
               message = `Your ${plant.name} is doing well. Consider gently rotating the plant for even light exposure and fertilizing lightly during active growth.`;

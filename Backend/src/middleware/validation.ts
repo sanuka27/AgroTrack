@@ -446,7 +446,7 @@ export class SchemaBuilder {
       location: Joi.string().max(100).optional(),
       timezone: Joi.string().max(50).optional(),
       language: Joi.string().length(2).optional(),
-      theme: Joi.string().valid('light', 'dark', 'auto').optional(),
+  // theme removed
       notifications: Joi.object({
         email: Joi.boolean().optional(),
         push: Joi.boolean().optional(),
