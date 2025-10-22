@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
+import * as admin from 'firebase-admin';
 import { Reminder } from '../models/Reminder';
 import { Plant } from '../models/Plant';
+import { User } from '../models/User';
 import { createNotificationNow } from './notificationController';
 
 export class ReminderController {
@@ -28,6 +30,24 @@ export class ReminderController {
         completed: false,
       });
       await reminder.save();
+
+      // Send push notification if user has FCM token
+      try {
+        const user = await User.findById(userId);
+        if (user && user.fcmToken) {
+          const message = {
+            token: user.fcmToken,
+            notification: {
+              title: 'New Reminder Created',
+              body: `Reminder: ${title} scheduled for ${new Date(dueAt).toLocaleString()}`,
+            },
+          };
+          await admin.messaging().send(message);
+          console.log('Push notification sent for new reminder');
+        }
+      } catch (pushError) {
+        console.warn('Failed to send push notification for reminder:', pushError);
+      }
 
       // Create an in-app notification for this reminder
       try {

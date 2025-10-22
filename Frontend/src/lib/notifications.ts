@@ -18,9 +18,13 @@ export async function askPermissionAndGetToken() {
 
     console.log("FCM Token:", token);
     // Send to backend
+    const authToken = localStorage.getItem('token');
     await fetch('/api/store-token', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(authToken && { Authorization: `Bearer ${authToken}` })
+      },
       body: JSON.stringify({ token })
     });
     return token;

@@ -9,6 +9,7 @@ import session from 'express-session';
 import path from 'path';
 import fs from 'fs';
 import * as admin from 'firebase-admin';
+import { User } from './models/User';
 
 // Load environment variables FIRST
 const envPath = path.resolve(__dirname, '../.env');
@@ -32,6 +33,7 @@ import { errorHandler, notFound } from './middleware/errorMiddleware';
 import { globalRateLimit, burstLimiter } from './middleware/rateLimiting';
 import { setupSwagger } from './config/swagger';
 import { CacheWarmer } from './middleware/cacheMiddleware';
+import { authMiddleware } from './middleware/authMiddleware';
 import './config/passport'; // Initialize passport strategies
 
 // Import routes
@@ -149,16 +151,14 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // FCM Token storage endpoint
-app.post('/api/store-token', async (req, res) => {
+app.post('/api/store-token', authMiddleware, async (req, res) => {
   try {
     const { token } = req.body;
     if (!token) {
       return res.status(400).json({ error: 'Token is required' });
     }
-    // Store token in database (e.g., update user document)
-    // Example: await User.findOneAndUpdate({ userId: req.user.id }, { fcmToken: token });
-    // For now, just log it
-    console.log('FCM Token stored:', token);
+    const userId = (req as any).user._id;
+    await User.findByIdAndUpdate(userId, { fcmToken: token });
     res.status(200).json({ message: 'Token stored successfully' });
   } catch (error) {
     console.error('Error storing token:', error);

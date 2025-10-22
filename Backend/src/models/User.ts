@@ -67,6 +67,7 @@ export interface IUser extends Document {
   passwordResetToken?: string;
   passwordResetExpires?: Date;
   refreshTokens: string[];
+  fcmToken?: string; // Firebase Cloud Messaging token
   
   // Timestamps
   createdAt: Date;
@@ -279,7 +280,12 @@ const userSchema = new Schema<IUser>({
   
   refreshTokens: [{
     type: String
-  }]
+  }],
+  
+  fcmToken: {
+    type: String,
+    default: null
+  }
 }, {
   timestamps: true, // Automatically adds createdAt and updatedAt
   toJSON: { virtuals: true },
