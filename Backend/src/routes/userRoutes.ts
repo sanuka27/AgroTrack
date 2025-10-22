@@ -420,4 +420,11 @@ router.get('/admin/users/:userId/analytics',
   UserController.getUserAnalytics
 );
 
+// Update notification preferences
+router.put('/notification-preferences', 
+  userRateLimit,
+  authMiddleware,
+  UserController.updateNotificationPreferences
+);
+
 export default router;

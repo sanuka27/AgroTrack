@@ -440,6 +440,49 @@ export class UserController {
     }
   }
 
+  /**
+   * Update notification preferences
+   */
+  static async updateNotificationPreferences(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+      const { email, push, sms, reminderNotifications, communityNotifications, systemNotifications, quietHoursStart, quietHoursEnd } = req.body;
+
+      const updateData: any = {};
+      if (email !== undefined) updateData['preferences.notifications.email'] = email;
+      if (push !== undefined) updateData['preferences.notifications.push'] = push;
+      if (sms !== undefined) updateData['preferences.notifications.sms'] = sms;
+      if (reminderNotifications !== undefined) updateData['preferences.notifications.reminderNotifications'] = reminderNotifications;
+      if (communityNotifications !== undefined) updateData['preferences.notifications.communityNotifications'] = communityNotifications;
+      if (systemNotifications !== undefined) updateData['preferences.notifications.systemNotifications'] = systemNotifications;
+      if (quietHoursStart !== undefined) updateData['preferences.notifications.quietHoursStart'] = quietHoursStart;
+      if (quietHoursEnd !== undefined) updateData['preferences.notifications.quietHoursEnd'] = quietHoursEnd;
+
+      const user = await User.findByIdAndUpdate(
+        userId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      ).select('preferences');
+
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Notification preferences updated successfully',
+        data: { user }
+      });
+    } catch (error) {
+      logger.error('Update notification preferences error:', error);
+      next(error);
+    }
+  }
+
   // Admin-only endpoints
 
   /**
