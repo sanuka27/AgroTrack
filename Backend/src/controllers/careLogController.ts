@@ -1,9 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
+﻿import { Request, Response, NextFunction } from 'express';
 import CareLog from '../models/CareLog';
 import mongoose from 'mongoose';
 
 export class CareLogController {
-  // Methods return Response or void (when delegating to next(err))
   static async createCareLog(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
     try {
       const user = (req as any).user;
@@ -40,11 +39,7 @@ export class CareLogController {
       const l = Math.min(parseInt(limit, 10) || 20, 200);
       const p = Math.max(parseInt(page, 10) || 1, 1);
 
-      const careLogs = await CareLog.find(q)
-        .sort({ date: -1 })
-        .skip((p - 1) * l)
-        .limit(l)
-        .lean();
+      const careLogs = await CareLog.find(q).sort({ date: -1 }).skip((p - 1) * l).limit(l).lean();
 
       const total = await CareLog.countDocuments(q);
 
@@ -59,35 +54,50 @@ export class CareLogController {
       const user = (req as any).user;
       if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-      const id = req.params.careLogId;
-      if (!id) return res.status(400).json({ success: false, message: 'careLogId is required' });
-
-      const careLog = await CareLog.findOne({ _id: id, userId: user._id }).lean();
+      const { id } = req.params;
+      const careLog = await CareLog.findOne({ _id: id, userId: user._id });
       if (!careLog) return res.status(404).json({ success: false, message: 'Care log not found' });
 
-      res.status(200).json({ careLog });
+      res.status(200).json({ success: true, careLog });
     } catch (error) {
       next(error);
     }
   }
 
-  static async updateCareLog(_req: Request, res: Response, _next: NextFunction): Promise<Response | void> {
-    return res.status(501).json({ success: false, message: 'Care logs are not available in this deployment.' });
+  static async updateCareLog(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
+    try {
+      const user = (req as any).user;
+      if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+      const { id } = req.params;
+      const { careType, notes, photos, careData, date } = req.body;
+
+      const careLog = await CareLog.findOneAndUpdate(
+        { _id: id, userId: user._id },
+        { careType, notes, photos, careData, date: date ? new Date(date) : undefined },
+        { new: true, runValidators: true }
+      );
+
+      if (!careLog) return res.status(404).json({ success: false, message: 'Care log not found' });
+
+      res.status(200).json({ success: true, careLog });
+    } catch (error) {
+      next(error);
+    }
   }
 
-  static async deleteCareLog(_req: Request, res: Response, _next: NextFunction): Promise<Response | void> {
-    return res.status(501).json({ success: false, message: 'Care logs are not available in this deployment.' });
-  }
+  static async deleteCareLog(req: Request, res: Response, next: NextFunction): Promise<Response | void> {
+    try {
+      const user = (req as any).user;
+      if (!user) return res.status(401).json({ success: false, message: 'Unauthorized' });
 
-  static async getCareLogStats(_req: Request, res: Response, _next: NextFunction): Promise<Response | void> {
-    return res.status(501).json({ success: false, message: 'Care logs are not available in this deployment.' });
-  }
+      const { id } = req.params;
+      const careLog = await CareLog.findOneAndDelete({ _id: id, userId: user._id });
+      if (!careLog) return res.status(404).json({ success: false, message: 'Care log not found' });
 
-  static async bulkOperation(_req: Request, res: Response, _next: NextFunction): Promise<Response | void> {
-    return res.status(501).json({ success: false, message: 'Care logs are not available in this deployment.' });
-  }
-
-  static async getCareRecommendations(_req: Request, res: Response, _next: NextFunction): Promise<Response | void> {
-    return res.status(501).json({ success: false, message: 'Care logs are not available in this deployment.' });
+      res.status(200).json({ success: true, message: 'Care log deleted successfully' });
+    } catch (error) {
+      next(error);
+    }
   }
 }

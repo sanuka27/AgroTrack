@@ -4,6 +4,8 @@ import bcrypt from 'bcryptjs';
 import { User } from '../models/User';
 import { UserAnalytics, AnalyticsEventType } from '../models/UserAnalytics';
 import { logger } from '../config/logger';
+import path from 'path';
+import { firebaseService } from '../config/firebase';
 
 // Extended Request interfaces for type safety
 interface UpdateProfileRequest extends Request {
@@ -15,7 +17,6 @@ interface UpdateProfileRequest extends Request {
     location?: string;
     timezone?: string;
     language?: string;
-    theme?: 'light' | 'dark' | 'auto';
   };
 }
 
@@ -125,7 +126,7 @@ export class UserController {
             location: user.location,
             timezone: user.timezone,
             language: user.language,
-            theme: user.theme,
+            authProvider: user.authProvider,
             isEmailVerified: user.isEmailVerified,
             createdAt: user.createdAt,
             lastActiveAt: user.lastActiveAt,
@@ -145,7 +146,7 @@ export class UserController {
    */
   static async updateProfile(req: UpdateProfileRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { name, email, avatar, bio, location, timezone, language, theme } = req.body;
+  const { name, email, avatar, bio, location, timezone, language } = req.body;
       const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
 
       // Check if email is being changed and if it's already in use
@@ -170,12 +171,42 @@ export class UserController {
         updateData.email = email.toLowerCase();
         updateData.isEmailVerified = false; // Re-verify email if changed
       }
-      if (avatar !== undefined) updateData.avatar = avatar;
+      // If an avatar file was uploaded via multipart, upload it to Firebase and set the avatar URL
+      if (req.file) {
+        try {
+          const bucket = firebaseService.getStorage().bucket();
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+          const filename = `profile-${userId.toString()}-${uniqueSuffix}${path.extname(req.file.originalname)}`;
+          const file = bucket.file(`profile-pictures/${filename}`);
+
+          // Upload buffer
+          await file.save(req.file.buffer, {
+            metadata: {
+              contentType: req.file.mimetype,
+              metadata: {
+                originalName: req.file.originalname,
+                userId: userId.toString(),
+                uploadDate: new Date().toISOString()
+              }
+            },
+            validation: 'md5'
+          });
+
+          // Make public and construct URL
+          await file.makePublic();
+          const avatarUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
+          updateData.avatar = avatarUrl;
+        } catch (uploadError) {
+          logger.error('Failed to upload profile avatar to Firebase', { error: uploadError });
+          // Do not fail the entire profile update if avatar upload fails; return a warning in response
+          // but continue to update other fields.
+        }
+      } else if (avatar !== undefined) updateData.avatar = avatar;
       if (bio !== undefined) updateData.bio = bio;
       if (location !== undefined) updateData.location = location;
       if (timezone !== undefined) updateData.timezone = timezone;
       if (language !== undefined) updateData.language = language;
-      if (theme !== undefined) updateData.theme = theme;
+  // theme removed from profile
 
       const user = await User.findByIdAndUpdate(
         userId,

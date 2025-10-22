@@ -42,7 +42,7 @@ export interface IPlant extends Document {
   healthStatus?: string; // e.g., "Good", "Fair", "Poor"
   health?: string;
   healthScore?: number;
-  growthRate?: number; // percentage this month
+  // growth rate removed
   
   // Measurements & Tracking
   measurements?: Array<{
@@ -163,11 +163,7 @@ const plantSchema = new Schema<IPlant>({
     min: 0,
     max: 100
   },
-  growthRate: {
-    type: Number,
-    min: -100,
-    max: 1000
-  },
+  // growthRate removed from schema
   
   // Measurements & Tracking
   measurements: [{

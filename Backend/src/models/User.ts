@@ -53,13 +53,11 @@ export interface IUser extends Document {
     };
     language: string;
     timezone: string;
-    theme: 'light' | 'dark' | 'auto';
   };
   
   // Direct access fields for compatibility
   timezone?: string;
   language?: string;
-  theme?: 'light' | 'dark' | 'auto';
   stats?: any; // For analytics
   passwordChangedAt?: Date;
   
@@ -255,11 +253,6 @@ const userSchema = new Schema<IUser>({
     timezone: {
       type: String,
       default: 'UTC'
-    },
-    theme: {
-      type: String,
-      enum: ['light', 'dark', 'auto'],
-      default: 'light'
     }
   },
   

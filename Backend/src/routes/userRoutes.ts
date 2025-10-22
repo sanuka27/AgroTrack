@@ -51,8 +51,9 @@ const updateProfileValidation = [
     .optional()
     .isLength({ min: 2, max: 50 })
     .withMessage('Name must be between 2 and 50 characters')
-    .matches(/^[a-zA-Z\s'-]+$/)
-    .withMessage('Name can only contain letters, spaces, hyphens, and apostrophes'),
+    // Allow letters, numbers, spaces, hyphens, and apostrophes (e.g., "User 01")
+    .matches(/^[\p{L}0-9\s'-]+$/u)
+    .withMessage('Name can only contain letters, numbers, spaces, hyphens, and apostrophes'),
   
   body('email')
     .optional()
@@ -85,10 +86,7 @@ const updateProfileValidation = [
     .isIn(['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh'])
     .withMessage('Please provide a valid language code'),
   
-  body('theme')
-    .optional()
-    .isIn(['light', 'dark', 'auto'])
-    .withMessage('Theme must be light, dark, or auto')
+  // Theme preference removed from user profile
 ];
 
 const updatePreferencesValidation = [
@@ -152,10 +150,7 @@ const updatePreferencesValidation = [
     .isInt({ min: 1, max: 365 })
     .withMessage('Default fertilizing interval must be between 1 and 365 days'),
   
-  body('plantCare.preferredUnits')
-    .optional()
-    .isIn(['metric', 'imperial'])
-    .withMessage('Preferred units must be metric or imperial'),
+  // preferredUnits removed from preferences validation
   
   body('plantCare.reminderTime')
     .optional()
@@ -350,9 +345,11 @@ router.post('/profile/avatar',
   }
 );
 
+// Allow multipart/form-data with optional `avatar` file so clients can send an image together with profile fields
 router.put('/profile', 
   userRateLimit,
   authMiddleware,
+  profilePictureUpload.single('avatar'),
   updateProfileValidation,
   validate,
   UserController.updateProfile

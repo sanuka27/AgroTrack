@@ -1,9 +1,9 @@
-import mongoose, { Document, Schema } from 'mongoose';
+﻿import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICareLog extends Document {
   userId: mongoose.Types.ObjectId;
   plantId: mongoose.Types.ObjectId;
-  careType: string;
+  careType: 'watering' | 'fertilizing' | 'pruning' | 'repotting' | 'pestControl' | 'other';
   notes?: string;
   photos?: string[];
   careData?: Record<string, any>;
@@ -12,21 +12,50 @@ export interface ICareLog extends Document {
   updatedAt: Date;
 }
 
-const careLogSchema = new Schema<ICareLog>({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-  plantId: { type: Schema.Types.ObjectId, ref: 'Plant', required: true, index: true },
-  careType: { type: String, required: true },
-  notes: { type: String },
-  photos: [{ type: String }],
-  careData: { type: Schema.Types.Mixed },
-  date: { type: Date, default: Date.now }
-}, {
-  collection: 'carelogs',
-  timestamps: true
-});
+const CareLogSchema = new Schema<ICareLog>(
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    plantId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Plant',
+      required: true,
+      index: true,
+    },
+    careType: {
+      type: String,
+      enum: ['watering', 'fertilizing', 'pruning', 'repotting', 'pestControl', 'other'],
+      required: true,
+    },
+    notes: {
+      type: String,
+      maxlength: 1000,
+    },
+    photos: [{
+      type: String,
+    }],
+    careData: {
+      type: Schema.Types.Mixed,
+    },
+    date: {
+      type: Date,
+      default: Date.now,
+      index: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
-careLogSchema.index({ userId: 1, plantId: 1, date: -1 });
+CareLogSchema.index({ userId: 1, date: -1 });
+CareLogSchema.index({ plantId: 1, date: -1 });
+CareLogSchema.index({ userId: 1, plantId: 1, careType: 1 });
 
-export const CareLog = mongoose.model<ICareLog>('CareLog', careLogSchema);
+const CareLog = mongoose.model<ICareLog>('CareLog', CareLogSchema);
 
 export default CareLog;

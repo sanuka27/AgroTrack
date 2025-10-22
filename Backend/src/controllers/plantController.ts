@@ -276,6 +276,14 @@ export class PlantController {
         Plant.countDocuments(searchQuery)
       ]);
 
+      // Debug: log how many returned plants include imageUrl
+      try {
+        const withImages = (plants || []).filter(p => (p as any).imageUrl).length;
+        logger.info(`[GetPlants] user=${userId.toString()} returned=${plants.length} withImage=${withImages}`);
+      } catch (logErr) {
+        logger.warn('Failed to log GetPlants imageUrl stats', logErr);
+      }
+
       const totalPages = Math.ceil(totalPlants / limitNum);
 
       res.status(200).json({
@@ -419,6 +427,18 @@ export class PlantController {
         updatedAt: new Date() 
       };
 
+      // Debug logging to help trace image persistence issues
+      try {
+        if (req.body && (req.body as any).imageUrl) {
+          logger.info(`[UpdatePlant] Request includes imageUrl for plant ${plantId}: ${(req.body as any).imageUrl}`);
+        }
+        if (imageUrl) {
+          logger.info(`[UpdatePlant] Resolved server-side imageUrl for plant ${plantId}: ${imageUrl}`);
+        }
+      } catch (logErr) {
+        logger.warn('Failed to log imageUrl debug info', logErr);
+      }
+
       // Check if plantId is valid MongoDB ObjectId
       if (!mongoose.Types.ObjectId.isValid(plantId!)) {
         res.status(400).json({
@@ -479,6 +499,19 @@ export class PlantController {
         message: 'Plant updated successfully',
         data: { plant }
       });
+
+      // After responding, log whether the imageUrl actually persisted (helps for async callers)
+      try {
+        if (imageUrl) {
+          if (plant && (plant as any).imageUrl === imageUrl) {
+            logger.info(`[UpdatePlant] imageUrl persisted for plant ${plantId}`);
+          } else {
+            logger.warn(`[UpdatePlant] imageUrl did NOT persist for plant ${plantId}. requested=${imageUrl} saved=${plant ? (plant as any).imageUrl : 'no-plant'}`);
+          }
+        }
+      } catch (logErr) {
+        logger.warn('Failed to log post-update image persistence check', logErr);
+      }
     } catch (error) {
       logger.error('Update plant error:', error);
       next(error);

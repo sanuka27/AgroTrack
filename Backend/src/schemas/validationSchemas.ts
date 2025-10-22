@@ -118,9 +118,8 @@ export const userSchemas = {
   }),
 
   updatePreferences: Joi.object({
-    timezone: Joi.string().max(50).optional(),
-    language: Joi.string().length(2).optional(),
-    theme: Joi.string().valid('light', 'dark', 'auto').optional(),
+  timezone: Joi.string().max(50).optional(),
+  language: Joi.string().length(2).optional(),
     dateFormat: Joi.string().valid('MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD').optional(),
     temperatureUnit: Joi.string().valid('celsius', 'fahrenheit').optional(),
     notifications: Joi.object({
