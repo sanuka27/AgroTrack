@@ -55,11 +55,6 @@ export function Footer() {
                   FAQ
                 </Link>
               </li>
-              <li>
-                <Link to="/blog" className="text-sm hover:text-white transition">
-                  Blog/Tips
-                </Link>
-              </li>
             </ul>
           </nav>
 
