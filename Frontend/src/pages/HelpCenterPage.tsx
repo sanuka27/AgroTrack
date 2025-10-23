@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, HelpCircle, MessageCircle, Bug } from 'lucide-react';
 
 const HelpCenterPage = () => {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
@@ -45,117 +45,160 @@ const HelpCenterPage = () => {
   ];
 
   return (
-    <main role="main" className="container mx-auto max-w-3xl px-4 py-12">
-      <h1 className="text-4xl font-bold text-gray-900 mb-8">Help Center</h1>
-      
-      <div className="space-y-8">
-        {/* Introduction */}
-        <section>
-          <p className="text-lg text-gray-600 leading-relaxed mb-6">
-            Welcome to the AgroTrack Help Center! Find answers to common questions below, 
-            or reach out to our support team if you need additional assistance.
-          </p>
-          
-          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-            <p className="text-emerald-800 text-sm">
-              <strong>Quick tip:</strong> Most questions can be answered by searching through the FAQ below. 
-              For technical issues, our Bug Reports page has specific troubleshooting steps.
-            </p>
-          </div>
-        </section>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,hsl(120_100%_25%/0.05),transparent_70%)] pointer-events-none"></div>
 
-        {/* FAQ Section */}
-        <section>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Frequently Asked Questions</h2>
-          
-          <div className="space-y-4">
-            {faqs.map((faq, index) => (
-              <div key={index} className="border border-gray-200 rounded-lg">
-                <button
-                  onClick={() => toggleFAQ(index)}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
-                  aria-expanded={openFAQ === index}
-                  aria-controls={`faq-answer-${index}`}
-                >
-                  <h3 className="text-lg font-medium text-gray-800 pr-4">
-                    {faq.question}
-                  </h3>
-                  {openFAQ === index ? (
-                    <ChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                  )}
-                </button>
-                
-                {openFAQ === index && (
-                  <div
-                    id={`faq-answer-${index}`}
-                    role="region"
-                    className="px-6 pb-4"
+      <main role="main" className="relative container mx-auto max-w-4xl px-4 py-16">
+        {/* Header Section */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center space-x-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-medium mb-6">
+            <HelpCircle className="w-4 h-4" />
+            <span>Help Center</span>
+          </div>
+          <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
+            How Can We
+            <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent"> Help You?</span>
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Find answers to common questions or get in touch with our support team.
+          </p>
+        </div>
+        <div className="space-y-12">
+          {/* Introduction */}
+          <section className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/20">
+            <p className="text-lg text-gray-600 leading-relaxed mb-6">
+              Welcome to the AgroTrack Help Center! Find answers to common questions below,
+              or reach out to our support team if you need additional assistance.
+            </p>
+
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl p-6">
+              <p className="text-green-800 text-sm font-medium">
+                <strong>Quick tip:</strong> Most questions can be answered by searching through the FAQ below.
+                For technical issues, our Bug Reports page has specific troubleshooting steps.
+              </p>
+            </div>
+          </section>
+
+          {/* FAQ Section */}
+          <section className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-white/20">
+            <h2 className="text-2xl font-bold text-gray-900 mb-8">Frequently Asked Questions</h2>
+
+            <div className="space-y-4">
+              {faqs.map((faq, index) => (
+                <div key={index} className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
+                  <button
+                    onClick={() => toggleFAQ(index)}
+                    className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+                    aria-expanded={openFAQ === index}
+                    aria-controls={`faq-answer-${index}`}
                   >
-                    <p className="text-gray-600 leading-relaxed">
-                      {faq.answer}
-                    </p>
+                    <h3 className="text-lg font-medium text-gray-800 pr-4">
+                      {faq.question}
+                    </h3>
+                    {openFAQ === index ? (
+                      <ChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                    )}
+                  </button>
+
+                  {openFAQ === index && (
+                    <div
+                      id={`faq-answer-${index}`}
+                      role="region"
+                      className="px-6 pb-4"
+                    >
+                      <p className="text-gray-600 leading-relaxed">
+                        {faq.answer}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Contact Links */}
+          <section>
+            <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">Still Need Help?</h2>
+            <p className="text-gray-600 leading-relaxed mb-8 text-lg text-center">
+              Can't find what you're looking for? Our support team is here to help:
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-shadow">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                    <MessageCircle className="w-6 h-6 text-white" />
                   </div>
-                )}
+                  <h3 className="text-lg font-semibold text-gray-900">General Support</h3>
+                </div>
+                <p className="text-gray-600 text-sm mb-4">
+                  Questions about using AgroTrack, plant care advice, or account issues.
+                </p>
+                <Link
+                  to="/contact"
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                >
+                  Contact Support →
+                </Link>
               </div>
-            ))}
-          </div>
-        </section>
 
-        {/* Contact Links */}
-        <section>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Still Need Help?</h2>
-          <p className="text-gray-600 leading-relaxed mb-6">
-            Can't find what you're looking for? Our support team is here to help:
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">General Support</h3>
-              <p className="text-gray-600 text-sm mb-4">
-                Questions about using AgroTrack, plant care advice, or account issues.
-              </p>
-              <Link 
-                to="/contact" 
-                className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm"
-              >
-                Contact Support →
-              </Link>
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-shadow">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-xl flex items-center justify-center">
+                    <Bug className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">Technical Issues</h3>
+                </div>
+                <p className="text-gray-600 text-sm mb-4">
+                  App crashes, bugs, or features not working as expected.
+                </p>
+                <Link
+                  to="/bug-reports"
+                  className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                >
+                  Report Bug →
+                </Link>
+              </div>
             </div>
-            
-            <div className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Technical Issues</h3>
-              <p className="text-gray-600 text-sm mb-4">
-                App crashes, bugs, or features not working as expected.
-              </p>
-              <Link 
-                to="/bug-reports" 
-                className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-              >
-                Report Bug →
-              </Link>
-            </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Quick Contact Info */}
-        <section className="bg-gray-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Direct Contact</h3>
-          <div className="space-y-2 text-sm">
-            <p className="text-gray-600">
-              📧 Email: <a href="mailto:support@agrotrack.lk" className="text-emerald-600 hover:text-emerald-700">support@agrotrack.lk</a>
-            </p>
-            <p className="text-gray-600">
-              📞 Phone: <a href="tel:+94771234567" className="text-emerald-600 hover:text-emerald-700">+94 77 123 4567</a>
-            </p>
-            <p className="text-gray-600">
-              🕒 Support Hours: Monday-Friday, 9:00 AM - 6:00 PM (Sri Lanka Time)
-            </p>
-          </div>
-        </section>
+          {/* Quick Contact Info */}
+          <section className="bg-gradient-to-r from-green-600 to-blue-600 rounded-2xl p-8 text-white">
+            <h3 className="text-xl font-bold mb-6">Direct Contact</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <p className="text-green-100 text-sm mb-1">📧 Email</p>
+                <a href="mailto:support@agrotrack.lk" className="text-white hover:text-green-200 font-medium transition-colors block">
+                  support@agrotrack.lk
+                </a>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <p className="text-green-100 text-sm mb-1">📞 Phone</p>
+                <a href="tel:+94771234567" className="text-white hover:text-green-200 font-medium transition-colors block">
+                  +94 77 123 4567
+                </a>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <p className="text-green-100 text-sm mb-1">🐛 Bug Reports</p>
+                <a href="mailto:bugs@agrotrack.lk" className="text-white hover:text-green-200 font-medium transition-colors block">
+                  bugs@agrotrack.lk
+                </a>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                <p className="text-green-100 text-sm mb-1">🕒 Support Hours</p>
+                <p className="text-white font-medium">Mon-Fri, 9AM-6PM (Sri Lanka)</p>
+              </div>
+            </div>
+          </section>
       </div>
-    </main>
+        <footer className="mt-16 pt-8 border-t border-gray-200 text-center">
+          <p className="text-sm text-gray-500">Last updated: 2025-08-24</p>
+        </footer>
+      </main>
+    </div>
   );
 };
 
