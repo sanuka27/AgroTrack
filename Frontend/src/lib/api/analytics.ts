@@ -221,4 +221,47 @@ export const analyticsApi = {
       throw error;
     }
   },
+  /**
+   * Get the full dashboard (widgets + analytics)
+   * GET /api/analytics/dashboard
+   */
+  async getFullDashboard(): Promise<any> {
+    try {
+      const response = await api.get('/analytics/dashboard');
+      return response.data.data; // { widgets, analytics, period, lastUpdated }
+    } catch (error) {
+      console.error('Error fetching full dashboard analytics:', getErrorMessage(error));
+      throw error;
+    }
+  },
+
+  /**
+   * Get plant health analytics (summary)
+   * GET /api/analytics/plant-health
+   */
+  async getPlantHealthSummary(params?: Record<string, any>): Promise<any> {
+    try {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      const response = await api.get(`/analytics/plant-health${query}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching plant health summary:', getErrorMessage(error));
+      throw error;
+    }
+  },
+
+  /**
+   * Get growth analytics
+   * GET /api/analytics/growth
+   */
+  async getGrowthAnalytics(params?: Record<string, any>): Promise<any> {
+    try {
+      const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+      const response = await api.get(`/analytics/growth${query}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching growth analytics:', getErrorMessage(error));
+      throw error;
+    }
+  }
 };

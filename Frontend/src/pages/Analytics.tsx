@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { BarChart3, TrendingUp, Activity, PieChart, Droplets, Sun, Scissors } from "lucide-react";
-import { mockApi } from "@/lib/mockApi";
+import { analyticsApi } from '@/lib/api/analytics';
 import type { AnalyticsData } from "@/types/api";
 
 const Analytics = () => {
@@ -18,20 +18,60 @@ const Analytics = () => {
   const { role } = useAuth();
 
   useEffect(() => {
-    const loadAnalytics = async () => {
-      try {
-        setLoading(true);
-        // For non-admin users keep using existing mock/user endpoint
-        if (role !== 'admin') {
-          const data = await mockApi.analytics.getDashboard();
-          setAnalyticsData(data);
+      const loadAnalytics = async () => {
+        try {
+          setLoading(true);
+          // For admin users we render AdminAnalytics which has its own loader
+          if (role !== 'admin') {
+            // Fetch richer analytics from backend in parallel
+            const [full, plantHealth, growth] = await Promise.all([
+              analyticsApi.getFullDashboard().catch(() => null),
+              analyticsApi.getPlantHealthSummary().catch(() => null),
+              analyticsApi.getGrowthAnalytics().catch(() => null)
+            ]);
+
+            const backendAnalytics = full?.analytics || {};
+
+            // derive counts
+            const totalPlants = backendAnalytics?.plantOverview?.totalPlants ?? plantHealth?.totalPlants ?? 0;
+            const healthyCount = (plantHealth?.healthDistribution?.excellent || 0) + (plantHealth?.healthDistribution?.good || 0);
+
+            const mapped: any = {
+              dashboard: {
+                totalPlants: totalPlants,
+                activeReminders: backendAnalytics?.reminders?.pending ?? backendAnalytics?.reminders?.total ?? 0,
+                overdueReminders: backendAnalytics?.reminders?.overdue ?? 0,
+                recentCareLogs: backendAnalytics?.careActivity?.totalLogs ?? plantHealth?.recentCareLogs ?? 0,
+                healthScore: totalPlants > 0 ? Math.round((healthyCount / totalPlants) * 100) : (plantHealth?.averageHealthScore ? Math.round(plantHealth.averageHealthScore) : 0),
+                growthRate: growth?.averageGrowthRate ?? 0,
+                careActions: backendAnalytics?.careActivity?.thisWeek ?? backendAnalytics?.careActivity?.totalLogs ?? 0,
+                streakDays: 0,
+              },
+              careTrends: growth?.growthTrends?.map((t: any) => ({
+                month: t.month || t.period || 'N/A',
+                watering: t.watering || 0,
+                fertilizing: t.fertilizing || 0,
+                pruning: t.pruning || 0
+              })) || [],
+              plantHealth: (plantHealth ? [
+                { category: 'Excellent', count: plantHealth.healthDistribution.excellent || 0, percentage: totalPlants ? Math.round(((plantHealth.healthDistribution.excellent || 0) / totalPlants) * 100) : 0 },
+                { category: 'Good', count: plantHealth.healthDistribution.good || 0, percentage: totalPlants ? Math.round(((plantHealth.healthDistribution.good || 0) / totalPlants) * 100) : 0 },
+                { category: 'Fair', count: plantHealth.healthDistribution.fair || 0, percentage: totalPlants ? Math.round(((plantHealth.healthDistribution.fair || 0) / totalPlants) * 100) : 0 },
+                { category: 'Poor', count: plantHealth.healthDistribution.poor || 0, percentage: totalPlants ? Math.round(((plantHealth.healthDistribution.poor || 0) / totalPlants) * 100) : 0 },
+                { category: 'Critical', count: plantHealth.healthDistribution.critical || 0, percentage: totalPlants ? Math.round(((plantHealth.healthDistribution.critical || 0) / totalPlants) * 100) : 0 }
+              ] : []),
+              careTypeDistribution: plantHealth?.careImpactAnalysis?.distribution || [],
+              recentActivity: backendAnalytics?.plantOverview?.recentActivity ? [backendAnalytics.plantOverview.recentActivity] : []
+            };
+
+            setAnalyticsData(mapped);
+          }
+        } catch (error) {
+          console.error('Error loading analytics:', error);
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('Error loading analytics:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
 
     loadAnalytics();
   }, [role]);
@@ -57,11 +97,7 @@ const Analytics = () => {
             <h1 className="text-3xl font-bold text-foreground mb-2">Analytics</h1>
             <p className="text-muted-foreground">Track your gardening progress and insights</p>
           </div>
-          <div className="mt-3 md:mt-0">
-            <Button variant="default" asChild className="w-full md:w-auto">
-              <Link to="/plant-analysis">Plant Analysis</Link>
-            </Button>
-          </div>
+          {/* Plant Analysis CTA removed on analytics page */}
         </div>
 
         {/* Analytics Overview */}
