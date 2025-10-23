@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { adminApi } from '@/api/admin';
 import { Button } from '@/components/ui/button';
-import { realtime } from '@/realtime';
 
 const AdminAnalytics: React.FC = () => {
   const [overview, setOverview] = useState<any>(null);
@@ -24,15 +23,6 @@ const AdminAnalytics: React.FC = () => {
     };
 
     load();
-    const unsubscribe = realtime.subscribe((event) => {
-      if (event.type === 'metrics') {
-        load();
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
   }, []);
 
   if (loading) return <div className="p-6">Loading admin analytics...</div>;
@@ -42,9 +32,6 @@ const AdminAnalytics: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Admin Analytics</h2>
-        <div>
-          <Button variant="ghost" onClick={() => window.location.reload()}>Refresh</Button>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
