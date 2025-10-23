@@ -630,10 +630,11 @@ router.post('/firebase', async (req, res): Promise<void> => {
     try {
       decodedToken = await firebaseService.verifyIdToken(idToken);
     } catch (firebaseError) {
-      logger.warn('Firebase authentication failed', { error: firebaseError });
+      logger.warn('Firebase authentication failed', { error: firebaseError, stack: (firebaseError as Error)?.stack });
       res.status(400).json({
         success: false,
-        message: 'Invalid Firebase token'
+        message: 'Invalid Firebase token',
+        error: (firebaseError as Error)?.message
       });
       return;
     }

@@ -58,6 +58,7 @@ import aiChatRoutes from './routes/aiChatRoutes';
 import aiSuggestionsRoutes from './routes/aiSuggestionsRoutes';
 import communityForumRoutes from './routes/communityForumRoutes';
 import devAuthRoutes from './routes/devAuth';
+import devDebugRoutes from './routes/devDebug';
 import realtimeRoutes from './routes/realtimeRoutes';
 import { isFeatureEnabled } from './config/features';
 
@@ -148,6 +149,7 @@ app.use('/api/realtime', realtimeRoutes);
 // Development-only routes
 if (process.env.NODE_ENV === 'development') {
   app.use('/api/dev', devAuthRoutes);
+  app.use('/api/dev', devDebugRoutes);
 }
 
 // FCM Token storage endpoint
@@ -162,6 +164,22 @@ app.post('/api/store-token', authMiddleware, async (req, res) => {
     res.status(200).json({ message: 'Token stored successfully' });
   } catch (error) {
     console.error('Error storing token:', error);
+    res.status(500).json({ error: 'Failed to store token' });
+  }
+});
+
+// Alias route without leading /api to support clients that post to /store-token
+app.post('/store-token', authMiddleware, async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ error: 'Token is required' });
+    }
+    const userId = (req as any).user._id;
+    await User.findByIdAndUpdate(userId, { fcmToken: token });
+    res.status(200).json({ message: 'Token stored successfully' });
+  } catch (error) {
+    console.error('Error storing token (alias):', error);
     res.status(500).json({ error: 'Failed to store token' });
   }
 });

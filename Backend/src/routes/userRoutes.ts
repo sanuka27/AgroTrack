@@ -110,11 +110,6 @@ const updatePreferencesValidation = [
     .isBoolean()
     .withMessage('Community updates preference must be a boolean'),
   
-  body('notifications.blogUpdates')
-    .optional()
-    .isBoolean()
-    .withMessage('Blog updates preference must be a boolean'),
-  
   body('notifications.systemUpdates')
     .optional()
     .isBoolean()
