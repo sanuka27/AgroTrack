@@ -173,7 +173,7 @@ export const adminApi = {
     action: 'resolve' | 'dismiss',
     adminNote?: string
   ): Promise<void> => {
-    await api.patch(`/community/forum/reports/${reportId}`, {
+    await api.patch(`/admin/reports/${reportId}`, {
       status: action === 'resolve' ? 'resolved' : 'dismissed',
       adminNote,
     });

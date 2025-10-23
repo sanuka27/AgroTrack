@@ -38,6 +38,12 @@ export class AdminController {
       const careLogsCount = 0; // Model removed
       const remindersCount = 0; // Model removed
 
+      // Reports statistics
+      const [pendingReports, totalReports] = await Promise.all([
+        CommunityReport.countDocuments({ status: { $in: ['open', 'pending'] } }),
+        CommunityReport.countDocuments({})
+      ]);
+
       const stats = {
         users: {
           total: totalUsers,
@@ -53,6 +59,10 @@ export class AdminController {
           posts: postsCount,
           careLogs: careLogsCount,
           reminders: remindersCount
+        },
+        reports: {
+          pending: pendingReports,
+          total: totalReports
         },
         activity: {
           dailyActiveUsers: await User.countDocuments({ lastActiveAt: { $gte: startOfDay } }),
@@ -1050,6 +1060,62 @@ export class AdminController {
         message: 'Failed to update post',
         error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
+    }
+  }
+
+  // Update a report (community report or bug report) - resolve or dismiss
+  async updateReport(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { status, adminNote } = req.body;
+
+      if (!id) { res.status(400).json({ success: false, message: 'Report ID required' }); return; }
+      if (!['resolved', 'dismissed', 'pending'].includes(status)) {
+        res.status(400).json({ success: false, message: 'Invalid status' }); return;
+      }
+
+      // Try community reports first
+      const { CommunityReport } = await import('../models/CommunityReport');
+      const { BugReport } = await import('../models/BugReport');
+
+      const isObjectId = mongoose.Types.ObjectId.isValid(id);
+
+      let updated: any = null;
+
+      if (isObjectId) {
+        // Update community report if exists
+        const comm = await CommunityReport.findById(id);
+        if (comm) {
+          comm.status = status === 'dismissed' ? 'dismissed' : (status === 'resolved' ? 'resolved' : status as any);
+          comm.reviewedBy = req.user ? (req.user as any)._id?.toString() || (req.user as any).id : null;
+          comm.reviewedAt = new Date();
+          if (adminNote) comm.reviewNotes = adminNote;
+          updated = await comm.save();
+        }
+      }
+
+      // If not community report, try bug report by id string (could be same)
+      if (!updated) {
+        const bug = await BugReport.findById(id);
+        if (bug) {
+          // Map dismissed -> closed, resolved -> resolved
+          bug.status = status === 'dismissed' ? 'closed' : (status === 'resolved' ? 'resolved' : status as any);
+          bug.assignedTo = req.user ? (req.user as any)._id?.toString() || (req.user as any).id : bug.assignedTo;
+          if (adminNote) bug.resolution = adminNote;
+          updated = await bug.save();
+        }
+      }
+
+      if (!updated) {
+        res.status(404).json({ success: false, message: 'Report not found' }); return;
+      }
+
+      // Emit activity or log (omitted for brevity)
+
+      res.json({ success: true, data: { report: updated } });
+    } catch (error) {
+      console.error('Failed to update report:', error);
+      res.status(500).json({ success: false, message: 'Failed to update report' });
     }
   }
 
