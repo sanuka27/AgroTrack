@@ -11,7 +11,6 @@ import GuestCTABanner from "@/components/GuestCTABanner";
 import GuestFloatingCTA from "@/components/GuestFloatingCTA";
 import BackToTop from "@/components/BackToTop";
 import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // Dynamic imports with proper typing
@@ -37,8 +36,6 @@ const BugReportsPage = lazy(() => import("./pages/BugReportsPage"));
 const HowItWorksPage = lazy(() => import("./pages/HowItWorksPage"));
 const GuidesPage = lazy(() => import("./pages/GuidesPage"));
 const FAQPage = lazy(() => import("./pages/FAQPage"));
-const BlogPage = lazy(() => import("./pages/BlogPage"));
-const BlogDetailPage = lazy(() => import("./pages/BlogDetailPage"));
 const StatusPage = lazy(() => import("./pages/StatusPage"));
 const AssistantPage = lazy(() => import("./pages/AssistantPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
@@ -143,8 +140,6 @@ const App = () => {
               <Route path="/how-it-works" element={<HowItWorksPage />} />
               <Route path="/guides" element={<GuidesPage />} />
               <Route path="/faq" element={<FAQPage />} />
-              <Route path="/blog" element={<BlogPage />} />
-              <Route path="/blog/:slug" element={<BlogDetailPage />} />
               <Route path="/status" element={<StatusPage />} />
               <Route path="/assistant" element={<AssistantPage />} />
               <Route path="/care-test" element={<CareTestPage />} />
