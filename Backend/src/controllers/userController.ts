@@ -27,7 +27,6 @@ interface UpdatePreferencesRequest extends Request {
       push?: boolean;
       careReminders?: boolean;
       communityUpdates?: boolean;
-      blogUpdates?: boolean;
       systemUpdates?: boolean;
     };
     privacy?: {
