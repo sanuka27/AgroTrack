@@ -7,11 +7,15 @@ import heroPlant from "@/assets/hero-plant.jpg";
 
 export function Hero() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const handleStartGrowing = () => {
     if (isAuthenticated) {
-      navigate('/plants');
+      if (user?.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/plants');
+      }
     } else {
       navigate('/signup');
     }
