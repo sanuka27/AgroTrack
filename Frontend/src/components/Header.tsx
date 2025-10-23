@@ -38,8 +38,8 @@ export function Header() {
   const getVisibleNavItems = () => {
     const items = [...baseNavItems];
 
-    // If authenticated, insert a Dashboard link before Features regardless of specific permissions
-    if (user) {
+    // If authenticated and not admin, insert a Dashboard link before Features
+    if (user && user.role !== 'admin') {
       // Use a distinct icon for Dashboard so it differs from the Features leaf icon
       items.unshift({ label: "Dashboard", href: "/plants", icon: BarChart3 } as any);
     }
