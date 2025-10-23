@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowUp } from 'lucide-react';
 
@@ -7,15 +7,23 @@ interface BackToTopProps {
   className?: string;
 }
 
-export const BackToTop: React.FC<BackToTopProps> = ({ 
+const BackToTop: React.FC<BackToTopProps> = memo(({ 
   showAfter = 400,
   className = ""
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const throttleRef = useRef(false);
 
   useEffect(() => {
     const toggleVisibility = () => {
+      if (throttleRef.current) return;
+      throttleRef.current = true;
+
+      setTimeout(() => {
+        throttleRef.current = false;
+      }, 16); // ~60fps
+
       const scrolled = window.pageYOffset;
       const maxHeight = document.documentElement.scrollHeight - window.innerHeight;
       const progress = (scrolled / maxHeight) * 100;
@@ -29,7 +37,7 @@ export const BackToTop: React.FC<BackToTopProps> = ({
       }
     };
 
-    window.addEventListener('scroll', toggleVisibility);
+    window.addEventListener('scroll', toggleVisibility, { passive: true });
 
     return () => {
       window.removeEventListener('scroll', toggleVisibility);
@@ -102,6 +110,6 @@ export const BackToTop: React.FC<BackToTopProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default BackToTop;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { analyticsApi } from '@/lib/api/analytics';
 import { realtime } from '@/realtime';
@@ -10,7 +10,7 @@ interface SimpleDashboard {
   recentCareLogs: number;
 }
 
-const UserAnalytics: React.FC = () => {
+const UserAnalytics: React.FC = memo(() => {
   const [data, setData] = useState<SimpleDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +101,6 @@ const UserAnalytics: React.FC = () => {
       </div>
     </div>
   );
-};
+});
 
 export default UserAnalytics;
