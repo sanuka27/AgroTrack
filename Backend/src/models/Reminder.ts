@@ -8,6 +8,9 @@ export interface IReminder extends Document {
   plantId?: Types.ObjectId | null;
   completed: boolean;
   completedAt?: Date | null;
+  // Notification tracking
+  notificationSent?: boolean;
+  notifiedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,6 +23,9 @@ const ReminderSchema = new Schema<IReminder>({
   plantId: { type: Schema.Types.ObjectId, ref: 'Plant', required: false, default: null, index: true },
   completed: { type: Boolean, default: false, index: true },
   completedAt: { type: Date, default: null },
+  // Track whether a pre-reminder notification has been created/sent
+  notificationSent: { type: Boolean, default: false, index: true },
+  notifiedAt: { type: Date, default: null },
 }, { timestamps: true, versionKey: false, collection: 'reminders' });
 
 ReminderSchema.index({ userId: 1, completed: 1, dueAt: 1 });
