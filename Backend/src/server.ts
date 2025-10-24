@@ -35,6 +35,7 @@ import { setupSwagger } from './config/swagger';
 import { CacheWarmer } from './middleware/cacheMiddleware';
 import { authMiddleware } from './middleware/authMiddleware';
 import './config/passport'; // Initialize passport strategies
+import { Scheduler } from './services/scheduler';
 
 // Import routes
 import authRoutes from './routes/authRoutes';
@@ -70,7 +71,7 @@ app.use(helmet());
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:8081'],
+  origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:8080', 'http://localhost:8081'],
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -150,17 +151,44 @@ app.use('/api/realtime', realtimeRoutes);
 if (process.env.NODE_ENV === 'development') {
   app.use('/api/dev', devAuthRoutes);
   app.use('/api/dev', devDebugRoutes);
+  
+  // Test endpoint for reminder notifications
+  app.post('/api/dev/test-reminder-notification', authMiddleware, async (req, res) => {
+    try {
+      await Scheduler.runReminderCheckNow();
+      res.json({ success: true, message: 'Reminder notification check triggered' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to trigger reminder check', error: (error as Error).message });
+    }
+  });
+
+  // Development-only: no-auth trigger (useful when testing locally and you don't have a JWT)
+  app.post('/api/dev/test-reminder-notification/noauth', async (_req, res) => {
+    try {
+      await Scheduler.runReminderCheckNow();
+      res.json({ success: true, message: 'Reminder notification check triggered (no-auth)' });
+    } catch (error) {
+      res.status(500).json({ success: false, message: 'Failed to trigger reminder check (no-auth)', error: (error as Error).message });
+    }
+  });
 }
 
-// FCM Token storage endpoint
-app.post('/api/store-token', authMiddleware, async (req, res) => {
+// FCM Token storage endpoint (no auth required initially)
+app.post('/api/store-token', async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token, userId } = req.body;
     if (!token) {
       return res.status(400).json({ error: 'Token is required' });
     }
-    const userId = (req as any).user._id;
-    await User.findByIdAndUpdate(userId, { fcmToken: token });
+
+    // If userId is provided, store it for that user
+    if (userId) {
+      await User.findByIdAndUpdate(userId, { fcmToken: token });
+    } else {
+      // Store temporarily or just acknowledge
+      console.log('FCM Token received (no userId):', token.substring(0, 50) + '...');
+    }
+
     res.status(200).json({ message: 'Token stored successfully' });
   } catch (error) {
     console.error('Error storing token:', error);
@@ -169,14 +197,21 @@ app.post('/api/store-token', authMiddleware, async (req, res) => {
 });
 
 // Alias route without leading /api to support clients that post to /store-token
-app.post('/store-token', authMiddleware, async (req, res) => {
+app.post('/store-token', async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token, userId } = req.body;
     if (!token) {
       return res.status(400).json({ error: 'Token is required' });
     }
-    const userId = (req as any).user._id;
-    await User.findByIdAndUpdate(userId, { fcmToken: token });
+
+    // If userId is provided, store it for that user
+    if (userId) {
+      await User.findByIdAndUpdate(userId, { fcmToken: token });
+    } else {
+      // Store temporarily or just acknowledge
+      console.log('FCM Token received (no userId):', token.substring(0, 50) + '...');
+    }
+
     res.status(200).json({ message: 'Token stored successfully' });
   } catch (error) {
     console.error('Error storing token (alias):', error);
@@ -295,6 +330,18 @@ const startServer = async () => {
       console.error('❌ Firebase Admin failed to init:', e);
     }
     
+    // Start scheduled tasks (reminder notifications, etc.)
+    if (!skipMongoDB) {
+      try {
+        Scheduler.startAll();
+        logger.info('✅ Scheduler started successfully');
+      } catch (schedulerError) {
+        logger.warn('⚠️ Failed to start scheduler:', schedulerError);
+      }
+    } else {
+      logger.info('⏭️ Skipping scheduler (MongoDB not connected)');
+    }
+    
     // Start server - always start regardless of DB/Redis status
     app.listen(PORT, () => {
       logger.info(`🌱 AgroTrack API server running on port ${PORT}`);
@@ -342,6 +389,12 @@ process.on('uncaughtException', (err: Error) => {
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received. Shutting down gracefully...');
   try {
+    Scheduler.stopAll();
+    logger.info('⏰ Scheduler stopped');
+  } catch (error) {
+    logger.error('Error stopping scheduler:', error);
+  }
+  try {
     await cache.disconnect();
     logger.info('📦 Redis cache disconnected');
   } catch (error) {
@@ -352,6 +405,12 @@ process.on('SIGTERM', async () => {
 
 process.on('SIGINT', async () => {
   logger.info('SIGINT received. Shutting down gracefully...');
+  try {
+    Scheduler.stopAll();
+    logger.info('⏰ Scheduler stopped');
+  } catch (error) {
+    logger.error('Error stopping scheduler:', error);
+  }
   try {
     await cache.disconnect();
     logger.info('📦 Redis cache disconnected');
