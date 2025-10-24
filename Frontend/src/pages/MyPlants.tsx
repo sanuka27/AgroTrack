@@ -124,8 +124,53 @@ const MyPlants = () => {
           health: (apiPlant as any).health || "Good",
           
         }));
-  setPlants(convertedPlants);
-  savePlantsToLocalStorage(convertedPlants);
+      setPlants(convertedPlants);
+      savePlantsToLocalStorage(convertedPlants);
+
+      // Also surface any AI analysis saved in plant notes as lightweight recommendations
+      try {
+        const derived = convertedPlants
+          .map(p => {
+            const notes = p.notes || '';
+            if (!notes || !notes.includes('AI Analysis')) return null;
+
+            // Extract a short summary (first line after 'AI Analysis:')
+            const markerIndex = notes.indexOf('AI Analysis');
+            const after = notes.slice(markerIndex);
+            const lines = after.split('\n').map(l => l.trim()).filter(Boolean);
+            // Take up to first two informative lines
+            const summary = lines.slice(1, 3).join(' ') || lines[0] || notes.slice(0, 200);
+
+            const rec: AiRecommendation = {
+              _id: `note-${p.id}`,
+              userId: user?.id || undefined,
+              plantId: p.id,
+              plantName: p.name,
+              imageUrl: p.imageUrl || '',
+              description: summary,
+              recommendations: { immediateActions: [summary] },
+              detectionResults: undefined,
+              status: 'saved',
+              createdAt: new Date().toISOString()
+            };
+
+            return rec;
+          })
+          .filter(Boolean) as AiRecommendation[];
+
+        if (derived.length > 0) {
+          setAiRecommendations(prev => {
+            // Prepend derived so users see their saved analyses first
+            const existing = prev || [];
+            // Avoid duplicates by _id
+            const ids = new Set(existing.map(r => r._id));
+            const newOnes = derived.filter(d => !ids.has(d._id));
+            return [...newOnes, ...existing];
+          });
+        }
+      } catch (e) {
+        console.warn('[MyPlants] Failed to derive AI recommendations from plant notes', e);
+      }
       // Debug: log loaded plants and their imageUrl fields to aid troubleshooting
       try {
         console.debug('[MyPlants] Loaded plants:', convertedPlants.map(p => ({ id: p.id, name: p.name, imageUrl: p.imageUrl })));
@@ -189,7 +234,7 @@ const MyPlants = () => {
     };
 
     loadAnalytics();
-  }, []);
+  }, [user]);
 
   // Helper: retry an async function with exponential backoff
   async function retry<T>(fn: () => Promise<T>, attempts = 3, baseDelay = 400): Promise<T> {
@@ -925,12 +970,81 @@ const MyPlants = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Move Smart Care Suggestions up into the sidebar to avoid large white gaps */}
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Smart Care Suggestions</CardTitle>
+                <CardDescription>Personalized tips from your AI analyses and saved results</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {aiRecommendations && aiRecommendations.length > 0 ? (
+                  aiRecommendations.slice(0, 3).map((rec) => {
+                    const label = rec.recommendations?.followUpRequired ? '⚠️ Alert' : (rec.recommendations?.immediateActions?.length ? '💡 Pro Tip' : '🌱 Insight');
+                    const bg = label.includes('Alert') ? 'from-orange-50 to-yellow-50' : label.includes('Pro Tip') ? 'from-green-50 to-blue-50' : 'from-purple-50 to-pink-50';
+                    const textColor = label.includes('Alert') ? 'text-orange-800' : label.includes('Pro Tip') ? 'text-green-800' : 'text-purple-800';
+                    const summary = (
+                      rec.recommendations?.immediateActions?.[0]
+                      || rec.recommendations?.preventionMeasures?.[0]
+                      || rec.detectionResults?.primaryDisease?.name
+                      || rec.description
+                      || 'Recommendation available'
+                    );
+
+                    return (
+                      <div key={rec._id} className={`p-3 bg-gradient-to-r ${bg} rounded-lg border flex items-start gap-3`}>
+                        <div className="flex-shrink-0 w-12 h-12 overflow-hidden rounded-lg bg-white/70 border">
+                          {rec.imageUrl ? (
+                            <img src={rec.imageUrl} alt={rec.plantName || 'plant'} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">🌿</div>
+                          )}
+                        </div>
+
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className={`text-sm font-medium ${textColor} mb-1`}>{label}</p>
+                              <div className="text-sm text-neutral-800 font-semibold">{rec.plantName || 'Saved Analysis'}</div>
+                            </div>
+                            <span className="text-xs text-neutral-600">Saved</span>
+                          </div>
+
+                          <p className="mt-2 text-sm text-muted-foreground">{summary}</p>
+
+                          <div className="mt-2">
+                            <Link to={`/plant-analysis?rec=${rec._id}`} className="text-sm text-blue-600">View details</Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <>
+                    <div className="p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border">
+                      <p className="text-sm font-medium text-green-800 mb-1">💡 Pro Tip</p>
+                      <p className="text-sm text-green-700">Your Fiddle Leaf Fig shows signs of overwatering. Reduce frequency by 2 days.</p>
+                    </div>
+                    
+                    <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border">
+                      <p className="text-sm font-medium text-purple-800 mb-1">🌱 Growth Insight</p>
+                      <p className="text-sm text-purple-700">Plants near the east window are growing 23% faster this month!</p>
+                    </div>
+                    
+                    <div className="p-3 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg border">
+                      <p className="text-sm font-medium text-orange-800 mb-1">⚠️ Alert</p>
+                      <p className="text-sm text-orange-700">Basil leaves showing early pest signs. Check undersides.</p>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
 
         {/* Smart Notifications & Reminders */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <Card className="lg:col-span-2 border-t-4 border-t-orange-400">
+        <div className="grid grid-cols-1 gap-6 mb-8">
+          <Card className="border-t-4 border-t-orange-400">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -1035,57 +1149,6 @@ const MyPlants = () => {
                   </div>
                 )
               }
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Smart Suggestions</CardTitle>
-              <CardDescription>Personalized care tips</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {aiRecommendations && aiRecommendations.length > 0 ? (
-                aiRecommendations.slice(0, 3).map((rec) => {
-                  // Determine a simple label based on recommendation content
-                  const label = rec.recommendations?.followUpRequired ? '⚠️ Alert' : (rec.recommendations?.immediateActions?.length ? '💡 Pro Tip' : '🌱 Insight');
-                  const bg = label.includes('Alert') ? 'from-orange-50 to-yellow-50' : label.includes('Pro Tip') ? 'from-green-50 to-blue-50' : 'from-purple-50 to-pink-50';
-                  const textColor = label.includes('Alert') ? 'text-orange-800' : label.includes('Pro Tip') ? 'text-green-800' : 'text-purple-800';
-                  const summary = (
-                    rec.recommendations?.immediateActions?.[0]
-                    || rec.recommendations?.preventionMeasures?.[0]
-                    || rec.detectionResults?.primaryDisease?.name
-                    || rec.description
-                    || 'Recommendation available'
-                  );
-
-                  return (
-                    <div key={rec._id} className={`p-3 bg-gradient-to-r ${bg} rounded-lg border`}>
-                      <p className={`text-sm font-medium ${textColor} mb-1`}>{label}</p>
-                      <p className="text-sm text-muted-foreground">{summary}</p>
-                      <div className="mt-2">
-                        <Link to={`/ai-assistant?rec=${rec._id}`} className="text-sm text-blue-600">View details</Link>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <>
-                  <div className="p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border">
-                    <p className="text-sm font-medium text-green-800 mb-1">💡 Pro Tip</p>
-                    <p className="text-sm text-green-700">Your Fiddle Leaf Fig shows signs of overwatering. Reduce frequency by 2 days.</p>
-                  </div>
-                  
-                  <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border">
-                    <p className="text-sm font-medium text-purple-800 mb-1">🌱 Growth Insight</p>
-                    <p className="text-sm text-purple-700">Plants near the east window are growing 23% faster this month!</p>
-                  </div>
-                  
-                  <div className="p-3 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg border">
-                    <p className="text-sm font-medium text-orange-800 mb-1">⚠️ Alert</p>
-                    <p className="text-sm text-orange-700">Basil leaves showing early pest signs. Check undersides.</p>
-                  </div>
-                </>
-              )}
             </CardContent>
           </Card>
         </div>

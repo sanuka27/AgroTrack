@@ -17,7 +17,7 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
   logout: () => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   hasPermission: (permission: string) => boolean;
   refreshToken: () => Promise<boolean>;
 }

@@ -16,7 +16,42 @@ type Props = {
 
 export default function SimpleReminders({ plants }: Props) {
   const { toast } = useToast();
+  // Helper: extract actionable steps from analyzer text
+  const parseActionableNotes = (raw?: string | null): string[] => {
+    if (!raw) return [];
+    const text = raw.replace(/\r/g, '\n');
+    // Look for common markers
+    const markers = ['Care Steps:', 'Immediate actions', 'Immediate Care Steps', 'Care steps:'];
+    for (const marker of markers) {
+      const idx = text.indexOf(marker);
+      if (idx >= 0) {
+        const after = text.slice(idx + marker.length).trim();
+        // split on | or line breaks or bullets
+        let parts = after.split('|').map(s => s.trim()).filter(Boolean);
+        if (parts.length === 0) {
+          parts = after.split(/\n|•|\u2022|-|\*+/).map(s => s.trim()).filter(Boolean);
+        }
+        // stop at next section marker if present
+        const stopIdx = parts.findIndex(p => /^(Prevention|Prevention Measures|Recommendations|Detected Issue)/i.test(p));
+        if (stopIdx >= 0) parts = parts.slice(0, stopIdx);
+        return parts.map(p => p.replace(/^[:\-\s]+/, '').trim()).filter(Boolean);
+      }
+    }
+    // fallback: if text contains "AI Analysis" then try to grab lines after it
+    if (text.includes('AI Analysis')) {
+      const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
+      // find likely Care Steps line
+      const careLine = lines.find(l => /Care Steps:|Immediate actions/i.test(l));
+      if (careLine) {
+        const parts = careLine.replace(/.*?:/, '').split('|').map(s => s.trim()).filter(Boolean);
+        return parts;
+      }
+    }
+    return [];
+  };
   const [loading, setLoading] = useState(false);
+  const [busyIds, setBusyIds] = useState<string[]>([]);
+  const [highlighted, setHighlighted] = useState<Record<string, boolean>>({});
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState('Water plants');
@@ -52,10 +87,14 @@ export default function SimpleReminders({ plants }: Props) {
   const handleCreate = async () => {
     try {
       setLoading(true);
+      // If notes look like AI analysis, store only actionable steps
+      const actionable = parseActionableNotes(notes);
+      const payloadNotes = actionable.length ? actionable.join(' | ') : (notes.trim() || undefined);
+
       const created = await remindersApi.createReminder({
         title: title.trim() || 'Reminder',
         dueAt: new Date(dueAt).toISOString(),
-        notes: notes.trim() || undefined,
+        notes: payloadNotes,
         plantId: plantId || undefined,
       });
       setReminders(prev => [...prev, created].sort((a,b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime()));
@@ -97,15 +136,29 @@ export default function SimpleReminders({ plants }: Props) {
   };
 
   const snooze = async (id: string, hours: number) => {
+    // optimistic update: show the new due date immediately, revert on failure
+    const newDue = new Date(Date.now() + hours * 3600 * 1000).toISOString();
+    const prev = reminders;
     try {
-      const newDue = new Date(Date.now() + hours * 3600 * 1000).toISOString();
-      const updated = await remindersApi.snoozeReminder(id, newDue);
-      setReminders(prev => prev.map(r => r._id === id ? updated : r).sort((a,b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime()));
+      setBusyIds(prevIds => [...prevIds, id]);
+  // apply optimistic change locally and highlight the changed due date
+  setReminders(curr => curr.map(r => r._id === id ? { ...r, dueAt: newDue } : r).sort((a,b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime()));
+  setHighlighted(prev => ({ ...prev, [id]: true }));
+  // remove highlight after a moment (visual confirmation)
+  setTimeout(() => setHighlighted(prev => { const copy = { ...prev }; delete copy[id]; return copy; }), 2500);
+
+      const updated = await remindersApi.updateReminder(id, { dueAt: newDue });
+      // replace with server canonical reminder (in case server adjusted)
+      setReminders(curr => curr.map(r => r._id === id ? updated : r).sort((a,b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime()));
       toast({ title: 'Reminder snoozed', description: `Snoozed for ${hours} hours` });
     } catch (e: any) {
       console.error('Error snoozing reminder:', e);
       setError(e?.message || 'Failed to snooze reminder');
+      // revert optimistic update
+      setReminders(prev);
       toast({ title: 'Error', description: 'Failed to snooze reminder', variant: 'destructive' });
+    } finally {
+      setBusyIds(prevIds => prevIds.filter(x => x !== id));
     }
   };
 
@@ -165,29 +218,60 @@ export default function SimpleReminders({ plants }: Props) {
           </CardHeader>
           <CardContent className="space-y-3">
             {upcoming.length === 0 && <div className="text-sm text-muted-foreground">No upcoming reminders</div>}
-            {upcoming.map(r => (
-              <div key={r._id} className="flex items-center justify-between p-3 bg-gradient-to-r from-white to-blue-50 rounded border">
-                <div>
-                  <div className="font-medium">{r.title}</div>
-                  <div className="text-sm text-muted-foreground">{r.notes || '—'}</div>
-                  <div className="text-xs text-gray-500">Due: {new Date(r.dueAt).toLocaleString()}</div>
+            {upcoming.map(r => {
+              const plant = plants.find(p => p.id === r.plantId);
+              const shortNotes = r.notes ? (r.notes.length > 120 ? r.notes.slice(0, 117) + '…' : r.notes) : '';
+              return (
+                <div key={r._id} className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm">
+                  <div className="flex items-center gap-3">
+                    {plant?.imageUrl ? (
+                      <img src={plant.imageUrl} alt={plant.name} className="w-12 h-12 rounded-md object-cover border" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-md bg-green-50 flex items-center justify-center text-green-600 border">
+                        <Bell className="w-5 h-5" />
+                      </div>
+                    )}
+
+                    <div>
+                      <div className="font-medium text-sm">{r.title}{plant ? ` — ${plant.name}` : ''}</div>
+                      {shortNotes ? (
+                        // Prefer to show parsed actionable steps when available
+                        (() => {
+                          const actions = parseActionableNotes(r.notes);
+                          if (actions.length) {
+                            return (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {actions.slice(0, 2).map((a, i) => (
+                                  <span key={i} className="inline-block mr-2">• {a}</span>
+                                ))}
+                                {actions.length > 2 ? <span className="text-muted-foreground">…</span> : null}
+                              </div>
+                            );
+                          }
+                          return <div className="text-xs text-muted-foreground mt-1">{shortNotes}</div>;
+                        })()
+                      ) : null}
+                      <div className={"text-xs mt-1 " + (highlighted[r._id] ? 'bg-yellow-50 px-1 rounded' : 'text-gray-500')}>Due: {new Date(r.dueAt).toLocaleString()}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => snooze(r._id, 24)} title="Snooze 1 day" disabled={busyIds.includes(r._id)}>
+                      +1d
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => snooze(r._id, 24*7)} title="Snooze 1 week" disabled={busyIds.includes(r._id)}>
+                      +1w
+                    </Button>
+                    <Button size="sm" onClick={() => complete(r._id)} className="bg-green-600 hover:bg-green-700 text-white" title="Mark done">
+                      ✓
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => remove(r._id)} title="Delete">
+                      <Trash className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => snooze(r._id, 24)}>
-                    <Clock className="w-4 h-4 mr-1" /> +1d
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => snooze(r._id, 24*7)}>
-                    <Clock className="w-4 h-4 mr-1" /> +1w
-                  </Button>
-                  <Button size="sm" onClick={() => complete(r._id)} className="bg-green-600 hover:bg-green-700 text-white">
-                    <CheckCircle className="w-4 h-4 mr-1" /> Done
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => remove(r._id)}>
-                    <Trash className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
 
@@ -199,26 +283,35 @@ export default function SimpleReminders({ plants }: Props) {
           </CardHeader>
           <CardContent className="space-y-3">
             {overdue.length === 0 && <div className="text-sm text-muted-foreground">No overdue reminders</div>}
-            {overdue.map(r => (
-              <div key={r._id} className="flex items-center justify-between p-3 bg-yellow-50 rounded border border-yellow-200">
-                <div>
-                  <div className="font-medium">{r.title}</div>
-                  <div className="text-sm text-yellow-700">{r.notes || '—'}</div>
-                  <div className="text-xs text-gray-500">Overdue since: {new Date(r.dueAt).toLocaleString()}</div>
+            {overdue.map(r => {
+              const plant = plants.find(p => p.id === r.plantId);
+              const shortNotes = r.notes ? (r.notes.length > 100 ? r.notes.slice(0, 97) + '…' : r.notes) : '';
+              return (
+                <div key={r._id} className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm">
+                  <div className="flex items-center gap-3">
+                    {plant?.imageUrl ? (
+                      <img src={plant.imageUrl} alt={plant.name} className="w-12 h-12 rounded-md object-cover border" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-md bg-amber-50 flex items-center justify-center text-amber-700 border">
+                        <Bell className="w-5 h-5" />
+                      </div>
+                    )}
+
+                    <div>
+                      <div className="font-medium text-sm">{r.title}{plant ? ` — ${plant.name}` : ''}</div>
+                      {shortNotes ? <div className="text-xs text-amber-700 mt-1">{shortNotes}</div> : null}
+                      <div className="text-xs text-gray-500 mt-1">Overdue since: {new Date(r.dueAt).toLocaleString()}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => snooze(r._id, 24)} title="Snooze 1 day" disabled={busyIds.includes(r._id)}>+1d</Button>
+                    <Button size="sm" onClick={() => complete(r._id)} className="bg-green-600 hover:bg-green-700 text-white" title="Mark done">✓</Button>
+                    <Button size="sm" variant="ghost" onClick={() => remove(r._id)} title="Delete"><Trash className="w-4 h-4" /></Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => snooze(r._id, 24)}>
-                    <Clock className="w-4 h-4 mr-1" /> +1d
-                  </Button>
-                  <Button size="sm" onClick={() => complete(r._id)} className="bg-green-600 hover:bg-green-700 text-white">
-                    <CheckCircle className="w-4 h-4 mr-1" /> Done
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => remove(r._id)}>
-                    <Trash className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       </div>

@@ -79,11 +79,11 @@ const Register = () => {
     setRegisterError("");
     
     try {
-      const success = await register(formData.name, formData.email, formData.password);
-      if (success) {
+      const result = await register(formData.name, formData.email, formData.password);
+      if (result.success) {
         navigate('/'); // Direct to home page after successful registration
       } else {
-        setRegisterError("Registration failed. Please try again.");
+        setRegisterError(result.error || "Registration failed. Please try again.");
       }
     } catch (error) {
       console.error("Registration error:", error);
