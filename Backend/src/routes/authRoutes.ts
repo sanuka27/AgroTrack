@@ -449,7 +449,7 @@ router.get('/check', authMiddleware, (req, res) => {
 const generateToken = (userId: string, role: string = 'user', email?: string) => {
   const secret = process.env.JWT_SECRET || 'default-secret';
   return jwt.sign({ 
-    userId, 
+    id: userId, 
     role,
     email 
   }, secret, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as any);
@@ -457,7 +457,7 @@ const generateToken = (userId: string, role: string = 'user', email?: string) =>
 
 // Helper function to generate refresh token
 const generateRefreshToken = (userId: string) => {
-  return jwt.sign({ userId, type: 'refresh' }, process.env.JWT_REFRESH_SECRET || 'default-refresh-secret', { 
+  return jwt.sign({ id: userId, type: 'refresh' }, process.env.JWT_REFRESH_SECRET || 'default-refresh-secret', { 
     expiresIn: '30d' 
   });
 };
@@ -603,7 +603,7 @@ router.get('/google/callback',
  *       500:
  *         $ref: '#/components/responses/InternalServerError'
  */
-router.post('/firebase', async (req, res): Promise<void> => {
+router.post('/firebase', async (req, res) => {
   try {
     const { idToken } = req.body;
 
@@ -639,30 +639,70 @@ router.post('/firebase', async (req, res): Promise<void> => {
       return;
     }
 
-    // Find or create user
+    // Ensure token contains an email (some providers may not include it)
+    if (!decodedToken.email) {
+      logger.warn('Firebase token does not contain email', { uid: decodedToken.uid });
+      res.status(400).json({
+        success: false,
+        message: 'Firebase token missing email - cannot create account'
+      });
+      return;
+    }
+
+    // Find or create user (handle validation errors explicitly)
     let user = await User.findOne({ firebaseUid: decodedToken.uid });
-    
-    if (!user) {
-      // Check if user exists with same email
-      user = await User.findOne({ email: decodedToken.email });
-      
-      if (user) {
-        // Link Firebase account to existing user
-        user.firebaseUid = decodedToken.uid;
-        user.authProvider = 'firebase';
-        await user.save();
-      } else {
-        // Create new user
-        user = new User({
-          email: decodedToken.email,
-          name: decodedToken.name || decodedToken.email,
-          firebaseUid: decodedToken.uid,
-          authProvider: 'firebase',
-          status: 'active',
-          isEmailVerified: decodedToken.email_verified || false
-        });
-        await user.save();
+
+    try {
+      if (!user) {
+        // Check if user exists with same email
+        user = await User.findOne({ email: decodedToken.email });
+
+        if (user) {
+          // Link Firebase account to existing user
+          user.firebaseUid = decodedToken.uid;
+          user.authProvider = 'firebase';
+          await user.save();
+        } else {
+          // Create new user
+          user = new User({
+            email: decodedToken.email,
+            name: decodedToken.name || decodedToken.email,
+            firebaseUid: decodedToken.uid,
+            authProvider: 'firebase',
+            status: 'active',
+            isEmailVerified: decodedToken.email_verified || false
+          });
+          await user.save();
+        }
       }
+    } catch (saveError: any) {
+      // Handle Mongoose validation errors and duplicate key errors gracefully
+      logger.warn('Failed to create/link Firebase user', { error: saveError });
+
+      // Duplicate key (e.g., unique constraint) -> 409
+      if (saveError && saveError.code === 11000) {
+        return res.status(409).json({
+          success: false,
+          message: 'A user with that email or firebase UID already exists',
+          error: saveError.message
+        });
+      }
+
+      // Validation errors -> 400
+      if (saveError && saveError.name === 'ValidationError') {
+        const errors: any = {};
+        for (const key in saveError.errors) {
+          errors[key] = saveError.errors[key].message;
+        }
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid user data from Firebase token',
+          errors
+        });
+      }
+
+      // Otherwise, rethrow to be handled by outer catch
+      throw saveError;
     }
 
     // Update last login

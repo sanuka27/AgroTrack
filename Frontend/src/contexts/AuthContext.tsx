@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
@@ -83,6 +83,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [role, setRole] = useState<UserRole>('guest');
   const [loading, setLoading] = useState(true);
 
+  const refreshToken = useCallback(async (): Promise<boolean> => {
+    try {
+      const refreshTokenValue = localStorage.getItem('agrotrack_refresh_token');
+      if (!refreshTokenValue) return false;
+
+      const response = await api.post('/auth/refresh', { 
+        refreshToken: refreshTokenValue 
+      });
+      
+      if (response.data.success) {
+        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+        localStorage.setItem('agrotrack_token', accessToken);
+        localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      return false;
+    }
+  }, []);
+
+  const checkExistingAuth = useCallback(async () => {
+    const token = localStorage.getItem('agrotrack_token');
+    console.log('checkExistingAuth: token present?', !!token);
+    if (token) {
+      try {
+        console.log('checkExistingAuth: calling /users/profile');
+        const response = await api.get('/users/profile');
+        console.log('checkExistingAuth: response', response.status, response.data);
+        if (response.data.success) {
+          // Backend returns { success: true, data: { user: {...} } }
+          const userData = response.data.data.user || response.data.data;
+          setUser(userData);
+          setRole(userData.role || 'user');
+          localStorage.setItem('userId', userData.id || userData._id); // Store userId for FCM token storage
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        console.log('Auth check error response:', (error as any)?.response?.status, (error as any)?.response?.data);
+        // If 401, try to refresh token
+        if ((error as any)?.response?.status === 401) {
+          console.log('Trying to refresh token');
+          const refreshed = await refreshToken();
+          if (refreshed) {
+            console.log('Token refreshed, retrying profile call');
+            try {
+              const response = await api.get('/users/profile');
+              if (response.data.success) {
+                const userData = response.data.data.user || response.data.data;
+                setUser(userData);
+                setRole(userData.role || 'user');
+                localStorage.setItem('userId', userData.id || userData._id);
+              }
+            } catch (retryError) {
+              console.error('Retry failed:', retryError);
+              // Clear storage
+              localStorage.removeItem('agrotrack_token');
+              localStorage.removeItem('agrotrack_refresh_token');
+              localStorage.removeItem('userId');
+            }
+          } else {
+            // Clear storage
+            localStorage.removeItem('agrotrack_token');
+            localStorage.removeItem('agrotrack_refresh_token');
+            localStorage.removeItem('userId');
+          }
+        }
+      }
+    }
+    setLoading(false);
+  }, [refreshToken]);
+
   useEffect(() => {
     // Check for existing auth on mount
     checkExistingAuth();
@@ -99,25 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return () => unsubscribe();
     }
-  }, []);
-
-  const checkExistingAuth = async () => {
-    const token = localStorage.getItem('agrotrack_token');
-    if (token) {
-      try {
-        const response = await api.get('/users/profile');
-        if (response.data.success) {
-          setUser(response.data.data);
-          setRole(response.data.data.role || 'user');
-        }
-      } catch (error) {
-        // Token invalid, clear storage
-        localStorage.removeItem('agrotrack_token');
-        localStorage.removeItem('agrotrack_refresh_token');
-      }
-    }
-    setLoading(false);
-  };
+  }, [checkExistingAuth]);
 
   const authenticateWithFirebase = async (idToken: string) => {
     try {
@@ -129,6 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRole(userData.role || 'user');
         localStorage.setItem('agrotrack_token', tokens.accessToken);
         localStorage.setItem('agrotrack_refresh_token', tokens.refreshToken);
+        localStorage.setItem('userId', userData.id); // Store userId for FCM token storage
         return true;
       }
     } catch (error) {
@@ -158,6 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRole(userObj.role);
         localStorage.setItem('agrotrack_token', tokens.accessToken);
         localStorage.setItem('agrotrack_refresh_token', tokens.refreshToken);
+        localStorage.setItem('userId', userObj.id); // Store userId for FCM token storage
         return true;
       }
       return false;
@@ -189,7 +246,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (name: string, email: string, password: string): Promise<boolean> => {
+  const register = async (name: string, email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       setLoading(true);
       const response = await api.post('/auth/register', { 
@@ -215,12 +272,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRole(userObj.role);
         localStorage.setItem('agrotrack_token', tokens.accessToken);
         localStorage.setItem('agrotrack_refresh_token', tokens.refreshToken);
-        return true;
+        localStorage.setItem('userId', userObj.id); // Store userId for FCM token storage
+        return { success: true };
       }
-      return false;
-    } catch (error) {
+      return { success: false, error: response.data.message || 'Registration failed' };
+    } catch (error: any) {
       console.error('Registration error:', error);
-      return false;
+      const errorMessage = error.response?.data?.message || error.response?.data?.errors?.email || error.response?.data?.errors?.password || 'Registration failed. Please try again.';
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -251,28 +310,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Logout error:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const refreshToken = async (): Promise<boolean> => {
-    try {
-      const refreshTokenValue = localStorage.getItem('agrotrack_refresh_token');
-      if (!refreshTokenValue) return false;
-
-      const response = await api.post('/auth/refresh', { 
-        refreshToken: refreshTokenValue 
-      });
-      
-      if (response.data.success) {
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-        localStorage.setItem('agrotrack_token', accessToken);
-        localStorage.setItem('agrotrack_refresh_token', newRefreshToken);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Token refresh error:', error);
-      return false;
     }
   };
 

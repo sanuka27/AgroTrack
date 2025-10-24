@@ -18,6 +18,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
 
     // Check if token exists
     if (!token) {
+      console.log('No token in request headers');
       const error = new Error('Not authorized, no token') as CustomError;
       error.statusCode = 401;
       return next(error);
@@ -27,26 +28,31 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
       // Ensure secret is configured
       const secret = process.env.JWT_SECRET;
       if (!secret) {
+        console.log('JWT_SECRET not configured');
         const cfgError = new Error('Server misconfiguration: JWT_SECRET not set') as CustomError;
         cfgError.statusCode = 500;
         return next(cfgError);
       }
 
-      // Verify token
-      const decoded = jwt.verify(token, secret) as { userId: string };
+      // Verify token - the payload uses 'id' not 'userId'
+      const decoded = jwt.verify(token, secret) as { id: string; email: string; role: string };
+      console.log('Token decoded successfully:', { id: decoded.id, email: decoded.email });
 
       // Get user from database
-      const user = await User.findById(decoded.userId).select('-password');
+      const user = await User.findById(decoded.id).select('-password');
       
       if (!user) {
+        console.log('User not found for id:', decoded.id);
         const error = new Error('Not authorized, user not found') as CustomError;
         error.statusCode = 401;
         return next(error);
       }
 
+      console.log('User found:', user._id);
       req.user = user;
       next();
     } catch (error) {
+      console.log('Token verification failed:', error);
       const authError = new Error('Not authorized, token failed') as CustomError;
       authError.statusCode = 401;
       return next(authError);
@@ -81,11 +87,11 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
           return next();
         }
 
-        // Verify token
-        const decoded = jwt.verify(token, secret) as { userId: string };
+  // Verify token (payload uses `id` like in protect)
+  const decoded = jwt.verify(token, secret) as { id: string };
 
-        // Get user from database
-        const user = await User.findById(decoded.userId).select('-password');
+  // Get user from database
+  const user = await User.findById(decoded.id).select('-password');
 
       if (!user) {
         // Invalid token, but continue as guest
