@@ -18,6 +18,8 @@ const Notifications: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
+  const unreadCount = items.reduce((acc, it) => acc + (it.isRead ? 0 : 1), 0);
+
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
@@ -56,7 +58,18 @@ const Notifications: React.FC = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Bell className="w-5 h-5 text-blue-600" />
-          Notifications
+          <div className="inline-flex items-center gap-2">
+            <span>Notifications</span>
+            {unreadCount > 0 && (
+              <span
+                aria-live="polite"
+                className="inline-flex items-center justify-center bg-red-600 text-white text-xs font-semibold rounded-full px-2 py-0.5"
+                title={`${unreadCount} unread notifications`}
+              >
+                {unreadCount}
+              </span>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
