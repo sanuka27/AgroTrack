@@ -14,7 +14,12 @@ export interface Notification {
 export const notificationsApi = {
   async createNotification(payload: { type: string; title: string; message: string; data?: any }) {
     try {
-      const resp = await api.post('/notifications', payload);
+      // Server expects 'channels' array per validation rules
+      const requestPayload = {
+        ...payload,
+        channels: ['push'] // default to push notifications
+      };
+      const resp = await api.post('/notifications', requestPayload);
       return resp.data;
     } catch (err) {
       console.error('Error creating notification:', getErrorMessage(err));

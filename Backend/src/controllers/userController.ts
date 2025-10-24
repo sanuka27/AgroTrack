@@ -86,6 +86,15 @@ export class UserController {
    */
   static async getProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      // Defensive check: ensure req.user exists before accessing _id
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          message: 'Not authenticated'
+        });
+        return;
+      }
+
       const user = await User.findById(new mongoose.Types.ObjectId((req.user as any)._id!.toString()))
         .select('-password -refreshToken -emailVerificationToken -passwordResetToken')
         .populate('stats');
