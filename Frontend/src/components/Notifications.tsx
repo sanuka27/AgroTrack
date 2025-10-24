@@ -58,12 +58,12 @@ const Notifications: React.FC = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Bell className="w-5 h-5 text-blue-600" />
-          <div className="inline-flex items-center gap-2">
-            <span>Notifications</span>
+          <div className="relative inline-flex items-center">
+            <span className="block">Notifications</span>
             {unreadCount > 0 && (
               <span
                 aria-live="polite"
-                className="inline-flex items-center justify-center bg-red-600 text-white text-xs font-semibold rounded-full px-2 py-0.5"
+                className="absolute -top-2 -right-4 bg-red-600 text-white text-[10px] font-semibold rounded-full px-2 leading-none"
                 title={`${unreadCount} unread notifications`}
               >
                 {unreadCount}
