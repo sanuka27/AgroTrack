@@ -21,6 +21,8 @@ const Analytics = () => {
           analyticsApi.getGrowthAnalytics().catch(() => null)
         ]);
 
+        console.log('Analytics API responses:', { full, plantHealth, growth });
+
         const backendAnalytics = full?.analytics || {};
 
         // Derive counts
@@ -40,9 +42,27 @@ const Analytics = () => {
           }
         };
 
+        console.log('Mapped analytics data:', mapped);
         setAnalyticsData(mapped);
       } catch (error) {
         console.error('Error loading analytics:', error);
+        // Set fallback data with proper structure
+        setAnalyticsData({
+          dashboard: {
+            totalPlants: 0,
+            activeReminders: 0,
+            overdueReminders: 0,
+            recentCareLogs: 0,
+            healthScore: 0,
+            growthRate: 0,
+            careActions: 0,
+            streakDays: 0,
+          },
+          careTrends: [],
+          plantHealth: [],
+          careTypeDistribution: [],
+          recentActivity: []
+        });
       } finally {
         setLoading(false);
       }
