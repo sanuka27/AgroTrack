@@ -63,7 +63,7 @@ const BugReportSchema = new Schema<IBugReport>({
   }
 }, {
   timestamps: true,
-  collection: 'bugreports'
+  collection: 'user_bug_reports'
 });
 
 // Index for efficient querying

@@ -63,6 +63,7 @@ const communityReportSchema = new Schema<ICommunityReport>(
     },
   },
   {
+    collection: 'reports',
     timestamps: true,
   }
 );

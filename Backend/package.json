@@ -115,6 +115,12 @@
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.46.0"
   },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": ["**/tests/**/*.test.ts"],
+    "collectCoverageFrom": ["src/**/*.ts", "!src/**/*.d.ts"]
+  },
   "engines": {
     "node": ">=18.0.0"
   }
