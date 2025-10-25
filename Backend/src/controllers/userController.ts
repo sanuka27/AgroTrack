@@ -96,8 +96,7 @@ export class UserController {
       }
 
       const user = await User.findById(new mongoose.Types.ObjectId((req.user as any)._id!.toString()))
-        .select('-password -refreshToken -emailVerificationToken -passwordResetToken')
-        .populate('stats');
+        .select('-password -refreshToken -emailVerificationToken -passwordResetToken');
 
       if (!user) {
         res.status(404).json({
@@ -138,8 +137,7 @@ export class UserController {
             isEmailVerified: user.isEmailVerified,
             createdAt: user.createdAt,
             lastActiveAt: user.lastActiveAt,
-            preferences: user.preferences,
-            stats: user.stats
+            preferences: user.preferences
           }
         }
       });
@@ -539,8 +537,7 @@ export class UserController {
           .select('-password -refreshToken -emailVerificationToken -passwordResetToken')
           .sort(sortObj)
           .skip(skip)
-          .limit(limitNum)
-          .populate('stats', 'totalPlants totalCareLogs streakDays activityScore'),
+          .limit(limitNum),
         User.countDocuments(searchQuery)
       ]);
 

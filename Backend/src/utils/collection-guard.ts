@@ -55,7 +55,9 @@ export function installCollectionGuard(db: Db) {
   //    We hook common write methods on the "Collection" prototype.
   const CollectionProto = (db.collection('dummy') as any).constructor.prototype;
 
-  const getCollName = function (this: any) { return this.collectionName; };
+  const getCollName = function (this: any) {
+    return this && this.collectionName ? this.collectionName : undefined;
+  };
 
   for (const m of [
     'insertOne', 'insertMany',
