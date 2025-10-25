@@ -14,7 +14,8 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]",
+      // Pin to bottom-right and stack toasts upward so new toasts appear above older ones.
+      "fixed right-4 bottom-4 z-[100] flex max-h-screen w-auto flex-col-reverse gap-2 p-4 md:max-w-[420px]",
       className
     )}
     {...props}
@@ -23,11 +24,12 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
+  "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-right-full data-[state=open]:sm:slide-in-from-bottom-full",
   {
     variants: {
       variant: {
-        default: "border bg-background text-foreground",
+        // Use the theme primary color for default toasts so they match app theme
+        default: "border bg-primary text-primary-foreground",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
       },
@@ -43,9 +45,31 @@ const Toast = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
     VariantProps<typeof toastVariants>
 >(({ className, variant, ...props }, ref) => {
+  // Radix ToastPrimitives.Root renders an <li>, so use HTMLLIElement to match the
+  // forwarded ref type expected by Radix and avoid mismatched-ref TS errors.
+  const localRef = React.useRef<HTMLLIElement | null>(null)
+
+  // Expose the inner ref to the forwarded ref (types now align: HTMLLIElement)
+  React.useImperativeHandle(ref, () => localRef.current)
+
+  // When toast opens, move focus to it so keyboard users are taken to the toast area
+  React.useEffect(() => {
+    if (props.open && localRef.current) {
+      try {
+        localRef.current.focus()
+      } catch (e) {
+        /* ignore focus failures */
+      }
+    }
+  }, [props.open])
+
   return (
     <ToastPrimitives.Root
-      ref={ref}
+      // tabIndex -1 allows programmatic focus without adding it to tab order
+      tabIndex={-1}
+      ref={localRef}
+      role="status"
+      aria-live="polite"
       className={cn(toastVariants({ variant }), className)}
       {...props}
     />

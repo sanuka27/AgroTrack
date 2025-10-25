@@ -145,6 +145,7 @@ const App = () => {
               <Route path="/care-test" element={<CareTestPage />} />
               <Route path="/reminder-test" element={<ReminderTestPage />} />
               <Route path="/search" element={<SearchPage />} />
+              {/* Dev-only toast preview removed */}
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFoundPage />} />
