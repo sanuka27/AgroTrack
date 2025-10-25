@@ -225,9 +225,8 @@ export class CommunityController {
         data: {
           post: {
             ...post,
-            hasLiked,
-            // Include embedded comments in response
-            comments: post.comments || []
+            hasLiked
+            // Comments are fetched separately via getComments endpoint
           }
         }
       });

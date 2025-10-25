@@ -34,7 +34,7 @@ export interface ICommunityPost extends Document {
   score: number; // Changed from voteScore
   voteScore: number; // Alias for score (for compatibility)
   commentsCount: number; // Changed from commentCount
-  comments: IEmbeddedComment[]; // NEW: Embedded comments array
+  // comments: IEmbeddedComment[]; // REMOVED: No longer using embedded comments
   isSolved: boolean;
   status: 'visible' | 'hidden' | 'deleted'; // Changed from isDeleted (boolean)
   deletedAt?: Date;
@@ -155,10 +155,10 @@ const communityPostSchema = new Schema<ICommunityPost>(
       type: Number,
       default: 0,
     },
-    comments: {
-      type: [embeddedCommentSchema],
-      default: [],
-    },
+    // comments: {
+    //   type: [embeddedCommentSchema],
+    //   default: [],
+    // },
     isSolved: {
       type: Boolean,
       default: false,
