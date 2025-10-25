@@ -14,7 +14,7 @@ const defaults: Record<FeatureFlag, boolean> = {
   carelogs: false,
   reminders: true,
   notifications: true,
-  analytics: false,
+  analytics: true,
   aiSuggestions: true,
   exportImport: false,
 };
