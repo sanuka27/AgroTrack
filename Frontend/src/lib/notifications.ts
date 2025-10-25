@@ -1,6 +1,7 @@
 import { getMessagingIfSupported } from "./firebase";
 import { getToken, onMessage } from "firebase/messaging";
 import api from './api';
+import { toast } from '@/hooks/use-toast';
 
 export async function askPermissionAndGetToken() {
   try {
@@ -53,6 +54,25 @@ export async function listenForMessages() {
   const messaging = await getMessagingIfSupported();
   if (!messaging) return;
   onMessage(messaging, (payload) => {
-    alert(`📢 ${payload.notification.title}\n${payload.notification.body}`);
+    // Dispatch a custom event so React app can show a styled in-app toast
+    try {
+      const detail = {
+        title: payload.notification?.title,
+        body: payload.notification?.body,
+        data: payload.data,
+      };
+      window.dispatchEvent(new CustomEvent('app:notify', { detail }));
+    } catch (e) {
+      // Fallback to in-app toast if something goes wrong
+      try {
+        toast({
+          title: payload.notification?.title || 'Notification',
+          description: payload.notification?.body || '',
+          className: 'bg-emerald-50 border-emerald-200 text-emerald-900',
+        });
+      } catch (_err) {
+        // swallow
+      }
+    }
   });
 }
