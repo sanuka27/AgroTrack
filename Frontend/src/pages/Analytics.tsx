@@ -29,6 +29,15 @@ const Analytics = () => {
         const totalPlants = backendAnalytics?.plantOverview?.totalPlants ?? plantHealth?.totalPlants ?? 0;
         const healthyCount = (plantHealth?.healthDistribution?.excellent || 0) + (plantHealth?.healthDistribution?.good || 0);
 
+        console.log('Data extraction:', {
+          backendAnalytics,
+          'backendAnalytics.plantOverview': backendAnalytics?.plantOverview,
+          'backendAnalytics.plantOverview.totalPlants': backendAnalytics?.plantOverview?.totalPlants,
+          'plantHealth.totalPlants': plantHealth?.totalPlants,
+          totalPlants,
+          healthyCount
+        });
+
         const mapped: any = {
           dashboard: {
             totalPlants: totalPlants,
@@ -39,10 +48,14 @@ const Analytics = () => {
             growthRate: growth?.averageGrowthRate ?? 0,
             careActions: backendAnalytics?.careActivity?.thisWeek ?? backendAnalytics?.careActivity?.totalLogs ?? 0,
             streakDays: 0,
-          }
+          },
+          careTrends: [],
+          plantHealth: [],
+          careTypeDistribution: [],
+          recentActivity: []
         };
 
-        console.log('Mapped analytics data:', mapped);
+        console.log('Final mapped data:', mapped);
         setAnalyticsData(mapped);
       } catch (error) {
         console.error('Error loading analytics:', error);

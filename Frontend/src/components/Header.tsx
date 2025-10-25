@@ -26,7 +26,6 @@ export function Header() {
   // which points to the same route and is shown in a primary position when authenticated.
   const userNavItems = [
     { label: "AI Assistant", href: "/assistant", icon: Bot, permission: "view_assistant" },
-    { label: "Analytics", href: "/analytics", icon: BarChart3, permission: "view_analytics" },
   ];
 
   // Admin-specific navigation items

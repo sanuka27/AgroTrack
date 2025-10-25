@@ -4,9 +4,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DemoProvider } from "@/contexts/DemoContext";
 import { askPermissionAndGetToken, listenForMessages } from "@/lib/notifications";
+import { toast as globalToast } from '@/hooks/use-toast';
 import GuestCTABanner from "@/components/GuestCTABanner";
 import GuestFloatingCTA from "@/components/GuestFloatingCTA";
 import BackToTop from "@/components/BackToTop";
@@ -21,7 +24,6 @@ const PasswordResetPage = lazy(() => import("./pages/auth/PasswordResetPage"));
 const EmailVerificationPage = lazy(() => import("./pages/auth/EmailVerificationPage"));
 const MyPlants = lazy(() => import("./pages/MyPlants"));
 const Community = lazy(() => import("./pages/Community"));
-const Analytics = lazy(() => import("./pages/Analytics"));
 const AllFeatures = lazy(() => import("./pages/AllFeatures"));
 const PlantAnalysis = lazy(() => import("./pages/PlantAnalysis"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
@@ -72,6 +74,25 @@ const App = () => {
     listenForMessages();
   }, []);
 
+  // Listen for non-React notifications (dispatched from service worker handler or other modules)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      try {
+        // Some events come from non-React modules (service worker handler). Cast safely.
+        const ce = e as CustomEvent<{ title?: string; body?: string; description?: string; [k: string]: any }>;
+        const detail = ce && typeof ce.detail === 'object' ? (ce.detail as { title?: string; body?: string; description?: string }) : {};
+        const title = detail?.title || 'Notification';
+        const description = detail?.body || detail?.description || '';
+        globalToast({ title, description });
+      } catch (err) {
+        // swallow
+      }
+    };
+
+    window.addEventListener('app:notify', handler as EventListener);
+    return () => window.removeEventListener('app:notify', handler as EventListener);
+  }, []);
+
   return (
   <AuthProvider>
     <DemoProvider>
@@ -107,11 +128,6 @@ const App = () => {
                 </ProtectedRoute>
               } />
               <Route path="/community/:postId" element={<PostDetailPage />} />
-              <Route path="/analytics" element={
-                <ProtectedRoute>
-                  <Analytics />
-                </ProtectedRoute>
-              } />
               <Route path="/settings" element={
                 <ProtectedRoute>
                   <SettingsPage />
@@ -150,6 +166,9 @@ const App = () => {
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
+
+            {/* Service worker -> app message handler (inside Router so useNavigate works) */}
+            <ServiceWorkerMessageHandler />
             
             {/* Guest Conversion Components - Only on Home Page */}
             <ConditionalCTAComponents />
@@ -164,5 +183,36 @@ const App = () => {
   </AuthProvider>
   );
 };
+
+// Small component to listen for messages from the service worker and navigate or show feedback
+function ServiceWorkerMessageHandler() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const onMsg = (event: MessageEvent) => {
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+
+      if (data.type === 'NAVIGATE' && typeof data.url === 'string') {
+        navigate(data.url);
+        return;
+      }
+
+      if (data.type === 'SNOOZE_CONFIRMED') {
+        try {
+          toast({ title: 'Snoozed', description: 'Reminder snoozed for 1 hour' });
+        } catch (e) {
+          // ignore
+        }
+      }
+    };
+
+    navigator.serviceWorker?.addEventListener?.('message', onMsg);
+    return () => navigator.serviceWorker?.removeEventListener?.('message', onMsg);
+  }, [navigate, toast]);
+
+  return null;
+}
 
 export default App;
