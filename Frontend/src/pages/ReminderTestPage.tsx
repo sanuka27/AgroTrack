@@ -196,14 +196,7 @@ const ReminderTestPage = () => {
         {/* Data source indicator */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
-            {user && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                <div className="flex items-center gap-2 text-sm text-green-800">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Using <strong>real data</strong></span>
-                </div>
-              </div>
-            )}
+            {/* Data source indicator removed per design request */}
           </div>
 
           <div className="flex items-center gap-2">
