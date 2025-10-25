@@ -204,13 +204,37 @@ const MyPlants = () => {
         try {
           const pending = await remindersApi.getReminders({ status: 'pending' });
           const now = Date.now();
-          const localUpcoming = (pending || []).filter(r => new Date(r.dueAt).getTime() >= now);
-          const localOverdue = (pending || []).filter(r => new Date(r.dueAt).getTime() < now);
-          console.log('[MyPlants] Loaded reminders:', { 
-            total: pending?.length || 0, 
-            upcoming: localUpcoming.length, 
-            overdue: localOverdue.length 
+
+          // Compute start/end of "today" in user's local timezone
+          const today = new Date();
+          const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+          const endOfToday = startOfToday + 24 * 60 * 60 * 1000;
+
+          // Reminders due sometime today (00:00 - 23:59 local time)
+          const dueToday = (pending || []).filter((r: any) => {
+            const t = new Date(r.dueAt).getTime();
+            return t >= startOfToday && t < endOfToday;
           });
+
+          // Upcoming (later today) vs overdue (earlier today or before today)
+          const upcomingToday = dueToday.filter((r: any) => new Date(r.dueAt).getTime() >= now);
+          const overdueEarlierToday = dueToday.filter((r: any) => new Date(r.dueAt).getTime() < now);
+
+          // Global overdue reminders (before start of today)
+          const globalOverdue = (pending || []).filter((r: any) => new Date(r.dueAt).getTime() < startOfToday);
+
+          // upcomingReminders should show items for today that are still pending (later today)
+          // overdueReminders should include reminders earlier today and any older overdue reminders
+          const localUpcoming = upcomingToday;
+          const localOverdue = [...overdueEarlierToday, ...globalOverdue];
+
+          console.log('[MyPlants] Loaded reminders (today-focused):', {
+            total: pending?.length || 0,
+            dueToday: dueToday.length,
+            upcomingToday: localUpcoming.length,
+            overdue: localOverdue.length,
+          });
+
           setUpcomingReminders(localUpcoming);
           setOverdueReminders(localOverdue);
         } catch (remErr) {
