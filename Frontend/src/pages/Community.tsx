@@ -7,12 +7,14 @@ import { Footer } from "@/components/Footer";
 import { RoleGuard, PermissionCheck, GuestPrompt } from "@/components/RoleGuard";
 import VoteButton from "@/components/community/VoteButton";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from '@/hooks/use-toast';
 import { mockApi } from "@/lib/mockApi";
 import type { CommunityPost, CommunityStats, TrendingTopic } from "@/types/api";
 import { Users, MessageCircle, Heart, TrendingUp, Shield, Flag, Trash2, Edit, Sparkles, ArrowUp, ArrowDown, Minus, MessageSquare } from "lucide-react";
 
 const Community = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [stats, setStats] = useState<CommunityStats | null>(null);
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
@@ -256,7 +258,7 @@ const Community = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="text-blue-500 hover:text-blue-600"
-                                onClick={() => alert('Please sign in to comment on posts')}
+                                onClick={() => toast({ title: 'Please sign in', description: 'Please sign in to comment on posts' })}
                               >
                                 <MessageCircle className="w-4 h-4 mr-1" />
                                 {post.comments}
@@ -270,7 +272,7 @@ const Community = () => {
                           </div>
                           
                             <RoleGuard roles={['user', 'admin']} fallback={
-                              <Button variant="ghost" size="sm" onClick={() => alert('Please sign in to reply to posts')}>
+                              <Button variant="ghost" size="sm" onClick={() => toast({ title: 'Please sign in', description: 'Please sign in to reply to posts' })}>
                                 Reply
                               </Button>
                             }>
