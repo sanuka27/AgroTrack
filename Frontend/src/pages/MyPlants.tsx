@@ -245,7 +245,15 @@ const MyPlants = () => {
         // Load AI recommendations (recent)
         try {
           const recs = await aiRecommendationApi.getRecommendations({ limit: 5 });
-          setAiRecommendations(recs || []);
+          // Merge backend recommendations with any derived recommendations from plant notes
+          setAiRecommendations(prev => {
+            const existing = Array.isArray(prev) ? prev : [];
+            const existingIds = new Set(existing.map(r => r._id));
+            const fetched = Array.isArray(recs) ? recs : [];
+            // Keep derived/existing first, then append fetched ones that are not duplicates
+            const toAppend = fetched.filter(r => !existingIds.has(r._id));
+            return [...existing, ...toAppend];
+          });
         } catch (aiErr) {
           console.warn('Failed to load AI recommendations', aiErr);
         }
