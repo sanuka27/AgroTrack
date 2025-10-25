@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, ChevronUp, HelpCircle, MessageCircle, Bug } from 'lucide-react';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 
 const HelpCenterPage = () => {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
@@ -45,11 +47,13 @@ const HelpCenterPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,hsl(120_100%_25%/0.05),transparent_70%)] pointer-events-none"></div>
+    <>
+      <Header />
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,hsl(120_100%_25%/0.05),transparent_70%)] pointer-events-none"></div>
 
-      <main role="main" className="relative container mx-auto max-w-4xl px-4 py-16">
+        <main role="main" className="relative container mx-auto max-w-4xl px-4 py-16">
         {/* Header Section */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center space-x-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-medium mb-6">
@@ -193,12 +197,12 @@ const HelpCenterPage = () => {
               </div>
             </div>
           </section>
+        </div>
+        {/* Replace page-local footer with shared Footer for consistent layout */}
+        </main>
       </div>
-        <footer className="mt-16 pt-8 border-t border-gray-200 text-center">
-          <p className="text-sm text-gray-500">Last updated: 2025-08-24</p>
-        </footer>
-      </main>
-    </div>
+      <Footer />
+    </>
   );
 };
 
