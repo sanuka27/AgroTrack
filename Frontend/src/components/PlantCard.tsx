@@ -67,7 +67,7 @@ export function PlantCard({
         </div>
       )}
       
-      <div className="flex relative">
+  <div className="flex relative min-h-0">
         {/* Plant Image */}
         {plant.imageUrl && (
           <div className="w-20 h-20 flex-shrink-0 relative overflow-hidden rounded-l-lg">
@@ -80,11 +80,11 @@ export function PlantCard({
           </div>
         )}
         
-        {/* Content */}
-        <CardContent className="flex-1 p-4">
+  {/* Content */}
+  <CardContent className="flex-1 p-4 min-h-0">
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1">
-              <h3 className="font-semibold text-lg leading-tight">{plant.name}</h3>
+              <h3 className="font-semibold text-lg leading-tight break-words">{plant.name}</h3>
               <p className="text-sm text-muted-foreground">
                 {plant.category}
                 {plant.ageYears && ` • ${plant.ageYears} year${plant.ageYears !== 1 ? 's' : ''} old`}
@@ -136,7 +136,7 @@ export function PlantCard({
           <div className="space-y-2 text-sm">
             <div className="flex justify-between items-center">
               <span>Last watered:</span>
-              <span className="text-blue-600 font-medium">
+              <span className="text-blue-600 font-medium break-words">
                 {formatLastWatered(plant.lastWatered)}
               </span>
             </div>
@@ -152,7 +152,7 @@ export function PlantCard({
             
             <div className="flex justify-between items-center">
               <span>Light needs:</span>
-              <span className="text-yellow-700 font-medium">{plant.sunlight}</span>
+              <span className="text-yellow-700 font-medium break-words">{plant.sunlight}</span>
             </div>
           </div>
         </CardContent>

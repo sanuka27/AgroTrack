@@ -76,12 +76,9 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a 
-                  href="mailto:bugs@agrotrack.lk?subject=Bug%20Report" 
-                  className="text-sm hover:text-white transition"
-                >
+                <Link to="/bug-reports" className="text-sm hover:text-white transition">
                   Bug Reports
-                </a>
+                </Link>
               </li>
               <li>
                 <a 
