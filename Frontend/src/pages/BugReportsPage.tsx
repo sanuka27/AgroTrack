@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 import { Bug, Mail, Send, CheckCircle, AlertCircle, Loader2, Clock, Trash2, Eye } from 'lucide-react';
 import { bugReportsApi, CreateBugReportData, BugReport } from '../api/bugReports';
 import { getErrorMessage, getCurrentUser } from '../lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 const BugReportsPage = () => {
   const [formData, setFormData] = useState<CreateBugReportData>({
@@ -56,6 +60,8 @@ const BugReportsPage = () => {
     loadUserReports();
   }, [loadUserReports]);
 
+  const { toast } = useToast();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -97,7 +103,7 @@ const BugReportsPage = () => {
       await bugReportsApi.delete(reportId);
       setUserReports(prev => prev.filter(report => report._id !== reportId));
     } catch (error) {
-      alert('Failed to delete bug report: ' + getErrorMessage(error));
+      toast({ title: 'Failed to delete bug report', description: getErrorMessage(error), variant: 'destructive' });
     }
   };
 
@@ -139,7 +145,10 @@ const BugReportsPage = () => {
   };
 
   return (
-    <main role="main" className="container mx-auto max-w-3xl px-4 py-12">
+    <>
+      <Header />
+      <main role="main" className="container mx-auto max-w-3xl px-4 py-12">
+
       <h1 className="text-4xl font-bold text-gray-900 mb-8">Bug Reports</h1>
 
       <div className="space-y-8">
@@ -460,8 +469,12 @@ const BugReportsPage = () => {
             </p>
           </div>
         </section>
+
+        {/* (Removed duplicate bottom "Back to AgroTrack" CTA; top link remains) */}
       </div>
-    </main>
+      </main>
+      <Footer />
+    </>
   );
 };
 
