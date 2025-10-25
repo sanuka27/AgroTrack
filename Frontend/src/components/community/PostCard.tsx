@@ -26,7 +26,7 @@ export default function PostCard({ post, truncateBody = true, onVoteChange }: Po
         {/* Vote buttons */}
         <VoteButton
           postId={post._id}
-          initialScore={post.voteScore}
+          initialScore={(post as any).voteScore ?? (post as any).score ?? 0}
           initialUserVote={post.userVote}
           onVoteChange={handleVoteChange}
         />

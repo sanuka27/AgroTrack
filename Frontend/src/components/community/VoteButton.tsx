@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { communityForumApi } from '../../api/communityForum';
 import { useAuth } from '../../hooks/useAuth';
@@ -23,47 +23,24 @@ export default function VoteButton({
   const [userVote, setUserVote] = useState<1 | -1 | null>(initialUserVote ?? null);
   const [isVoting, setIsVoting] = useState(false);
 
+  // Update internal state when props change
+  useEffect(() => {
+    setScore(initialScore);
+    setUserVote(initialUserVote ?? null);
+  }, [initialScore, initialUserVote]);
+
   const handleVote = async (value: 1 | -1) => {
     if (!user || isVoting || disabled) return;
-
-    // Optimistic update
-    const previousScore = score;
-    const previousVote = userVote;
-
-    let newScore = score;
-    let newVote: 1 | -1 | null = value;
-
-    // Toggle logic
-    if (userVote === value) {
-      // Remove vote
-      newScore -= value;
-      newVote = null;
-    } else if (userVote === null) {
-      // Add vote
-      newScore += value;
-    } else {
-      // Change vote (remove old, add new)
-      newScore -= userVote;
-      newScore += value;
-    }
-
-    setScore(newScore);
-    setUserVote(newVote);
-    onVoteChange?.(newScore, newVote);
 
     setIsVoting(true);
 
     try {
       const response = await communityForumApi.votePost(postId, { value });
-      // Update with server values
+      // Update with server values (server handles all the toggle logic)
       setScore(response.data.voteScore);
       setUserVote(response.data.userVote ?? null);
       onVoteChange?.(response.data.voteScore, response.data.userVote ?? null);
     } catch (error) {
-      // Revert on error
-      setScore(previousScore);
-      setUserVote(previousVote);
-      onVoteChange?.(previousScore, previousVote);
       console.error('Failed to vote:', error);
     } finally {
       setIsVoting(false);
@@ -97,7 +74,7 @@ export default function VoteButton({
             : 'text-gray-600'
         }`}
       >
-        {score}
+        {isNaN(Number(score)) ? 0 : score}
       </span>
 
       <button

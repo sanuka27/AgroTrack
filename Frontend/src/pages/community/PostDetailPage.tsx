@@ -176,7 +176,7 @@ export default function PostDetailPage() {
             {/* Vote buttons */}
             <VoteButton
               postId={post._id}
-              initialScore={post.voteScore}
+              initialScore={(post as any).voteScore ?? (post as any).score ?? 0}
               initialUserVote={post.userVote}
               onVoteChange={handleVoteChange}
             />
