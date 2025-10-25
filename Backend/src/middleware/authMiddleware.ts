@@ -18,17 +18,19 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
 
     // Check if token exists
     if (!token) {
-      console.log('No token in request headers');
+      console.log('❌ [AUTH] No token in request headers');
       const error = new Error('Not authorized, no token') as CustomError;
       error.statusCode = 401;
       return next(error);
     }
 
+    console.log('✅ [AUTH] Token received, length:', token.length);
+
     try {
       // Ensure secret is configured
       const secret = process.env.JWT_SECRET;
       if (!secret) {
-        console.log('JWT_SECRET not configured');
+        console.log('❌ [AUTH] JWT_SECRET not configured');
         const cfgError = new Error('Server misconfiguration: JWT_SECRET not set') as CustomError;
         cfgError.statusCode = 500;
         return next(cfgError);
@@ -36,23 +38,23 @@ export const protect = async (req: Request, res: Response, next: NextFunction): 
 
       // Verify token - the payload uses 'id' not 'userId'
       const decoded = jwt.verify(token, secret) as { id: string; email: string; role: string };
-      console.log('Token decoded successfully:', { id: decoded.id, email: decoded.email });
+      console.log('✅ [AUTH] Token decoded successfully:', { id: decoded.id, email: decoded.email });
 
       // Get user from database
       const user = await User.findById(decoded.id).select('-password');
       
       if (!user) {
-        console.log('User not found for id:', decoded.id);
+        console.log('❌ [AUTH] User not found for id:', decoded.id);
         const error = new Error('Not authorized, user not found') as CustomError;
         error.statusCode = 401;
         return next(error);
       }
 
-      console.log('User found:', user._id);
+      console.log('✅ [AUTH] User found:', user._id, 'with firebaseUid:', (user as any).firebaseUid);
       req.user = user;
       next();
     } catch (error) {
-      console.log('Token verification failed:', error);
+      console.log('❌ [AUTH] Token verification failed:', error instanceof Error ? error.message : error);
       const authError = new Error('Not authorized, token failed') as CustomError;
       authError.statusCode = 401;
       return next(authError);

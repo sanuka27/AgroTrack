@@ -24,8 +24,11 @@ export class CommunityForumController {
   static async createPost(req: AuthRequest, res: Response) {
     try {
       const { title, bodyMarkdown, images } = req.body;
-      const authorUid = req.user!.uid;
-
+      // Use authenticated user from middleware
+      const currentUser = req.user as any;
+      if (!currentUser) {
+        return res.status(401).json({ success: false, message: 'User not authenticated' });
+      }
       // Validate input
       if (!title || !bodyMarkdown) {
         return res.status(400).json({
@@ -34,8 +37,15 @@ export class CommunityForumController {
         });
       }
 
-      // Find user by firebaseUid to get ObjectId
-      const user = await User.findOne({ firebaseUid: authorUid });
+      // Resolve the full user document from the authenticated user
+      let user = null as any;
+      if (currentUser._id) {
+        user = await User.findById(currentUser._id).lean();
+      }
+      if (!user && currentUser.uid) {
+        user = await User.findOne({ firebaseUid: currentUser.uid }).lean();
+      }
+
       if (!user) {
         return res.status(404).json({
           success: false,
@@ -77,7 +87,7 @@ export class CommunityForumController {
 
       await post.save();
 
-      logger.info(`Forum post created: ${post._id} by ${authorDisplayName} (${authorUid})`);
+  logger.info(`Forum post created: ${post._id} by ${authorDisplayName} (user ${user._id})`);
 
       res.status(201).json({
         success: true,
@@ -201,6 +211,8 @@ export class CommunityForumController {
         
         return {
           ...post,
+          // Ensure frontend has consistent field name for score
+          voteScore: (post as any).score ?? 0,
           author: {
             uid: author?.firebaseUid || '',
             name: displayName,
@@ -249,6 +261,9 @@ export class CommunityForumController {
     try {
       const { id } = req.params;
 
+      console.log(`🔎 [GET POST] Requested id: ${id}`);
+      console.log(`🔎 [GET POST] req.user present: ${!!req.user}`);
+
       if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({
           success: false,
@@ -260,6 +275,8 @@ export class CommunityForumController {
         _id: id,
         status: 'visible',
       }).lean();
+
+      console.log(`🔎 [GET POST] DB lookup completed. post found: ${!!post}`);
 
       if (!post) {
         return res.status(404).json({
@@ -291,13 +308,17 @@ export class CommunityForumController {
       res.json({
         success: true,
         data: {
-          ...post,
-          author: {
-            _id: author?._id || post.authorId,
-            uid: author?.firebaseUid || '',
-            name: displayName,
-            avatarUrl: author?.avatar || '',
-            role: author?.role || 'user',
+          post: {
+            ...post,
+            // Provide consistent voteScore field expected by frontend
+            voteScore: (post as any).score ?? 0,
+            author: {
+              _id: author?._id || post.authorId,
+              uid: author?.firebaseUid || '',
+              name: displayName,
+              avatarUrl: author?.avatar || '',
+              role: author?.role || 'user',
+            },
           },
           userVote,
         },
@@ -321,7 +342,9 @@ export class CommunityForumController {
     try {
       const { id } = req.params;
       const { value } = req.body;
-      const voterUid = req.user!.uid;
+      
+      // req.user is populated by authMiddleware with the full User document
+      const currentUser = req.user as any;
 
       if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({
@@ -337,14 +360,15 @@ export class CommunityForumController {
         });
       }
 
-      // Find user by firebaseUid to get ObjectId
-      const user = await User.findOne({ firebaseUid: voterUid });
-      if (!user) {
-        return res.status(404).json({
+      // User is already loaded by authMiddleware
+      if (!currentUser) {
+        return res.status(401).json({
           success: false,
-          message: 'User not found',
+          message: 'User not authenticated',
         });
       }
+
+      console.log(`🗳️ [VOTE] User ${currentUser._id} attempting to vote ${value} on post ${id}`);
 
       // Check if post exists
       const post = await CommunityPost.findOne({
@@ -353,53 +377,62 @@ export class CommunityForumController {
       });
 
       if (!post) {
+        console.log(`❌ [VOTE] Post not found: ${id}`);
         return res.status(404).json({
           success: false,
           message: 'Post not found',
         });
       }
 
+      console.log(`✅ [VOTE] Post found: ${post._id}, current score: ${post.score}`);
+
       // Check if user already voted
       const existingVote = await CommunityVote.findOne({
         postId: id,
-        userId: user._id,
+        userId: currentUser._id,
       });
 
+      console.log(`🗳️ [VOTE] Existing vote:`, existingVote ? `value=${existingVote.value}` : 'none');
+
       let voteScoreDelta = 0;
+      const oldScore = post.score;
 
       if (existingVote) {
         // If same vote, remove it (toggle)
         if (existingVote.value === value) {
           await CommunityVote.deleteOne({ _id: existingVote._id });
           voteScoreDelta = -value; // Remove the vote
-          logger.info(`Vote removed: post ${id} by ${voterUid}`);
+          console.log(`🗳️ [VOTE] Toggle OFF - Removing vote ${value}, delta: ${voteScoreDelta}`);
         } else {
           // Change vote
           existingVote.value = value;
           await existingVote.save();
           voteScoreDelta = value * 2; // e.g., -1 to 1 = +2
-          logger.info(`Vote changed: post ${id} by ${voterUid} to ${value}`);
+          console.log(`🗳️ [VOTE] Vote CHANGED from ${existingVote.value === 1 ? -1 : 1} to ${value}, delta: ${voteScoreDelta}`);
         }
       } else {
         // Create new vote
         await CommunityVote.create({
           postId: id,
-          userId: user._id,
+          userId: currentUser._id,
           value,
         });
         voteScoreDelta = value;
-        logger.info(`Vote created: post ${id} by ${voterUid} value ${value}`);
+        console.log(`🗳️ [VOTE] NEW vote created: value=${value}, delta: ${voteScoreDelta}`);
       }
 
       // Update post vote score
       post.score += voteScoreDelta;
-      await post.save();
+      console.log(`🗳️ [VOTE] Score calculation: ${oldScore} + ${voteScoreDelta} = ${post.score}`);
+      await post.save({ validateBeforeSave: false }); // Skip validation for embedded comments
 
       // Get updated user vote
       const updatedVote = await CommunityVote.findOne({
         postId: id,
-        userId: user._id,
+        userId: currentUser._id,
       });
+
+      console.log(`✅ [VOTE] Success! New score: ${post.score}, userVote: ${updatedVote?.value || null}`);
 
       res.json({
         success: true,
@@ -426,8 +459,12 @@ export class CommunityForumController {
     try {
       const { id } = req.params;
       const { bodyMarkdown } = req.body;
-      const authorUid = req.user!.uid;
 
+      console.log(`📝 [COMMENT] Request to create comment on post ${id}`);
+      console.log(`📝 [COMMENT] bodyMarkdown length: ${typeof bodyMarkdown === 'string' ? bodyMarkdown.length : 'n/a'}`);
+      console.log(`📝 [COMMENT] req.user present: ${!!req.user}`);
+
+      // Validate input
       if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).json({
           success: false,
@@ -442,32 +479,26 @@ export class CommunityForumController {
         });
       }
 
-      // Check if post exists
-      const post = await CommunityPost.findOne({
-        _id: id,
-        status: 'visible',
-      });
+      // Ensure authenticated user is present
+      const currentUser = req.user as any;
+      if (!currentUser) {
+        console.log('❌ [COMMENT] No authenticated user on req');
+        return res.status(401).json({ success: false, message: 'User not authenticated' });
+      }
+
+      // Check if post exists and is visible
+      const post = await CommunityPost.findOne({ _id: id, status: 'visible' });
+      console.log(`📝 [COMMENT] Post lookup result: ${!!post}`);
 
       if (!post) {
-        return res.status(404).json({
-          success: false,
-          message: 'Post not found',
-        });
+        console.log(`❌ [COMMENT] Post not found for id ${id}`);
+        return res.status(404).json({ success: false, message: 'Post not found' });
       }
 
-      // Find user by firebaseUid to get ObjectId
-      const user = await User.findOne({ firebaseUid: authorUid });
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: 'User not found',
-        });
-      }
-
-      // Create comment
+      // Create comment using authenticated user's ObjectId
       const comment = new CommunityComment({
         postId: id,
-        authorId: user._id,
+        authorId: currentUser._id,
         text: bodyMarkdown,
         status: 'visible',
       });
@@ -475,22 +506,24 @@ export class CommunityForumController {
       await comment.save();
 
       // Increment comment count
-      post.commentsCount += 1;
-      await post.save();
+      post.commentsCount = (post.commentsCount || 0) + 1;
+      await post.save({ validateBeforeSave: false });
 
-      logger.info(`Comment created: ${comment._id} on post ${id} by ${authorUid}`);
+      logger.info(`Comment created: ${comment._id} on post ${id} by ${currentUser._id}`);
 
       res.status(201).json({
         success: true,
         message: 'Comment created successfully',
         data: {
+          // Return comment shaped for frontend compatibility (bodyMarkdown, author.uid)
           comment: {
             ...comment.toObject(),
+            bodyMarkdown: (comment as any).text || (comment as any).body || '',
             author: {
-              uid: user.firebaseUid,
-              name: user.name,
-              avatarUrl: user.avatar,
-              role: user.role,
+              uid: currentUser.firebaseUid || '',
+              name: currentUser.name || 'Unknown',
+              avatarUrl: currentUser.avatar || '',
+              role: currentUser.role || 'user',
             },
           },
         },
@@ -552,8 +585,10 @@ export class CommunityForumController {
       // Enrich comments with author info
       const enrichedComments = comments.map((comment) => {
         const author = authorsMap.get(comment.authorId?.toString());
+        // Normalize comment shape to match frontend types (bodyMarkdown + author.uid)
         return {
           ...comment,
+          bodyMarkdown: (comment as any).text || (comment as any).body || '',
           author: author
             ? {
                 uid: author.firebaseUid,
