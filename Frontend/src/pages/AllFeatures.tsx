@@ -4,68 +4,118 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { 
-  ArrowLeft, 
-  Brain, 
-  Camera, 
-  Users, 
-  BarChart3, 
-  Bell, 
+import {
+  ArrowLeft,
+  Brain,
+  Camera,
+  Users,
+  BarChart3,
+  Bell,
   Leaf,
-  Droplets,
-  Sun,
-  Bug,
-  Calendar,
   MessageSquare,
-  Share2,
-  Smartphone,
-  Cloud,
   Shield,
   Zap,
   Heart,
   Search,
-  BookOpen
-} from "lucide-react";
-
-const featureCategories = [
+  Settings,
+  Upload,
+  TrendingUp,
+  Award,
+  BookOpen,
+  Smartphone
+} from "lucide-react";const featureCategories = [
+  {
+    title: "AI-Powered Plant Care",
+    description: "Leverage artificial intelligence for expert plant care assistance",
+    features: [
+      {
+        icon: Camera,
+        title: "Disease Detection",
+        description: "Upload plant photos for instant AI diagnosis using Google Gemini",
+        example: "Take a photo of yellowing leaves to get immediate identification of nutrient deficiencies or pest problems.",
+        benefits: ["Instant diagnosis", "Treatment recommendations", "Prevention tips"]
+      },
+      {
+        icon: Brain,
+        title: "Smart Recommendations",
+        description: "Get personalized care tips and treatment suggestions powered by AI",
+        example: "Receive tailored watering schedules and fertilization plans based on your plant's specific needs and environment.",
+        benefits: ["Personalized advice", "Optimal care plans", "Expert knowledge"]
+      },
+      {
+        icon: Search,
+        title: "Plant Identification",
+        description: "AI-powered plant species recognition and detailed care guides",
+        example: "Upload a photo of an unknown plant to instantly identify the species and get comprehensive care instructions.",
+        benefits: ["Species recognition", "Care guides", "Plant database access"]
+      }
+    ]
+  },
   {
     title: "Plant Management",
     description: "Comprehensive tools to organize and track your plant collection",
     features: [
       {
         icon: Leaf,
-        title: "Plant Library",
-        description: "Create and manage your personal plant collection with detailed information for each plant.",
-        example: "Add your Monstera with custom care instructions, location, photos, and track its growth over time with organized notes.",
-        benefits: ["Unlimited plants", "Custom care plans", "Photo galleries"]
+        title: "Plant Database",
+        description: "Extensive collection of plant species with detailed care information",
+        example: "Browse through thousands of plants with complete care guides, growing conditions, and maintenance tips.",
+        benefits: ["Extensive database", "Detailed care info", "Search & filter"]
       },
-
+      {
+        icon: BarChart3,
+        title: "Care Tracking",
+        description: "Log watering, fertilizing, and maintenance activities with timestamps",
+        example: "Record every watering session, fertilization, and pruning activity to maintain perfect care history.",
+        benefits: ["Activity logging", "Care history", "Maintenance tracking"]
+      },
+      {
+        icon: TrendingUp,
+        title: "Growth Monitoring",
+        description: "Track plant health and growth progress over time with visual indicators",
+        example: "Monitor height changes, leaf count, and overall health improvements with photo comparisons and notes.",
+        benefits: ["Visual tracking", "Health monitoring", "Growth analytics"]
+      },
       {
         icon: Bell,
-        title: "Smart Reminders",
-        description: "Never forget to care for your plants with customizable reminders and notifications.",
-        example: "Get reminded to water your succulents every 2 weeks or fertilize your tomatoes monthly during growing season.",
-        benefits: ["Customizable schedules", "Push notifications", "Plant-specific alerts"]
+        title: "Custom Reminders",
+        description: "Intelligent notifications for plant care tasks and maintenance schedules",
+        example: "Set personalized reminders for watering, fertilizing, repotting, and seasonal care tasks.",
+        benefits: ["Smart scheduling", "Custom notifications", "Care automation"]
       }
     ]
   },
   {
-    title: "AI-Powered Features",
-    description: "Leverage artificial intelligence for expert plant care assistance",
+    title: "Community & Social",
+    description: "Connect with fellow gardeners and share your plant journey",
     features: [
       {
-        icon: Brain,
-        title: "AI Chat Assistant",
-        description: "Get instant answers to plant care questions powered by Google Gemini AI.",
-        example: "Ask 'Why are my tomato leaves turning yellow?' and receive detailed diagnosis with treatment recommendations.",
-        benefits: ["24/7 availability", "Expert knowledge", "Personalized advice"]
+        icon: MessageSquare,
+        title: "Discussion Forums",
+        description: "Reddit-style community with upvoting and threaded discussions",
+        example: "Post questions about plant care, share growing tips, and engage in meaningful discussions with gardeners worldwide.",
+        benefits: ["Expert advice", "Knowledge sharing", "Community support"]
       },
       {
-        icon: Camera,
-        title: "Disease Detection",
-        description: "Upload plant photos to detect diseases, pests, and nutrient deficiencies with AI analysis.",
-        example: "Take a photo of brown spots on your rose leaves to identify fungal infection and get organic treatment options.",
-        benefits: ["Early detection", "Treatment plans", "Prevention tips"]
+        icon: Users,
+        title: "Expert Advice",
+        description: "Connect with fellow gardeners and plant care specialists",
+        example: "Get advice from experienced gardeners, share your successes, and learn from the community's collective knowledge.",
+        benefits: ["Expert connections", "Peer learning", "Support network"]
+      },
+      {
+        icon: Upload,
+        title: "Plant Sharing",
+        description: "Share your garden successes and get feedback from the community",
+        example: "Post photos of your blooming plants, share propagation successes, and receive constructive feedback.",
+        benefits: ["Photo sharing", "Feedback system", "Inspiration gallery"]
+      },
+      {
+        icon: Award,
+        title: "Hashtag System",
+        description: "Discover content with trending plant topics and categories",
+        example: "Use #SucculentCare or #IndoorGardening to find relevant posts and connect with niche communities.",
+        benefits: ["Topic discovery", "Trending content", "Specialized communities"]
       }
     ]
   },
@@ -75,58 +125,65 @@ const featureCategories = [
     features: [
       {
         icon: BarChart3,
-        title: "Plant Health Analytics",
-        description: "Visualize plant health trends, care patterns, and collection statistics over time.",
-        example: "View dashboard showing 85% of your plants are healthy, with charts tracking watering frequency and growth milestones.",
-        benefits: ["Visual dashboards", "Health tracking", "Care optimization"]
-      },
-
-    ]
-  },
-  {
-    title: "Community & Sharing",
-    description: "Connect with fellow gardeners and share your plant journey",
-    features: [
-      {
-        icon: Users,
-        title: "Community Forum",
-        description: "Post questions, share experiences, and learn from a community of plant enthusiasts.",
-        example: "Share photos of your blooming orchids, ask for propagation tips, and vote on helpful community posts.",
-        benefits: ["Q&A support", "Photo sharing", "Expert members"]
+        title: "Plant Health Dashboard",
+        description: "Visual analytics of your garden's performance and health metrics",
+        example: "View comprehensive dashboards showing plant health scores, care consistency, and garden performance trends.",
+        benefits: ["Visual analytics", "Health metrics", "Performance tracking"]
       },
       {
-        icon: MessageSquare,
-        title: "Comments & Discussions",
-        description: "Engage in conversations with threaded comments and community interactions.",
-        example: "Join discussions about indoor gardening techniques and get feedback on your plant setup from experienced growers.",
-        benefits: ["Active discussions", "Knowledge sharing", "Helpful community"]
+        icon: BookOpen,
+        title: "Care History",
+        description: "Detailed logs and trends of plant maintenance and care activities",
+        example: "Review chronological care logs, identify patterns, and optimize your plant care routines based on data.",
+        benefits: ["Detailed logs", "Trend analysis", "Care optimization"]
       },
       {
-        icon: Share2,
-        title: "Social Features",
-        description: "Vote on helpful posts, report issues, and contribute to community knowledge.",
-        example: "Upvote helpful advice about pest control and help build a knowledge base for other gardeners.",
-        benefits: ["Voting system", "Quality content", "Community moderation"]
+        icon: TrendingUp,
+        title: "Growth Analytics",
+        description: "Monitor plant development and health metrics over time",
+        example: "Track growth rates, health improvements, and care effectiveness with detailed analytics and visualizations.",
+        benefits: ["Growth tracking", "Health metrics", "Data visualization"]
+      },
+      {
+        icon: Upload,
+        title: "Custom Reports",
+        description: "Export data for gardening journals and detailed analysis",
+        example: "Generate comprehensive reports of your garden's performance, care activities, and plant health for documentation.",
+        benefits: ["Data export", "Custom reports", "Gardening journals"]
       }
     ]
   },
   {
-    title: "Data & Privacy",
-    description: "Full control over your data with powerful export and privacy tools",
+    title: "Admin & Moderation",
+    description: "Complete platform management and community moderation tools",
     features: [
       {
-        icon: Shield,
-        title: "Data Export & Import",
-        description: "Export your entire plant collection and data in JSON or CSV format for backup or migration.",
-        example: "Download all your plant data including photos, care logs, and notes as a backup or to share with others.",
-        benefits: ["JSON & CSV formats", "Complete backups", "Easy migration"]
+        icon: Settings,
+        title: "Admin Dashboard",
+        description: "Complete user and content management system with full oversight",
+        example: "Monitor platform usage, manage users, moderate content, and access comprehensive analytics from a centralized dashboard.",
+        benefits: ["User management", "Content oversight", "Platform analytics"]
       },
       {
-        icon: Search,
-        title: "Advanced Search",
-        description: "Quickly find plants, posts, and care logs with powerful search and filtering.",
-        example: "Search for 'succulents needing water' or filter community posts by category to find exactly what you need.",
-        benefits: ["Fast results", "Smart filters", "Cross-collection search"]
+        icon: Shield,
+        title: "Moderation Tools",
+        description: "Community content moderation and reporting system",
+        example: "Review reported posts, moderate discussions, and maintain community standards with powerful moderation tools.",
+        benefits: ["Content moderation", "Reporting system", "Community safety"]
+      },
+      {
+        icon: Users,
+        title: "User Management",
+        description: "Role-based access control and comprehensive user administration",
+        example: "Manage user roles, permissions, and access levels while maintaining platform security and user experience.",
+        benefits: ["Role management", "Access control", "User administration"]
+      },
+      {
+        icon: BarChart3,
+        title: "Analytics Overview",
+        description: "Platform-wide usage statistics and performance metrics",
+        example: "Access detailed analytics about user engagement, content performance, and platform usage patterns.",
+        benefits: ["Usage statistics", "Performance metrics", "Engagement tracking"]
       }
     ]
   }
@@ -265,11 +322,11 @@ const AllFeatures = () => {
           </div>
           <div className="space-y-2">
             <div className="text-3xl font-bold text-primary">AI</div>
-            <div className="text-sm text-muted-foreground">Powered Assistant</div>
+            <div className="text-sm text-muted-foreground">Plant Analysis</div>
           </div>
           <div className="space-y-2">
-            <div className="text-3xl font-bold text-primary">24/7</div>
-            <div className="text-sm text-muted-foreground">Plant Tracking</div>
+            <div className="text-3xl font-bold text-primary">MongoDB</div>
+            <div className="text-sm text-muted-foreground">Database</div>
           </div>
           <div className="space-y-2">
             <div className="text-3xl font-bold text-primary">Free</div>
