@@ -198,15 +198,10 @@ export default function PostDetailPage() {
                   {/* Author & meta */}
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1.5">
-                      {post.author?.avatarUrl ? (
-                        <img
-                          src={post.author.avatarUrl}
-                          alt={post.author.name}
-                          className="w-6 h-6 rounded-full"
-                        />
-                      ) : (
-                        <User className="w-5 h-5" />
-                      )}
+                        {/* Show neutral avatar (initial or icon) instead of stored image */}
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center border border-border text-foreground text-xs font-semibold">
+                          {post.author?.name ? post.author.name.charAt(0).toUpperCase() : <User className="w-5 h-5" />}
+                        </div>
                       <span className="font-medium text-foreground">
                         {post.author?.name || 'Unknown'}
                       </span>

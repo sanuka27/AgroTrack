@@ -86,17 +86,10 @@ export default function PostCard({ post, truncateBody = true, onVoteChange }: Po
           <div className="flex items-center gap-4 text-xs text-gray-600">
             {/* Author */}
             <div className="flex items-center gap-2">
-              {post.author?.avatarUrl ? (
-                <img
-                  src={post.author.avatarUrl}
-                  alt={post.author.name}
-                  className="w-6 h-6 rounded-full border-2 border-green-200"
-                />
-              ) : (
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center border border-green-200">
-                  <User className="w-3.5 h-3.5 text-green-700" />
-                </div>
-              )}
+              {/* Always show a neutral avatar (initial or icon) instead of user-uploaded image */}
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center border border-green-200 text-green-700 text-xs font-semibold">
+                {post.author?.name ? post.author.name.charAt(0).toUpperCase() : <User className="w-3.5 h-3.5 text-green-700" />}
+              </div>
               <span className="font-medium text-gray-800">
                 {post.author?.name || 'Unknown'}
               </span>

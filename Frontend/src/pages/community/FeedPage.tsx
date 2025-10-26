@@ -204,10 +204,11 @@ export default function FeedPage() {
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
       <Header />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main feed */}
-          <div className="lg:col-span-2">
+  <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col lg:flex-row justify-center gap-6">
+          {/* Main feed (centered) */}
+          <div className="w-full flex justify-center">
+            <div className="w-full max-w-3xl">
             {/* Header with nature-inspired gradient */}
             <div className="bg-white rounded-2xl shadow-[0_2px_8px_hsl(120_100%_25%_/_0.08)] border border-green-100 p-6 mb-6 relative overflow-hidden">
               {/* Background gradient accent */}
@@ -393,11 +394,14 @@ export default function FeedPage() {
               {/* Infinite scroll trigger */}
               {hasMore && !loading && <div ref={observerTarget} className="h-4" />}
             </div>
+            </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <TrendingTags onTagClick={handleTagFilter} activeTag={tag} />
+          {/* Sidebar (fixed width on large screens) */}
+          <div className="hidden lg:block w-80">
+            <div className="sticky top-24">
+              <TrendingTags onTagClick={handleTagFilter} activeTag={tag} />
+            </div>
           </div>
         </div>
       </div>

@@ -112,15 +112,10 @@ export default function CommentThread({
               {/* Comment Header */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2 text-sm">
-                  {comment.author?.avatarUrl ? (
-                    <img
-                      src={comment.author.avatarUrl}
-                      alt={comment.author.name}
-                      className="w-6 h-6 rounded-full"
-                    />
-                  ) : (
-                    <User className="w-5 h-5 text-muted-foreground" />
-                  )}
+                  {/* Always use neutral avatar (initial or icon) for comments */}
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-card to-muted flex items-center justify-center border border-border text-muted-foreground text-xs font-semibold">
+                    {comment.author?.name ? comment.author.name.charAt(0).toUpperCase() : <User className="w-5 h-5 text-muted-foreground" />}
+                  </div>
                   <span className="font-medium text-foreground">
                     {comment.author?.name || 'Unknown'}
                   </span>
