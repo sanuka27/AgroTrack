@@ -283,25 +283,38 @@ export class DiseaseDetectionController {
 
       DiseaseDetections.push(detection);
 
-      // Simulate AI processing (in real implementation, this would call an ML model)
+      // AI processing using real model (no mocks)
       const processingStartTime = Date.now();
-      
-      // Mock AI analysis - in production, this would be replaced with actual AI/ML service
-      const aiResults = await DiseaseDetectionController.simulateAIDetection(
-        imageUrl,
-        { description: req.body?.description, selectedSymptoms: req.body?.selectedSymptoms }
-      );
-      
+      let aiError: any = null;
+      let aiResults: any = null;
+      try {
+        aiResults = await DiseaseDetectionController.simulateAIDetection(
+          imageUrl,
+          { description: req.body?.description, selectedSymptoms: req.body?.selectedSymptoms }
+        );
+      } catch (err) {
+        aiError = err;
+        logger.error('AI analysis failed, returning graceful result:', err);
+      }
       const processingTime = Date.now() - processingStartTime;
 
-      // Update detection with AI results
-      detection.detectionResults = {
-        ...aiResults,
-        processingTime
-      };
+      // Update detection with AI results or graceful failure preserving real user input context
+      if (aiResults) {
+        detection.detectionResults = {
+          ...aiResults,
+          processingTime
+        };
+      } else {
+        detection.detectionResults = {
+          diseaseDetected: false,
+          confidence: 0,
+          healthyProbability: 0,
+          processingTime
+        } as any;
+      }
 
       // Generate treatment recommendations based on detection
-      if (aiResults.diseaseDetected && aiResults.primaryDisease) {
+      if (aiResults && aiResults.diseaseDetected && aiResults.primaryDisease) {
         const recommendations = await DiseaseDetectionController.generateTreatmentRecommendations(
           aiResults.primaryDisease.name,
           aiResults.primaryDisease.severity,
@@ -311,14 +324,15 @@ export class DiseaseDetectionController {
       }
 
       // Update plant information
-      if (aiResults.diseaseDetected && aiResults.primaryDisease) {
+      if (aiResults && aiResults.diseaseDetected && aiResults.primaryDisease) {
         detection.plantInformation = await DiseaseDetectionController.analyzePlantCondition(
           aiResults.primaryDisease.name,
           aiResults.primaryDisease.severity
         );
       }
 
-      detection.status = 'completed';
+  // Status reflects whether AI succeeded
+  detection.status = aiResults ? 'completed' : 'failed';
       detection.updatedAt = new Date();
 
       // Update user analytics
@@ -358,16 +372,31 @@ export class DiseaseDetectionController {
         logger.warn('Failed to persist AI recommendation record:', persistErr);
       }
 
-      logger.info(`Disease detection completed: ${detection._id} for user ${userId}`);
-
-      res.status(201).json({
-        success: true,
-        message: 'Disease detection completed successfully',
-        data: {
-          detection,
-          processingTime: `${processingTime}ms`
-        }
-      });
+      if (aiResults) {
+        logger.info(`Disease detection completed: ${detection._id} for user ${userId}`);
+        res.status(201).json({
+          success: true,
+          message: 'Disease detection completed successfully',
+          data: {
+            detection,
+            processingTime: `${processingTime}ms`
+          }
+        });
+        return;
+      } else {
+        // Graceful degrade: no mock data, but a successful HTTP response with failed status in payload
+        logger.warn(`Disease detection failed due to AI error for user ${userId}`);
+        res.status(200).json({
+          success: true,
+          message: 'Analysis service unavailable. Detection could not be completed.',
+          data: {
+            detection,
+            error: process.env.NODE_ENV === 'development' ? (aiError?.message || 'AI error') : undefined,
+            processingTime: `${processingTime}ms`
+          }
+        });
+        return;
+      }
 
     } catch (error) {
       logger.error('Error in disease detection:', error);
@@ -836,45 +865,29 @@ export class DiseaseDetectionController {
    * Simulate AI disease detection (mock implementation)
    */
   private static async simulateAIDetection(imageUrl: string, context?: { description?: string; selectedSymptoms?: string[] }): Promise<any> {
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Use the real AI service to identify the disease in a structured format.
+    // This function intentionally does NOT return mock data. If the AI service
+    // is unavailable or returns an invalid response, an error is thrown so the
+    // caller can handle it (and no fake results are returned).
+    const symptomsText = `${context?.description || ''} ${(context?.selectedSymptoms || []).join(' ')}`.trim();
+    try {
+      const aiResponse = await (await import('../ai/gemini')).identifyPlantDiseaseStructured(symptomsText);
 
-    // Mock AI results - in production, this would call actual AI/ML service
-    const mockResults = [
-      {
-        diseaseDetected: true,
-        confidence: 0.87,
-        primaryDisease: {
-          name: "Powdery Mildew",
-          scientificName: "Erysiphales",
-          category: "fungal",
-          severity: "moderate" as const,
-          confidence: 0.87
-        },
-        alternativeDiagnoses: [
-          {
-            name: "Early Blight",
-            scientificName: "Alternaria solani",
-            confidence: 0.23,
-            category: "fungal"
-          }
-        ],
-        healthyProbability: 0.13
-      },
-      {
-        diseaseDetected: false,
-        confidence: 0.92,
-        healthyProbability: 0.92
-      }
-    ];
+      // Map AI response to the expected structure used by the controller
+      const mapped: any = {
+        diseaseDetected: !!aiResponse.diseaseDetected,
+        confidence: typeof aiResponse.confidence === 'number' ? aiResponse.confidence : 0,
+        primaryDisease: aiResponse.primaryDisease || undefined,
+        alternativeDiagnoses: aiResponse.alternativeDiagnoses || undefined,
+        healthyProbability: typeof aiResponse.healthyProbability === 'number' ? aiResponse.healthyProbability : 0
+      };
 
-    // Simple heuristic: if user mentions powdery/white spots, bias toward mildew
-    const text = `${context?.description || ''} ${(context?.selectedSymptoms || []).join(' ')}`.toLowerCase();
-    if (/powdery|white\s+spots|mildew/.test(text)) {
-      return mockResults[0];
+      return mapped;
+    } catch (err) {
+      // Bubble up so the higher-level handler can decide how to respond.
+      console.error('AI disease identification failed:', err);
+      throw err;
     }
-    // Otherwise random for demo
-    return Math.random() > 0.3 ? mockResults[0] : mockResults[1];
   }
 
   /**

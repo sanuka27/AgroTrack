@@ -1,6 +1,3 @@
-// REAL PLANT MODEL - Stores user's plant collection data
-// Collection: plants
-
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPlant extends Document {

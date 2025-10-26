@@ -353,118 +353,7 @@ router.get('/reports/users',
 
 /**
  * @route   GET /api/admin/reports/content
- * @desc    Generate content activity report
-    router.get('/reports/content',
-      query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
-      query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-      query('status').optional().isIn(['pending','resolved','dismissed','reviewed']).withMessage('Invalid status'),
-      validate,
-      async (req, res) => {
-        try {
-          const page = parseInt((req.query.page as string) || '1');
-          const limit = Math.min(parseInt((req.query.limit as string) || '10'), 100);
-          const status = req.query.status as string | undefined;
-
-          const query: any = {};
-          if (status) query.status = status;
-
-          const skip = (page - 1) * limit;
-
-          // Import CommunityReport model lazily to avoid circular deps
-          const { CommunityReport } = await import('../models/CommunityReport');
-
-          // Also import BugReport model so admin can view bug reports in the same tab
-          const { BugReport } = await import('../models/BugReport');
-
-          // Fetch community reports and bug reports in parallel
-          const [communityReports, communityTotal, bugReports, bugTotal] = await Promise.all([
-            CommunityReport.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-            CommunityReport.countDocuments(query),
-            // For bug reports, translate the incoming status filter to our schema values
-            (async () => {
-              const bugQuery: any = {};
-              if (status) {
-                // frontend uses 'resolved'|'pending'|'dismissed' - map to bugreports schema
-                if (status === 'resolved') bugQuery.status = { $in: ['resolved', 'closed'] };
-                else if (status === 'pending') bugQuery.status = 'pending';
-                else bugQuery.status = status;
-              }
-              return BugReport.find(bugQuery).sort({ createdAt: -1 }).skip(skip).limit(limit).lean();
-            })(),
-            (async () => {
-              const bugCountQuery: any = {};
-              if (status) {
-                if (status === 'resolved') bugCountQuery.status = { $in: ['resolved', 'closed'] };
-                else if (status === 'pending') bugCountQuery.status = 'pending';
-                else bugCountQuery.status = status;
-              }
-              return BugReport.countDocuments(bugCountQuery);
-            })()
-          ]);
-
-          // Resolve reporter names for community reports
-          const reporterUids = [...new Set(communityReports.map((r: any) => r.reporterUid))];
-          const { User } = await import('../models/User');
-          const users = await User.find({ firebaseUid: { $in: reporterUids } }).lean();
-          const userMap = new Map(users.map((u: any) => [u.firebaseUid, u]));
-
-          // Map community reports to the unified shape expected by frontend
-          const mappedCommunity = communityReports.map((r: any) => {
-            const reporter = userMap.get(r.reporterUid);
-            return {
-              _id: r._id,
-              reporterId: r.reporterUid,
-              reporterName: reporter ? reporter.name : r.reporterUid,
-              targetId: r.targetId,
-              targetType: r.targetType,
-              reason: r.reason,
-              description: r.description,
-              status: r.status === 'reviewed' ? 'resolved' : r.status,
-              createdAt: r.createdAt,
-              resolvedAt: r.reviewedAt || r.updatedAt,
-              resolvedBy: r.reviewedBy
-            };
-          });
-
-          // Map bug reports into the same shape so frontend can render them in the reports table
-          const mappedBugs = (bugReports as any[]).map((b) => ({
-            _id: b._id,
-            reporterId: b.email || null,
-            reporterName: b.name || b.email || 'Unknown',
-            targetId: b._id, // no specific target for bug reports
-            targetType: 'bug',
-            reason: b.message || '(no description)',
-            description: b.message || '',
-            status: b.status === 'pending' ? 'pending' : (b.status === 'resolved' ? 'resolved' : b.status),
-            createdAt: b.createdAt,
-            resolvedAt: b.updatedAt,
-            resolvedBy: b.assignedTo || null
-          }));
-
-          // Combine and sort by createdAt descending, then paginate the combined results manually
-          const combined = [...mappedCommunity, ...mappedBugs].sort((a, z) => {
-            return new Date(z.createdAt).getTime() - new Date(a.createdAt).getTime();
-          });
-
-          const totalCombined = communityTotal + bugTotal;
-          const paged = combined.slice(skip, skip + limit);
-
-          res.json({
-            success: true,
-            data: {
-              reports: paged,
-              total: totalCombined,
-              page,
-              limit
-            }
-          });
-        } catch (error) {
-          console.error('Failed to fetch admin content reports:', error);
-          res.status(500).json({ success: false, message: 'Failed to fetch reports' });
-        }
-      }
-    );
-
+ * @desc    Get all reports (community + bug reports) for admin management
  * @access  Private (Admin/Super Admin)
  */
 router.get('/reports/content',
@@ -478,9 +367,7 @@ router.get('/reports/content',
       const limit = Math.min(parseInt((req.query.limit as string) || '10'), 100);
       const status = req.query.status as string | undefined;
 
-      const skip = (page - 1) * limit;
-
-      // Import CommunityReport and BugReport lazily
+      // Import models lazily
       const { CommunityReport } = await import('../models/CommunityReport');
       const { BugReport } = await import('../models/BugReport');
 
@@ -491,19 +378,20 @@ router.get('/reports/content',
         else communityQuery.status = status;
       }
 
-      // Prepare query for bug reports (map frontend status values)
+      // Prepare query for bug reports (map frontend status values to DB schema)
       const bugQuery: any = {};
       if (status) {
         if (status === 'resolved') bugQuery.status = { $in: ['resolved', 'closed'] };
         else if (status === 'pending') bugQuery.status = 'pending';
+        else if (status === 'dismissed') bugQuery.status = 'closed';
         else bugQuery.status = status;
       }
 
-      // Fetch community and bug reports in parallel (counts separated)
+      // Fetch ALL matching reports from both collections (no pagination yet)
       const [communityReports, communityTotal, bugReports, bugTotal] = await Promise.all([
-        CommunityReport.find(communityQuery).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+        CommunityReport.find(communityQuery).sort({ createdAt: -1 }).lean(),
         CommunityReport.countDocuments(communityQuery),
-        BugReport.find(bugQuery).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+        BugReport.find(bugQuery).sort({ createdAt: -1 }).lean(),
         BugReport.countDocuments(bugQuery)
       ]);
 
@@ -531,7 +419,7 @@ router.get('/reports/content',
         };
       });
 
-      // Map bug reports into same shape
+      // Map bug reports into same unified shape
       const mappedBugs = (bugReports as any[]).map((b) => ({
         _id: b._id,
         reporterId: b.email || null,
@@ -540,19 +428,21 @@ router.get('/reports/content',
         targetType: 'bug',
         reason: b.message || '(no description)',
         description: b.message || '',
-        status: b.status === 'pending' ? 'pending' : (b.status === 'resolved' ? 'resolved' : (b.status === 'closed' ? 'dismissed' : b.status)),
+        status: b.status === 'pending' ? 'pending' : (b.status === 'resolved' || b.status === 'closed' ? 'resolved' : b.status),
         createdAt: b.createdAt,
         resolvedAt: b.updatedAt,
         resolvedBy: b.assignedTo || null
       }));
 
-      // Combine, sort by createdAt desc, then paginate combined results
+      // Combine and sort by createdAt descending
       const combined = [...mappedCommunity, ...mappedBugs].sort((a, z) => {
         return new Date((z.createdAt as any)).getTime() - new Date((a.createdAt as any)).getTime();
       });
 
-      const totalCombined = communityTotal + bugTotal;
+      // Now paginate the combined sorted results
+      const skip = (page - 1) * limit;
       const paged = combined.slice(skip, skip + limit);
+      const totalCombined = communityTotal + bugTotal;
 
       res.json({
         success: true,
