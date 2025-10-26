@@ -11,7 +11,7 @@ if (!apiKey) {
 }
 
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
-const model = genAI ? genAI.getGenerativeModel({ model: "gemini-pro" }) : null;
+const model = genAI ? genAI.getGenerativeModel({ model: "gemini-2.0-flash" }) : null;
 
 const unavailable = "AI features are disabled. Please configure GEMINI_API_KEY.";
 
@@ -40,6 +40,65 @@ export async function identifyPlantDisease(symptoms: string, imageDescription?: 
   } catch (err) {
     console.error("Gemini API error:", err);
     return "Sorry, I couldn't identify the disease at the moment.";
+  }
+}
+
+/**
+ * Call the model and request a structured JSON response describing detected diseases.
+ * This avoids returning any mocked/fake data and enforces the model to return a strict schema.
+ */
+export async function identifyPlantDiseaseStructured(symptoms: string, imageDescription?: string): Promise<any> {
+  if (!model) throw new Error('AI service unavailable');
+
+  // Prompt instructing the model to return JSON in a strict format
+  let prompt = `You are an expert plant pathologist. Analyze the following symptoms and optional image description, and return a JSON object ONLY in the exact format described after the examples. Do not include any explanatory text.
+
+Input symptoms: ${symptoms}
+`;
+  if (imageDescription) prompt += `Input image description: ${imageDescription}\n`;
+
+  prompt += `\nSTRICT OUTPUT REQUIREMENT: Output ONLY valid JSON, nothing else. No preamble, no explanation, no code blocks, no markdown. Start with { and end with }`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    let text = response.text().trim();
+
+    // Remove any markdown code blocks if present
+    if (text.includes('```')) {
+      const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (match && match[1]) {
+        text = match[1].trim();
+      }
+    }
+
+    // Find the first { and last } to extract JSON
+    const startIdx = text.indexOf('{');
+    const endIdx = text.lastIndexOf('}');
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      text = text.substring(startIdx, endIdx + 1);
+    }
+
+    const parsed = JSON.parse(text);
+
+    // Basic validation of expected fields
+    if (typeof parsed.diseaseDetected !== 'boolean' || typeof parsed.healthyProbability !== 'number') {
+      throw new Error('Invalid response structure from AI model');
+    }
+
+    // Normalize numeric confidence bounds
+    if (typeof parsed.confidence === 'number') {
+      parsed.confidence = Math.max(0, Math.min(1, parsed.confidence));
+    }
+    if (parsed.primaryDisease && typeof parsed.primaryDisease.confidence === 'number') {
+      parsed.primaryDisease.confidence = Math.max(0, Math.min(1, parsed.primaryDisease.confidence));
+    }
+
+    return parsed;
+  } catch (err) {
+    console.error('identifyPlantDiseaseStructured error:', err);
+    // Bubble up so callers can decide how to handle absence of AI result
+    throw err;
   }
 }
 
@@ -96,11 +155,13 @@ export async function generatePlantCareAdvice(content: string, context: { plantI
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
+    // Do not fabricate confidence or token estimates. Return the model text and leave
+    // optional fields undefined unless the model returns structured suggestions.
     return {
       text,
-      suggestions: [], // Could parse suggestions from text if needed
-      confidence: 0.8, // Mock confidence
-      tokens: text.length / 4, // Rough token estimate
+      suggestions: undefined,
+      confidence: undefined,
+      tokens: undefined,
     };
   } catch (err) {
     console.error("Gemini API error:", err);
@@ -128,7 +189,7 @@ export async function validateAgriculturalImage(imageUrl: string): Promise<{
 }> {
   try {
     // Use Gemini Vision model for image analysis
-    const visionModel = genAI ? genAI.getGenerativeModel({ model: "gemini-1.5-flash" }) : null;
+    const visionModel = genAI ? genAI.getGenerativeModel({ model: "gemini-2.0-flash" }) : null;
 
     if (!visionModel) {
       return {
