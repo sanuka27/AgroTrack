@@ -168,6 +168,19 @@ export const adminApi = {
     };
   },
 
+  getPendingReportsCount: async (): Promise<number> => {
+    try {
+      const response = await api.get('/admin/reports/content', {
+        params: { status: 'pending', limit: 1 }
+      });
+      const data = response.data?.data || {};
+      return data.total || 0;
+    } catch (error) {
+      console.error('Failed to fetch pending reports count:', error);
+      return 0;
+    }
+  },
+
   resolveReport: async (
     reportId: string,
     action: 'resolve' | 'dismiss',

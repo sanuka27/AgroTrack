@@ -9,6 +9,7 @@ import { RecentActivity } from '@/components/admin/RecentActivity';
 export function Overview() {
   const { toast } = useToast();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [pendingReports, setPendingReports] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,9 +17,14 @@ export function Overview() {
       try {
         setLoading(true);
         console.log('📊 Loading dashboard data...');
-        const data = await adminApi.getDashboard();
-        console.log('✅ Dashboard data loaded:', data);
-        setStats(data);
+        const [dashboardData, reportsCount] = await Promise.all([
+          adminApi.getDashboard(),
+          adminApi.getPendingReportsCount(),
+        ]);
+        console.log('✅ Dashboard data loaded:', dashboardData);
+        console.log('📋 Pending reports count:', reportsCount);
+        setStats(dashboardData);
+        setPendingReports(reportsCount);
       } catch (error: any) {
         console.error('❌ Error loading dashboard:', {
           message: error.message,
@@ -60,7 +66,6 @@ export function Overview() {
   const activeUsers = stats.activity.dailyActiveUsers;
   const newUsersThisMonth = stats.users.newThisMonth;
   const monthlyGrowthPct = totalUsers > 0 ? ((newUsersThisMonth / totalUsers) * 100).toFixed(1) : '0.0';
-  const pendingReports = 5; // We'll add real reports count later
 
   return (
     <div className="space-y-6">
