@@ -152,7 +152,7 @@ export function Community() {
               <ArrowLeft className="w-4 h-4 text-foreground" />
             </button>
 
-            <div ref={containerRef} id="recent-posts-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:flex gap-6 overflow-x-auto scroll-smooth">
+            <div ref={containerRef} id="recent-posts-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:flex gap-6 overflow-x-auto scroll-smooth hide-scrollbar">
               {loading ? (
                 // show skeletons when loading
                 Array.from({ length: POSTS_LIMIT }).map((_, i) => (

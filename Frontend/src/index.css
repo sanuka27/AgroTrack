@@ -95,6 +95,17 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
+  /* Hide scrollbars utility for horizontal carousels */
+  .hide-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+    width: 0;
+    height: 0;
+  }
+
   /* Underline Animation */
   .story-link {
     position: relative;
