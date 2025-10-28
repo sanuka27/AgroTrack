@@ -35,6 +35,42 @@ export function Community() {
   const [error, setError] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  // Scroll helpers — scroll by one card width (+ gap) in the given direction
+  const scrollByCard = (direction: 'next' | 'prev') => {
+    const container = containerRef.current;
+    if (!container) return;
+    const firstChild = container.children[0] as HTMLElement | undefined;
+    if (!firstChild) return;
+    const style = window.getComputedStyle(container);
+    // gap may be in columnGap or gap depending on browser
+    const gap = parseFloat(style.columnGap || style.gap || '0') || 0;
+    const cardWidth = Math.ceil(firstChild.getBoundingClientRect().width);
+    const delta = (cardWidth + gap) * (direction === 'next' ? 1 : -1);
+    container.scrollBy({ left: delta, behavior: 'smooth' });
+  };
+
+  const handlePrev = () => scrollByCard('prev');
+  const handleNext = () => scrollByCard('next');
+
+  // Track whether we can scroll prev/next to toggle button disabled state
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const check = () => {
+      setCanScrollPrev(container.scrollLeft > 0);
+      setCanScrollNext(container.scrollLeft + container.clientWidth < container.scrollWidth - 1);
+    };
+    check();
+    container.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check);
+    return () => {
+      container.removeEventListener('scroll', check);
+      window.removeEventListener('resize', check);
+    };
+  }, [posts, loading]);
   useEffect(() => {
     let mounted = true;
     const load = async () => {
@@ -109,17 +145,14 @@ export function Community() {
             {/* Navigation arrows (desktop) */}
             <button
               aria-label="Previous posts"
-              className="hidden lg:flex items-center justify-center absolute left-0 top-1/2 -translate-y-1/2 w-10 h-10 bg-card border border-border rounded-full shadow-sm hover:shadow-md z-20 ml-2"
-              onClick={() => {
-                const container = containerRef.current;
-                if (!container) return;
-                container.scrollBy({ left: -container.clientWidth / 1.5, behavior: 'smooth' });
-              }}
+              className={`hidden lg:flex items-center justify-center absolute left-0 top-1/2 -translate-y-1/2 w-10 h-10 bg-card border border-border rounded-full shadow-sm hover:shadow-md z-20 ml-2 ${!canScrollPrev ? 'opacity-40 pointer-events-none' : ''}`}
+              onClick={handlePrev}
+              aria-disabled={!canScrollPrev}
             >
               <ArrowLeft className="w-4 h-4 text-foreground" />
             </button>
 
-            <div ref={containerRef} id="recent-posts-grid" className="grid grid-cols-1 lg:flex gap-6 overflow-x-auto scroll-smooth">
+            <div ref={containerRef} id="recent-posts-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:flex gap-6 overflow-x-auto scroll-smooth">
               {loading ? (
                 // show skeletons when loading
                 Array.from({ length: POSTS_LIMIT }).map((_, i) => (
@@ -165,10 +198,10 @@ export function Community() {
                       
                       <CardContent className="space-y-4">
                         <div>
-                          <CardTitle className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-2">
+                          <CardTitle className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-2">
                             {title}
                           </CardTitle>
-                          <CardDescription className="text-muted-foreground line-clamp-3">
+                          <CardDescription className="text-sm text-muted-foreground line-clamp-3">
                             {content}
                           </CardDescription>
                         </div>
@@ -207,12 +240,9 @@ export function Community() {
 
             <button
               aria-label="Next posts"
-              className="hidden lg:flex items-center justify-center absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 bg-card border border-border rounded-full shadow-sm hover:shadow-md z-20 mr-2"
-              onClick={() => {
-                const container = containerRef.current;
-                if (!container) return;
-                container.scrollBy({ left: container.clientWidth / 1.5, behavior: 'smooth' });
-              }}
+              className={`hidden lg:flex items-center justify-center absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 bg-card border border-border rounded-full shadow-sm hover:shadow-md z-20 mr-2 ${!canScrollNext ? 'opacity-40 pointer-events-none' : ''}`}
+              onClick={handleNext}
+              aria-disabled={!canScrollNext}
             >
               <ArrowRight className="w-4 h-4 text-foreground" />
             </button>
