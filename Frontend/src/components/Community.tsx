@@ -167,6 +167,7 @@ export function Community() {
                   const initials = (post.author?.name || authorName).split(' ').map(n=>n[0]).slice(0,2).join('');
                   const title = post.title || '';
                   const content = (post.bodyMarkdown || '').replace(/\n/g, ' ');
+                  const shortContent = content.length > 120 ? content.slice(0, 120).trimEnd() + '…' : content;
                   const tags = post.tags || [];
                   const likes = post.voteScore ?? 0;
                   const comments = post.commentCount ?? 0;
@@ -198,11 +199,11 @@ export function Community() {
                       
                       <CardContent className="space-y-4">
                         <div>
-                          <CardTitle className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-2">
+                          <CardTitle className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 mb-1">
                             {title}
                           </CardTitle>
-                          <CardDescription className="text-sm text-muted-foreground line-clamp-3">
-                            {content}
+                          <CardDescription className="text-sm text-muted-foreground">
+                            {shortContent}
                           </CardDescription>
                         </div>
 
