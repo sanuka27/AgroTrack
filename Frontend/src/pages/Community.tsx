@@ -8,7 +8,7 @@ import { RoleGuard, PermissionCheck, GuestPrompt } from "@/components/RoleGuard"
 import VoteButton from "@/components/community/VoteButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from '@/hooks/use-toast';
-import { mockApi } from "@/lib/mockApi";
+import apiService from "@/lib/apiService";
 import type { CommunityPost, CommunityStats, TrendingTopic } from "@/types/api";
 import { Users, MessageCircle, Heart, TrendingUp, Shield, Flag, Trash2, Edit, Sparkles, ArrowUp, ArrowDown, Minus, MessageSquare } from "lucide-react";
 
@@ -25,9 +25,9 @@ const Community = () => {
       try {
         setLoading(true);
         const [postsResponse, statsData, topicsData] = await Promise.all([
-          mockApi.community.getPosts({ limit: 10 }),
-          mockApi.community.getStats(),
-          mockApi.community.getTrendingTopics(),
+          (apiService as any).community.getPosts({ limit: 10 }),
+          (apiService as any).community.getStats(),
+          (apiService as any).community.getTrendingTopics(),
         ]);
 
         setPosts(postsResponse.posts);
@@ -242,7 +242,6 @@ const Community = () => {
                                 postId={post._id}
                                 initialScore={post.likes}
                                 initialUserVote={null}
-                                disabled={true} // Disable voting for mock data
                                 onVoteChange={(newScore, newVote) => {
                                   // Update local state for UI feedback
                                   setPosts(prevPosts =>

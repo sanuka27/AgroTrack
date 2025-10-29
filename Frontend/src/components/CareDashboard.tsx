@@ -15,7 +15,6 @@ import {
   formatCareType
 } from '@/utils/careUtils';
 import { Plus, Calendar, BarChart3, Bell, History } from 'lucide-react';
-import mockApi from '@/lib/mockApi';
 import { careLogsApi } from '@/api/careLogs';
 import { remindersApi } from '@/lib/api/reminders';
 import type { CareLog as APICareLog, UpdateCareLogData } from '@/api/careLogs';

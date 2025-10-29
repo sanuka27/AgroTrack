@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plant } from '@/types/plant';
 import { Activity, Leaf, TestTube } from 'lucide-react';
-import mockApi from '@/lib/mockApi';
+import apiService from '@/lib/apiService';
 
 const CareTestPage = () => {
   const [plants, setPlants] = useState<Plant[]>([]);
@@ -17,9 +17,9 @@ const CareTestPage = () => {
   useEffect(() => {
     const loadPlants = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        const response = await mockApi.plants.getAll();
+  setLoading(true);
+  setError(null);
+  const response = await (apiService as any).plants.getAll();
         // Convert API plant format to frontend Plant format
         const convertedPlants: Plant[] = response.plants.map(apiPlant => ({
           id: apiPlant._id,
