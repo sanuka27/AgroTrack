@@ -13,10 +13,11 @@ export class ReminderController {
       const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       const { title, dueAt, notes, plantId } = req.body;
 
-      // If a plantId was provided, ensure it belongs to the authenticated user
+      // If a plantId was provided, ensure it belongs to the authenticated user and fetch plant details
+      let plant = null;
       if (plantId) {
-        const plantExists = await Plant.findOne({ _id: plantId, userId });
-        if (!plantExists) {
+        plant = await Plant.findOne({ _id: plantId, userId });
+        if (!plant) {
           return void res.status(403).json({ success: false, message: 'Invalid plantId or you do not own this plant' });
         }
       }
@@ -35,15 +36,34 @@ export class ReminderController {
       try {
         const user = await User.findById(userId);
         if (user && user.fcmToken) {
-          const message = {
+          // Enhance notification with plant context if available
+          const notificationTitle = plant 
+            ? `🌱 ${plant.name} Care Reminder`
+            : 'New Reminder Created';
+          const notificationBody = plant
+            ? `Time to ${title.replace(plant.name, '').trim()} on ${new Date(dueAt).toLocaleDateString()}`
+            : `Reminder: ${title} scheduled for ${new Date(dueAt).toLocaleString()}`;
+          
+          const message: admin.messaging.Message = {
             token: user.fcmToken,
             notification: {
-              title: 'New Reminder Created',
-              body: `Reminder: ${title} scheduled for ${new Date(dueAt).toLocaleString()}`,
+              title: notificationTitle,
+              body: notificationBody,
+            },
+            data: {
+              reminderId: reminder._id.toString(),
+              plantId: plantId || '',
+              plantName: plant?.name || '',
             },
           };
+          
+          // Add plant image if available
+          if (plant?.imageUrl) {
+            message.notification!.imageUrl = plant.imageUrl;
+          }
+          
           await admin.messaging().send(message);
-          console.log('Push notification sent for new reminder');
+          console.log('Push notification sent for new reminder:', notificationTitle);
         }
       } catch (pushError) {
         console.warn('Failed to send push notification for reminder:', pushError);
@@ -51,12 +71,23 @@ export class ReminderController {
 
       // Create an in-app notification for this reminder
       try {
+        const notificationTitle = plant 
+          ? `🌱 ${plant.name} Care Reminder`
+          : `Reminder: ${title}`;
+        const notificationMessage = plant
+          ? `Time to ${title.replace(plant.name, '').trim()} on ${new Date(dueAt).toLocaleDateString()}`
+          : `You have a reminder: ${title} scheduled at ${new Date(dueAt).toLocaleString()}`;
+        
         await createNotificationNow({
           userId,
           type: 'reminder',
-          title: `Reminder: ${title}`,
-          message: `You have a reminder: ${title} scheduled at ${new Date(dueAt).toLocaleString()}`,
-          data: { reminderId: reminder._id }
+          title: notificationTitle,
+          message: notificationMessage,
+          data: { 
+            reminderId: reminder._id,
+            plantId: plantId || undefined,
+            plantName: plant?.name || undefined,
+          }
         });
       } catch (err) {
         // Non-fatal: log and continue
