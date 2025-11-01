@@ -1,41 +1,48 @@
 import React from "react";
 
 export const GeminiLogo = ({ className = "h-5" }: { className?: string }) => (
-  <div className={`flex items-center gap-1.5 ${className}`}>
-    {/* Gemini Star Icon */}
-    <svg
-      viewBox="0 0 24 24"
-      className="w-5 h-5"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <defs>
-        <linearGradient id="gemini-star-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#4285F4" />
-          <stop offset="50%" stopColor="#9C40FF" />
-          <stop offset="100%" stopColor="#FF4081" />
-        </linearGradient>
-      </defs>
-      
-      {/* Four-pointed star */}
-      <path
-        d="M12 2L13.5 10.5L22 12L13.5 13.5L12 22L10.5 13.5L2 12L10.5 10.5L12 2Z"
-        fill="url(#gemini-star-gradient)"
-      />
-    </svg>
-    
-    {/* Gemini Text */}
+  <div className={`inline-flex items-center relative ${className}`}>
+    {/* Gemini Text with exact Google gradient: Blue → Purple → Pink/Red */}
     <span 
-      className="font-medium text-sm"
+      className="font-semibold text-base tracking-normal"
       style={{
-        background: 'linear-gradient(90deg, #4285F4 0%, #9C40FF 50%, #FF4081 100%)',
+        background: 'linear-gradient(90deg, #4285F4 0%, #5A67D8 25%, #9855F7 50%, #C084FC 75%, #EC4899 100%)',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text'
+        backgroundClip: 'text',
+        fontFamily: 'system-ui, -apple-system, sans-serif'
       }}
     >
       Gemini
     </span>
+    
+    {/* Official Gemini Sparkle Star positioned above the 'i' */}
+    <svg
+      viewBox="0 0 24 24"
+      className="absolute w-3 h-3"
+      style={{ 
+        top: '-8px',
+        right: '18px',
+        transform: 'translateX(50%)'
+      }}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        {/* Exact Google Gemini sparkle gradient */}
+        <linearGradient id="sparkle-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#7C3AED" />
+          <stop offset="50%" stopColor="#A855F7" />
+          <stop offset="100%" stopColor="#C084FC" />
+        </linearGradient>
+      </defs>
+      
+      {/* Four-pointed sparkle star */}
+      <path
+        d="M12 0 L13 11 L12 12 L11 11 Z M24 12 L13 13 L12 12 L13 11 Z M12 24 L11 13 L12 12 L13 13 Z M0 12 L11 11 L12 12 L11 13 Z"
+        fill="url(#sparkle-gradient)"
+      />
+    </svg>
   </div>
 );
 
