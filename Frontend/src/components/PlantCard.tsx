@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Leaf, Droplets, Edit, Trash2, Sun } from 'lucide-react';
+import { Leaf, Droplets, Edit, Trash2, Sun, Bell } from 'lucide-react';
 import { formatLastWatered, getHealthStatusColor } from '@/utils/plantUtils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -18,6 +18,8 @@ interface PlantCardProps {
   selectionMode?: boolean;
   showViewAll?: boolean;
   onViewAll?: () => void;
+  onViewDetails?: (plant: Plant) => void;
+  onSetReminder?: (plant: Plant) => void;
 }
 
 export function PlantCard({ 
@@ -27,8 +29,11 @@ export function PlantCard({
   onWatered, 
   isSelected = false, 
   onSelectionChange, 
-  selectionMode = false 
-  , showViewAll = true, onViewAll
+  selectionMode = false,
+  showViewAll = true,
+  onViewAll,
+  onViewDetails,
+  onSetReminder
 }: PlantCardProps) {
   const { toast } = useToast();
 
@@ -105,6 +110,15 @@ export function PlantCard({
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => onSetReminder?.(plant)}
+                className="h-8 w-8 p-0 hover:bg-purple-100 hover:scale-110 transition-all duration-200"
+                title="Set water reminder"
+              >
+                <Bell className="w-4 h-4 text-purple-600" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => onEdit(plant)}
                 className="h-8 w-8 p-0 hover:bg-emerald-100 hover:scale-110 transition-all duration-200"
                 title="Edit plant"
@@ -120,14 +134,15 @@ export function PlantCard({
               >
                 <Trash2 className="w-4 h-4 text-rose-600" />
               </Button>
-              {/* View All Plants button (green) */}
+              {/* View All button - shows full plant details */}
               {showViewAll && (
                 <Button
                   size="sm"
-                  onClick={() => onViewAll ? onViewAll() : window.location.assign('/plants')}
+                  onClick={() => onViewDetails ? onViewDetails(plant) : (onViewAll ? onViewAll() : window.location.assign('/plants'))}
                   className="ml-1 bg-gradient-to-r from-emerald-600 to-green-600 text-white hover:from-emerald-700 hover:to-green-700 h-8 px-3 shadow-md hover:shadow-lg transition-all duration-200"
+                  title="View full plant details"
                 >
-                  View All ✨
+                  View All
                 </Button>
               )}
             </div>

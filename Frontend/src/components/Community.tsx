@@ -76,13 +76,20 @@ export function Community() {
     const load = async () => {
       try {
         setLoading(true);
+        setError(null); // Clear previous errors
         const response = await communityForumApi.getPosts({ limit: POSTS_LIMIT, sort: 'top' });
         if (!mounted) return;
         // communityForumApi returns the posts under response.data.posts (PostsResponse)
         setPosts(response.data?.posts || []);
       } catch (err: any) {
         console.error('Failed to load community posts', err);
-        if (mounted) setError(err?.message || 'Failed to load posts');
+        if (mounted) {
+          // Better error message based on error type
+          const errorMsg = err?.code === 'ERR_NETWORK' 
+            ? 'Network error. Please check your connection.' 
+            : err?.response?.data?.message || err?.message || 'Failed to load posts';
+          setError(errorMsg);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -156,10 +163,25 @@ export function Community() {
               {loading ? (
                 // show skeletons when loading
                 Array.from({ length: POSTS_LIMIT }).map((_, i) => (
-                  <Card key={`loading-${i}`} className="animate-pulse bg-card rounded-lg p-6" />
+                  <Card key={`loading-${i}`} className="animate-pulse bg-card rounded-lg p-6 h-64" />
                 ))
               ) : error ? (
-                <div className="text-red-600">{error}</div>
+                <Card className="p-6 text-center border-amber-200 bg-amber-50">
+                  <p className="text-amber-800 mb-2">Unable to load community posts</p>
+                  <p className="text-sm text-amber-600">{error}</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-4"
+                    onClick={() => window.location.reload()}
+                  >
+                    Retry
+                  </Button>
+                </Card>
+              ) : posts.length === 0 ? (
+                <Card className="p-6 text-center">
+                  <p className="text-muted-foreground">No posts available yet. Be the first to post!</p>
+                </Card>
               ) : (
                 posts.map((post) => {
                   const authorName = post.author?.name || 'Unknown';

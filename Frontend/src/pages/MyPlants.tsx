@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/hooks/useAuth";
 import { AddPlantModal } from "@/components/AddPlantModal";
 import { PlantCard } from "@/components/PlantCard";
 import { PlantFiltersComponent, PlantFilters } from "@/components/PlantFilters";
+import { WaterReminderDialog } from "@/components/WaterReminderDialog";
 import { Plant, Category } from "@/types/plant";
 import type { Plant as ApiPlant } from "@/types/api";
 import { filterAndSortPlants } from "@/utils/plantFiltering";
@@ -15,7 +17,7 @@ import { useBulkSelection } from "@/hooks/use-bulk-selection";
 import { exportPlantsToCSV, exportPlantsToJSON } from "@/utils/exportUtils";
 import { BulkOperationsBar } from "@/components/BulkOperationsBar";
 import { useSearchDebounce } from "@/hooks/use-search";
-import { Leaf, Plus, Calendar, Droplets, Sun, Bell, TrendingUp, MessageSquare, CheckSquare, Square, AlertTriangle, Activity } from "lucide-react";
+import { Leaf, Plus, Calendar, Droplets, Sun, Bell, TrendingUp, MessageSquare, CheckSquare, Square, AlertTriangle, Activity, Scissors, Sprout, Bug } from "lucide-react";
 import api from '@/lib/api';
 import plantsApi from '@/lib/api/plants';
 import { uploadPlantImage } from '@/utils/firebaseStorage';
@@ -68,7 +70,10 @@ const MyPlants = () => {
   };
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPlant, setEditingPlant] = useState<Plant | null>(null);
+  const [viewingPlant, setViewingPlant] = useState<Plant | null>(null);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [reminderPlant, setReminderPlant] = useState<Plant | null>(null);
+  const [isReminderDialogOpen, setIsReminderDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<any | null>(null);
   const [upcomingReminders, setUpcomingReminders] = useState<ReminderType[]>([]);
@@ -200,38 +205,20 @@ const MyPlants = () => {
             recentCareLogs: analytics.careThisWeek || 0,
           }
         });
-        // fetch real reminders - always use fallback method to get ALL pending reminders
+        // fetch real reminders - get all pending reminders
         try {
           const pending = await remindersApi.getReminders({ status: 'pending' });
           const now = Date.now();
 
-          // Compute start/end of "today" in user's local timezone
-          const today = new Date();
-          const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-          const endOfToday = startOfToday + 24 * 60 * 60 * 1000;
+          // Split reminders into upcoming and overdue
+          // Upcoming: due at or after current time
+          // Overdue: due before current time
+          const localUpcoming = (pending || []).filter((r: any) => new Date(r.dueAt).getTime() >= now);
+          const localOverdue = (pending || []).filter((r: any) => new Date(r.dueAt).getTime() < now);
 
-          // Reminders due sometime today (00:00 - 23:59 local time)
-          const dueToday = (pending || []).filter((r: any) => {
-            const t = new Date(r.dueAt).getTime();
-            return t >= startOfToday && t < endOfToday;
-          });
-
-          // Upcoming (later today) vs overdue (earlier today or before today)
-          const upcomingToday = dueToday.filter((r: any) => new Date(r.dueAt).getTime() >= now);
-          const overdueEarlierToday = dueToday.filter((r: any) => new Date(r.dueAt).getTime() < now);
-
-          // Global overdue reminders (before start of today)
-          const globalOverdue = (pending || []).filter((r: any) => new Date(r.dueAt).getTime() < startOfToday);
-
-          // upcomingReminders should show items for today that are still pending (later today)
-          // overdueReminders should include reminders earlier today and any older overdue reminders
-          const localUpcoming = upcomingToday;
-          const localOverdue = [...overdueEarlierToday, ...globalOverdue];
-
-          console.log('[MyPlants] Loaded reminders (today-focused):', {
+          console.log('[MyPlants] Loaded reminders:', {
             total: pending?.length || 0,
-            dueToday: dueToday.length,
-            upcomingToday: localUpcoming.length,
+            upcoming: localUpcoming.length,
             overdue: localOverdue.length,
           });
 
@@ -482,6 +469,86 @@ const MyPlants = () => {
       savePlantsToLocalStorage(next);
       return next;
     });
+  };
+
+  const handleSetReminder = (plant: Plant) => {
+    setReminderPlant(plant);
+    setIsReminderDialogOpen(true);
+  };
+
+  const handleReminderCreated = async () => {
+    // Refresh reminders list
+    try {
+      const upcoming = await remindersApi.getReminders({ upcoming: true, status: 'pending' });
+      const overdue = await remindersApi.getReminders({ overdue: true, status: 'pending' });
+      setUpcomingReminders(upcoming);
+      setOverdueReminders(overdue);
+    } catch (err) {
+      console.warn('Failed to refresh reminders', err);
+    }
+  };
+
+  // Helper function to get reminder styling based on type
+  const getReminderStyle = (title: string) => {
+    const lowerTitle = title.toLowerCase();
+    
+    // Water reminders - blue theme
+    if (lowerTitle.includes('water')) {
+      return {
+        bgGradient: 'from-white to-blue-50',
+        borderColor: 'border-blue-400',
+        iconBg: 'bg-blue-500',
+        textColor: 'text-blue-800',
+        subtextColor: 'text-blue-600',
+        icon: Droplets,
+      };
+    }
+    
+    // Fertilizer reminders - green theme
+    if (lowerTitle.includes('fertiliz')) {
+      return {
+        bgGradient: 'from-white to-green-50',
+        borderColor: 'border-green-400',
+        iconBg: 'bg-green-500',
+        textColor: 'text-green-800',
+        subtextColor: 'text-green-600',
+        icon: Sprout,
+      };
+    }
+    
+    // Pruning reminders - purple theme
+    if (lowerTitle.includes('prun') || lowerTitle.includes('trim')) {
+      return {
+        bgGradient: 'from-white to-purple-50',
+        borderColor: 'border-purple-400',
+        iconBg: 'bg-purple-500',
+        textColor: 'text-purple-800',
+        subtextColor: 'text-purple-600',
+        icon: Scissors,
+      };
+    }
+    
+    // Pest/disease reminders - orange theme
+    if (lowerTitle.includes('pest') || lowerTitle.includes('disease') || lowerTitle.includes('check')) {
+      return {
+        bgGradient: 'from-white to-orange-50',
+        borderColor: 'border-orange-400',
+        iconBg: 'bg-orange-500',
+        textColor: 'text-orange-800',
+        subtextColor: 'text-orange-600',
+        icon: Bug,
+      };
+    }
+    
+    // Default - teal theme for other reminders
+    return {
+      bgGradient: 'from-white to-teal-50',
+      borderColor: 'border-teal-400',
+      iconBg: 'bg-teal-500',
+      textColor: 'text-teal-800',
+      subtextColor: 'text-teal-600',
+      icon: Bell,
+    };
   };
 
   // Bulk operation handlers
@@ -924,9 +991,11 @@ const MyPlants = () => {
                             onEdit={handleOpenModal}
                             onDelete={handleDeletePlant}
                             onWatered={handleWateredPlant}
+                            onSetReminder={handleSetReminder}
                             isSelected={isSelected(plant.id)}
                             onSelectionChange={toggleSelection}
                             selectionMode={selectionMode}
+                            onViewDetails={(plant) => setViewingPlant(plant)}
                           />
                         ))}
                       </div>
@@ -1107,77 +1176,89 @@ const MyPlants = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {upcomingReminders.map(rem => (
-                      <div key={rem._id} className="flex items-center justify-between p-4 bg-gradient-to-r from-white to-blue-50 rounded-xl border-l-4 border-blue-400 hover:shadow-md transition-shadow">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-blue-500 rounded-lg">
-                            <Droplets className="w-5 h-5 text-white" />
+                    {upcomingReminders.map(rem => {
+                      const style = getReminderStyle(rem.title);
+                      const IconComponent = style.icon;
+                      
+                      return (
+                        <div key={rem._id} className={`flex items-center justify-between p-4 bg-gradient-to-r ${style.bgGradient} rounded-xl border-l-4 ${style.borderColor} hover:shadow-md transition-shadow`}>
+                          <div className="flex items-center space-x-3">
+                            <div className={`p-2 ${style.iconBg} rounded-lg`}>
+                              <IconComponent className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                              <p className={`font-medium ${style.textColor}`}>{rem.title}</p>
+                              <p className={`text-sm ${style.subtextColor}`}>{rem.notes || 'Reminder'}</p>
+                              <p className="text-xs text-gray-500">Due: {new Date(rem.dueAt).toLocaleString()}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-blue-800">{rem.title}</p>
-                            <p className="text-sm text-blue-600">{rem.notes || 'Reminder'}</p>
-                            <p className="text-xs text-gray-500">Due: {new Date(rem.dueAt).toLocaleString()}</p>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline" onClick={async () => {
+                              try {
+                                await remindersApi.completeReminder(rem._id);
+                                setUpcomingReminders(prev => prev.filter(r => r._id !== rem._id));
+                                setAnalyticsData((ad:any) => ({
+                                  ...ad,
+                                  dashboard: {
+                                    ...ad?.dashboard,
+                                    recentCareLogs: (ad?.dashboard?.recentCareLogs || 0) + 1
+                                  }
+                                }));
+                                toast({ title: 'Reminder completed', description: `Marked "${rem.title}" as done.` });
+                              } catch (err: any) {
+                                console.error('Failed to complete reminder', err, err?.response?.data || err?.message);
+                                toast({ title: 'Failed to complete reminder', description: (err?.response?.data?.message || err?.message || 'See console for details') });
+                              }
+                            }}>Done</Button>
+                            <Button size="sm" variant="ghost" asChild>
+                              <Link to="/reminder-test">View</Link>
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" variant="outline" onClick={async () => {
-                            try {
-                              await remindersApi.completeReminder(rem._id);
-                              setUpcomingReminders(prev => prev.filter(r => r._id !== rem._id));
-                              setAnalyticsData((ad:any) => ({
-                                ...ad,
-                                dashboard: {
-                                  ...ad?.dashboard,
-                                  recentCareLogs: (ad?.dashboard?.recentCareLogs || 0) + 1
-                                }
-                              }));
-                              toast({ title: 'Reminder completed', description: `Marked "${rem.title}" as done.` });
-                            } catch (err: any) {
-                              console.error('Failed to complete reminder', err, err?.response?.data || err?.message);
-                              toast({ title: 'Failed to complete reminder', description: (err?.response?.data?.message || err?.message || 'See console for details') });
-                            }
-                          }}>Done</Button>
-                          <Button size="sm" variant="ghost" asChild>
-                            <Link to="/reminder-test">View</Link>
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
-                    {overdueReminders.map(rem => (
-                      <div key={rem._id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                        <div className="flex items-center space-x-3">
-                          <Sun className="w-4 h-4 text-yellow-500" />
-                          <div>
-                            <p className="font-medium text-yellow-800">{rem.title}</p>
-                            <p className="text-sm text-yellow-600">{rem.notes || 'Reminder'}</p>
-                            <p className="text-xs text-gray-500">Overdue since: {new Date(rem.dueAt).toLocaleString()}</p>
+                    {overdueReminders.map(rem => {
+                      const style = getReminderStyle(rem.title);
+                      const IconComponent = style.icon;
+                      
+                      return (
+                        <div key={rem._id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
+                          <div className="flex items-center space-x-3">
+                            <div className="p-2 bg-red-500 rounded-lg">
+                              <IconComponent className="w-4 h-4 text-white" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-red-800">{rem.title}</p>
+                              <p className="text-sm text-red-600">{rem.notes || 'Reminder'}</p>
+                              <p className="text-xs text-gray-500">Overdue since: {new Date(rem.dueAt).toLocaleString()}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline" onClick={async () => {
+                              try {
+                                await remindersApi.completeReminder(rem._id);
+                                setOverdueReminders(prev => prev.filter(r => r._id !== rem._id));
+                                setAnalyticsData((ad:any) => ({
+                                  ...ad,
+                                  dashboard: {
+                                    ...ad?.dashboard,
+                                    recentCareLogs: (ad?.dashboard?.recentCareLogs || 0) + 1
+                                  }
+                                }));
+                                toast({ title: 'Reminder completed', description: `Marked "${rem.title}" as done.` });
+                              } catch (err: any) {
+                                console.error('Failed to complete reminder', err, err?.response?.data || err?.message);
+                                toast({ title: 'Failed to complete reminder', description: (err?.response?.data?.message || err?.message || 'See console for details') });
+                              }
+                            }}>Done</Button>
+                            <Button size="sm" variant="ghost" asChild>
+                              <Link to="/reminder-test">View</Link>
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" variant="outline" onClick={async () => {
-                            try {
-                              await remindersApi.completeReminder(rem._id);
-                              setOverdueReminders(prev => prev.filter(r => r._id !== rem._id));
-                              setAnalyticsData((ad:any) => ({
-                                ...ad,
-                                dashboard: {
-                                  ...ad?.dashboard,
-                                  recentCareLogs: (ad?.dashboard?.recentCareLogs || 0) + 1
-                                }
-                              }));
-                              toast({ title: 'Reminder completed', description: `Marked "${rem.title}" as done.` });
-                            } catch (err: any) {
-                              console.error('Failed to complete reminder', err, err?.response?.data || err?.message);
-                              toast({ title: 'Failed to complete reminder', description: (err?.response?.data?.message || err?.message || 'See console for details') });
-                            }
-                          }}>Done</Button>
-                          <Button size="sm" variant="ghost" asChild>
-                            <Link to="/reminder-test">View</Link>
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )
               }
@@ -1194,6 +1275,118 @@ const MyPlants = () => {
         initial={editingPlant || undefined}
         onCancel={handleCloseModal}
         onSubmit={handleSubmitPlant}
+      />
+
+      {/* Plant Details Dialog */}
+      <Dialog open={!!viewingPlant} onOpenChange={(open) => !open && setViewingPlant(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <Leaf className="w-6 h-6 text-green-600" />
+              {viewingPlant?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {viewingPlant && (
+            <div className="space-y-6">
+              {/* Plant Image */}
+              {viewingPlant.imageUrl && (
+                <div className="w-full h-64 rounded-lg overflow-hidden">
+                  <img
+                    src={viewingPlant.imageUrl}
+                    alt={viewingPlant.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+
+              {/* Basic Info Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-1">Category</h4>
+                  <p className="text-base">{viewingPlant.category}</p>
+                </div>
+                {viewingPlant.ageYears && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground mb-1">Age</h4>
+                    <p className="text-base">{viewingPlant.ageYears} year{viewingPlant.ageYears !== 1 ? 's' : ''} old</p>
+                  </div>
+                )}
+                <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-1 flex items-center gap-1">
+                    <Droplets className="w-4 h-4 text-blue-600" />
+                    Last Watered
+                  </h4>
+                  <p className="text-base">{viewingPlant.lastWatered ? new Date(viewingPlant.lastWatered).toLocaleDateString() : 'Never'}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-muted-foreground mb-1 flex items-center gap-1">
+                    <Activity className="w-4 h-4 text-green-600" />
+                    Health Status
+                  </h4>
+                  <p className="text-base font-medium text-green-600">{viewingPlant.health}</p>
+                </div>
+              </div>
+
+              {/* Care Requirements */}
+              <div>
+                <h4 className="text-lg font-semibold mb-3">Care Requirements</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Sun className="w-5 h-5 text-yellow-600" />
+                    <span className="text-sm text-muted-foreground">Light needs:</span>
+                    <span className="font-medium">{viewingPlant.sunlight}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Droplets className="w-5 h-5 text-blue-600" />
+                    <span className="text-sm text-muted-foreground">Watering frequency:</span>
+                    <span className="font-medium">Every {viewingPlant.wateringEveryDays} days</span>
+                  </div>
+                  {viewingPlant.fertilizerEveryWeeks && (
+                    <div className="flex items-center gap-2">
+                      <Leaf className="w-5 h-5 text-green-600" />
+                      <span className="text-sm text-muted-foreground">Fertilizer:</span>
+                      <span className="font-medium">Every {viewingPlant.fertilizerEveryWeeks} weeks</span>
+                    </div>
+                  )}
+                  {viewingPlant.soil && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Soil type:</span>
+                      <span className="font-medium">{viewingPlant.soil}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t">
+                <Button
+                  onClick={() => {
+                    setViewingPlant(null);
+                    handleOpenModal(viewingPlant);
+                  }}
+                  className="flex-1"
+                  variant="outline"
+                >
+                  Edit Plant
+                </Button>
+                <Button
+                  onClick={() => setViewingPlant(null)}
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Water Reminder Dialog */}
+      <WaterReminderDialog
+        plant={reminderPlant}
+        open={isReminderDialogOpen}
+        onOpenChange={setIsReminderDialogOpen}
+        onReminderCreated={handleReminderCreated}
       />
 
       {/* Bulk Operations Bar */}
