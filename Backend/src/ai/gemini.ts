@@ -44,20 +44,160 @@ export async function identifyPlantDisease(symptoms: string, imageDescription?: 
 }
 
 /**
+ * Analyze plant disease from an image URL using Gemini Vision
+ * @param imageUrl - URL of the plant image to analyze
+ * @param symptoms - Optional text description of symptoms
+ * @returns Structured disease detection results
+ */
+export async function identifyPlantDiseaseFromImage(imageUrl: string, symptoms?: string): Promise<any> {
+  if (!genAI) throw new Error('AI service unavailable');
+
+  const visionModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+  try {
+    // Fetch the image
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      throw new Error('Unable to fetch image from URL');
+    }
+
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const imageData = new Uint8Array(imageBuffer);
+    const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+
+    const imagePart = {
+      inlineData: {
+        data: Buffer.from(imageData).toString('base64'),
+        mimeType: mimeType
+      }
+    };
+
+    let prompt = `You are an expert plant pathologist. Carefully analyze this plant image and identify any diseases, pests, or health issues.`;
+    
+    if (symptoms) {
+      prompt += `\n\nUser-provided context: ${symptoms}`;
+    }
+
+    prompt += `
+
+REQUIRED JSON OUTPUT FORMAT:
+{
+  "diseaseDetected": boolean,
+  "confidence": number (0-1),
+  "healthyProbability": number (0-1),
+  "primaryDisease": {
+    "name": string,
+    "scientificName": string,
+    "category": string (fungal/bacterial/viral/pest/nutritional/environmental),
+    "severity": string (mild/moderate/severe/critical),
+    "confidence": number (0-1)
+  },
+  "alternativeDiagnoses": [
+    {
+      "name": string,
+      "scientificName": string,
+      "confidence": number (0-1),
+      "category": string
+    }
+  ]
+}
+
+IMPORTANT INSTRUCTIONS:
+- Analyze the VISUAL appearance of the plant in the image
+- Look for discoloration, spots, wilting, pests, mold, or other abnormalities
+- If the plant appears healthy, set diseaseDetected to false and primaryDisease to null
+- Output ONLY valid JSON, nothing else
+- No preamble, no explanation, no code blocks, no markdown
+- Start with { and end with }
+- All confidence values must be between 0 and 1`;
+
+    const result = await visionModel.generateContent([prompt, imagePart]);
+    const response = await result.response;
+    let text = response.text().trim();
+
+    // Remove any markdown code blocks if present
+    if (text.includes('```')) {
+      const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (match && match[1]) {
+        text = match[1].trim();
+      }
+    }
+
+    // Find the first { and last } to extract JSON
+    const startIdx = text.indexOf('{');
+    const endIdx = text.lastIndexOf('}');
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      text = text.substring(startIdx, endIdx + 1);
+    }
+
+    const parsed = JSON.parse(text);
+
+    // Basic validation
+    if (typeof parsed.diseaseDetected !== 'boolean' || typeof parsed.healthyProbability !== 'number') {
+      throw new Error('Invalid response structure from AI model');
+    }
+
+    // Normalize confidence values
+    if (typeof parsed.confidence === 'number') {
+      parsed.confidence = Math.max(0, Math.min(1, parsed.confidence));
+    }
+    if (parsed.primaryDisease && typeof parsed.primaryDisease.confidence === 'number') {
+      parsed.primaryDisease.confidence = Math.max(0, Math.min(1, parsed.primaryDisease.confidence));
+    }
+
+    return parsed;
+  } catch (err) {
+    console.error('identifyPlantDiseaseFromImage error:', err);
+    throw err;
+  }
+}
+
+/**
  * Call the model and request a structured JSON response describing detected diseases.
  * This avoids returning any mocked/fake data and enforces the model to return a strict schema.
+ * @deprecated Use identifyPlantDiseaseFromImage for image-based analysis
  */
 export async function identifyPlantDiseaseStructured(symptoms: string, imageDescription?: string): Promise<any> {
   if (!model) throw new Error('AI service unavailable');
 
   // Prompt instructing the model to return JSON in a strict format
-  let prompt = `You are an expert plant pathologist. Analyze the following symptoms and optional image description, and return a JSON object ONLY in the exact format described after the examples. Do not include any explanatory text.
+  let prompt = `You are an expert plant pathologist. Analyze the following symptoms and optional image description, and return a JSON object in the EXACT format specified below.
 
 Input symptoms: ${symptoms}
 `;
   if (imageDescription) prompt += `Input image description: ${imageDescription}\n`;
 
-  prompt += `\nSTRICT OUTPUT REQUIREMENT: Output ONLY valid JSON, nothing else. No preamble, no explanation, no code blocks, no markdown. Start with { and end with }`;
+  prompt += `
+
+REQUIRED JSON OUTPUT FORMAT:
+{
+  "diseaseDetected": boolean,
+  "confidence": number (0-1),
+  "healthyProbability": number (0-1),
+  "primaryDisease": {
+    "name": string,
+    "scientificName": string,
+    "category": string (fungal/bacterial/viral/pest/nutritional/environmental),
+    "severity": string (mild/moderate/severe/critical),
+    "confidence": number (0-1)
+  },
+  "alternativeDiagnoses": [
+    {
+      "name": string,
+      "scientificName": string,
+      "confidence": number (0-1),
+      "category": string
+    }
+  ]
+}
+
+IMPORTANT INSTRUCTIONS:
+- If no disease is detected, set diseaseDetected to false and primaryDisease to null
+- Output ONLY valid JSON, nothing else
+- No preamble, no explanation, no code blocks, no markdown
+- Start with { and end with }
+- All confidence values must be between 0 and 1`;
+
 
   try {
     const result = await model.generateContent(prompt);
@@ -256,11 +396,26 @@ Only respond with the JSON object, no additional text.`;
 
     const result = await visionModel.generateContent([prompt, imagePart]);
     const response = await result.response;
-    const text = response.text();
+    let text = response.text().trim();
+
+    // Remove any markdown code blocks if present
+    if (text.includes('```')) {
+      const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (match && match[1]) {
+        text = match[1].trim();
+      }
+    }
+
+    // Find the first { and last } to extract JSON
+    const startIdx = text.indexOf('{');
+    const endIdx = text.lastIndexOf('}');
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      text = text.substring(startIdx, endIdx + 1);
+    }
 
     try {
       // Parse the JSON response
-      const parsed = JSON.parse(text.trim());
+      const parsed = JSON.parse(text);
 
       // Validate the response structure
       if (typeof parsed.isValid !== 'boolean' ||

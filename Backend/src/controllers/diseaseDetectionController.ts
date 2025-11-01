@@ -862,16 +862,24 @@ export class DiseaseDetectionController {
   // Helper methods
 
   /**
-   * Simulate AI disease detection (mock implementation)
+   * AI-powered disease detection from plant image (NO MOCK DATA)
    */
   private static async simulateAIDetection(imageUrl: string, context?: { description?: string; selectedSymptoms?: string[] }): Promise<any> {
-    // Use the real AI service to identify the disease in a structured format.
-    // This function intentionally does NOT return mock data. If the AI service
-    // is unavailable or returns an invalid response, an error is thrown so the
-    // caller can handle it (and no fake results are returned).
-    const symptomsText = `${context?.description || ''} ${(context?.selectedSymptoms || []).join(' ')}`.trim();
+    // Use the real AI service with Gemini Vision to analyze the actual plant image.
+    // This function does NOT return mock data. If the AI service is unavailable 
+    // or returns an invalid response, an error is thrown.
+    
+    // Build comprehensive symptoms text from description and selected symptoms
+    const symptomsText = `${context?.description || ''} ${(context?.selectedSymptoms || []).join(', ')}`.trim();
+    
+    logger.info(`AI Disease Detection - Analyzing image: ${imageUrl}`);
+    logger.info(`AI Disease Detection - User context: "${symptomsText || 'none provided'}"`);
+    
     try {
-      const aiResponse = await (await import('../ai/gemini')).identifyPlantDiseaseStructured(symptomsText);
+      // Use the new image-based analysis function that actually looks at the plant photo
+      const aiResponse = await (await import('../ai/gemini')).identifyPlantDiseaseFromImage(imageUrl, symptomsText || undefined);
+
+      logger.info(`AI Disease Detection - Response received: ${JSON.stringify(aiResponse)}`);
 
       // Map AI response to the expected structure used by the controller
       const mapped: any = {
