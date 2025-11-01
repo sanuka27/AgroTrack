@@ -329,7 +329,6 @@ export function AIAssistant() {
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <span>Powered by</span>
             <GeminiLogo className="h-4" />
-            <span>AI</span>
           </div>
         </div>
 
