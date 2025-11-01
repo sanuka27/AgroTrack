@@ -321,6 +321,85 @@ export async function generatePlantCareAdvice(content: string, context: { plantI
  * @param imageUrl - URL of the image to validate
  * @returns Promise<{isValid: boolean, confidence: number, category: string, message: string}>
  */
+/**
+ * Get AI-powered plant care recommendations including watering frequency and optimal care times
+ * @param plantName - Name of the plant (e.g., "Sunflower", "Rose")
+ * @param plantCategory - Category (Indoor, Outdoor, Succulent, etc.)
+ * @returns Structured care recommendations
+ */
+export async function getPlantCareRecommendations(plantName: string, plantCategory?: string): Promise<{
+  wateringFrequencyDays: number;
+  optimalWateringTime: string;
+  fertilizerFrequencyWeeks: number;
+  sunlightRequirement: string;
+  soilType: string;
+  careTips: string[];
+  seasonalAdjustments?: string;
+}> {
+  if (!model) throw new Error('AI service unavailable');
+
+  const prompt = `You are an expert horticulturist. Provide care recommendations for a ${plantName}${plantCategory ? ` (${plantCategory})` : ''}.
+
+REQUIRED JSON OUTPUT FORMAT:
+{
+  "wateringFrequencyDays": number (how many days between watering, typical range 1-14),
+  "optimalWateringTime": string (best time of day, e.g., "Early morning (6-8 AM)" or "Evening (6-8 PM)"),
+  "fertilizerFrequencyWeeks": number (how many weeks between fertilizing, typical range 2-8),
+  "sunlightRequirement": string (e.g., "Full Sun (6-8 hours)", "Partial Shade (3-6 hours)", "Indirect Light"),
+  "soilType": string (e.g., "Well-draining potting mix", "Loamy soil with good drainage"),
+  "careTips": [array of 2-4 SIMPLE, user-friendly care tips that ANYONE can understand - use everyday language, avoid technical jargon],
+  "seasonalAdjustments": string (brief note about seasonal care changes in simple terms)
+}
+
+IMPORTANT GUIDELINES FOR careTips:
+- Write tips for complete beginners who know nothing about plants
+- Use simple, conversational language (e.g., "Water when soil feels dry" not "Maintain consistent soil moisture levels")
+- Be specific and actionable (e.g., "Place near a sunny window" not "Requires adequate photosynthetically active radiation")
+- Avoid technical terms like "well-draining substrate", "foliar", "photosynthetic", etc.
+- Each tip should be one short, clear sentence
+- Focus on practical, easy-to-follow advice
+- Examples: "Check soil with your finger before watering", "Wipe leaves gently with a damp cloth", "Keep away from cold drafts"
+
+Base recommendations on REAL horticultural data for ${plantName}. Output ONLY valid JSON, no markdown, no code blocks. Start with { and end with }`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    let text = response.text().trim();
+
+    // Remove markdown code blocks if present
+    if (text.includes('```')) {
+      const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (match && match[1]) {
+        text = match[1].trim();
+      }
+    }
+
+    // Extract JSON
+    const startIdx = text.indexOf('{');
+    const endIdx = text.lastIndexOf('}');
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      text = text.substring(startIdx, endIdx + 1);
+    }
+
+    const parsed = JSON.parse(text);
+
+    // Validate and normalize
+    return {
+      wateringFrequencyDays: Math.max(1, Math.min(30, parsed.wateringFrequencyDays || 7)),
+      optimalWateringTime: parsed.optimalWateringTime || 'Early morning (6-8 AM)',
+      fertilizerFrequencyWeeks: Math.max(1, Math.min(12, parsed.fertilizerFrequencyWeeks || 4)),
+      sunlightRequirement: parsed.sunlightRequirement || 'Full Sun',
+      soilType: parsed.soilType || 'Well-draining soil',
+      careTips: Array.isArray(parsed.careTips) ? parsed.careTips : [],
+      seasonalAdjustments: parsed.seasonalAdjustments || undefined,
+    };
+  } catch (err) {
+    console.error('getPlantCareRecommendations error:', err);
+    throw err;
+  }
+}
+
 export async function validateAgriculturalImage(imageUrl: string): Promise<{
   isValid: boolean;
   confidence: number;
