@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { GeminiLogo } from "@/components/ui/gemini-logo";
 import {
   ArrowLeft,
   Brain,
@@ -31,21 +32,42 @@ import {
       {
         icon: Camera,
         title: "Disease Detection",
-        description: "Upload plant photos for instant AI diagnosis using Google Gemini",
+        description: (
+          <span className="flex items-center flex-wrap gap-1.5">
+            Upload plant photos for instant AI diagnosis
+            <span className="inline-flex items-center gap-1 text-xs">
+              powered by <GeminiLogo className="h-3.5" />
+            </span>
+          </span>
+        ),
         example: "Take a photo of yellowing leaves to get immediate identification of nutrient deficiencies or pest problems.",
         benefits: ["Instant diagnosis", "Treatment recommendations", "Prevention tips"]
       },
       {
         icon: Brain,
         title: "Smart Recommendations",
-        description: "Get personalized care tips and treatment suggestions powered by AI",
+        description: (
+          <span className="flex items-center flex-wrap gap-1.5">
+            Get personalized care tips and treatment suggestions
+            <span className="inline-flex items-center gap-1 text-xs">
+              powered by <GeminiLogo className="h-3.5" />
+            </span>
+          </span>
+        ),
         example: "Receive tailored watering schedules and fertilization plans based on your plant's specific needs and environment.",
         benefits: ["Personalized advice", "Optimal care plans", "Expert knowledge"]
       },
       {
         icon: Search,
         title: "Plant Identification",
-        description: "AI-powered plant species recognition and detailed care guides",
+        description: (
+          <span className="flex items-center flex-wrap gap-1.5">
+            AI-powered plant species recognition and detailed care guides
+            <span className="inline-flex items-center gap-1 text-xs">
+              powered by <GeminiLogo className="h-3.5" />
+            </span>
+          </span>
+        ),
         example: "Upload a photo of an unknown plant to instantly identify the species and get comprehensive care instructions.",
         benefits: ["Species recognition", "Care guides", "Plant database access"]
       }
