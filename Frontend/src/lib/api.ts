@@ -179,6 +179,12 @@ export const analyzePlant = async (formData: FormData) => {
   if (pid) detectBody.plantId = pid;
   if (pname) detectBody.plantName = pname;
   if (formData.get('description')) detectBody.description = formData.get('description');
+  
+  // Add selected symptoms if present
+  const symptoms = formData.getAll('selectedSymptoms');
+  if (symptoms && symptoms.length > 0) {
+    detectBody.selectedSymptoms = symptoms;
+  }
 
   const detectResp = await fetch(`${API_BASE_URL}/disease-detection/detect`, {
     method: 'POST',
@@ -187,11 +193,16 @@ export const analyzePlant = async (formData: FormData) => {
     credentials: 'include',
   });
   const detectJson = await detectResp.json();
+  console.log('[AI Debug] Full backend response:', detectJson);
+  
   if (!detectJson.success) {
     throw new Error(detectJson.message || 'Detection failed');
   }
   // Map disease-detection controller output to expected PlantAnalysis
   const det = detectJson.data?.detection;
+  console.log('[AI Debug] Detection object:', det);
+  console.log('[AI Debug] Detection results:', det?.detectionResults);
+  
   if (det?.detectionResults) {
     const r = det.detectionResults;
     const result = {

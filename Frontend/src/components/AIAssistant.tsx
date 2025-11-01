@@ -203,7 +203,7 @@ export function AIAssistant() {
 
             const derived = {
               _id: recId,
-              plantId: plant._id || plant.id,
+              plantId: plant._id || (plant as any).id,
               plantName: plant.name,
               imageUrl: analysisImageUrl || plant.imageUrl || '',
               description,
@@ -329,7 +329,7 @@ export function AIAssistant() {
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <span>Powered by</span>
             <GeminiLogo className="h-4" />
-            <span>— demo simulation</span>
+            <span>AI</span>
           </div>
         </div>
 
