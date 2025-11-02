@@ -188,7 +188,25 @@ Plant name: ${name}`
   return;
   } catch (error: any) {
     logger.error('suggestPlantDefaults error', error);
-    res.status(500).json({ success: false, message: error?.message || 'AI error' });
+    
+    // Check if it's a rate limit error
+    const isRateLimit = error?.message?.includes('quota') || 
+                        error?.message?.includes('429') ||
+                        error?.message?.includes('Too Many Requests') ||
+                        error?.status === 429;
+    
+    if (isRateLimit) {
+      res.status(429).json({ 
+        success: false, 
+        message: 'AI rate limit exceeded. Please try again later or add plant details manually.',
+        code: 'RATE_LIMIT_EXCEEDED'
+      });
+    } else {
+      res.status(500).json({ 
+        success: false, 
+        message: error?.message || 'AI service temporarily unavailable'
+      });
+    }
   }
 };
 

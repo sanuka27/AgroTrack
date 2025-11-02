@@ -78,6 +78,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
     if (mode === 'edit') return;
     if (didAutoApply) return;
     setAiLoading(true);
+    setAiErr(null); // Clear previous errors
     if (attempt > 0) setRetrying(true);
     try {
       console.debug('[AI] Requesting suggestion for:', name, 'attempt', attempt);
@@ -161,12 +162,35 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
         }
       }
 
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[AI] Suggestion request failed', err);
-      toast({
-        title: 'AI suggestion failed',
-        description: 'Unable to fetch suggestions. See console for details.',
-      });
+      
+      // Check if it's a rate limit error
+      const isRateLimit = err?.response?.status === 429 || 
+                          err?.response?.data?.code === 'RATE_LIMIT_EXCEEDED' ||
+                          (err?.response?.status === 500 && 
+                           err?.response?.data?.message?.includes('quota'));
+      
+      if (isRateLimit) {
+        setAiErr('⏱️ AI rate limit reached. You can add plant details manually.');
+        // Don't show toast on every retry, only on final failure
+        if (attempt >= MAX_RETRIES - 1) {
+          toast({
+            title: '⏱️ AI Rate Limit Reached',
+            description: 'Google Gemini API quota exceeded. You can still add plants manually.',
+            variant: 'default',
+          });
+        }
+      } else {
+        setAiErr('AI suggestions unavailable. Add details manually.');
+        // Only show toast on final attempt
+        if (attempt >= MAX_RETRIES - 1) {
+          toast({
+            title: 'AI suggestions unavailable',
+            description: 'You can still add your plant manually with your own details.',
+          });
+        }
+      }
     } finally {
       setRetrying(false);
       setAiLoading(false);
@@ -448,11 +472,30 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
                     AI is analyzing and filling suggestions...
                   </div>
                 )}
-                {!aiLoading && aiSuggestion && (
+                {!aiLoading && aiSuggestion && !aiErr && (
                   <div className="flex items-center gap-3">
                     <div className="text-sm text-emerald-600">✓ Fields auto-filled by AI based on "{formData.name}"</div>
                     <Button size="sm" variant="outline" onClick={() => fetchSuggestion(formData.name, 0)} disabled={aiLoading || retrying}>
                       {retrying ? 'Retrying...' : 'Regenerate AI suggestion'}
+                    </Button>
+                  </div>
+                )}
+                {!aiLoading && aiErr && (
+                  <div className="flex items-center gap-2 p-4 rounded-lg bg-red-500/80 dark:bg-red-600/80 border-2 border-red-600 dark:border-red-500 shadow-md">
+                    <div className="text-sm font-bold text-white flex-1">
+                      ⚠️ {aiErr}
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => {
+                        setAiErr(null);
+                        fetchSuggestion(formData.name, 0);
+                      }} 
+                      disabled={aiLoading || retrying}
+                      className="border-white bg-white hover:bg-red-50 text-red-700 hover:text-red-800 font-semibold"
+                    >
+                      Retry AI
                     </Button>
                   </div>
                 )}
