@@ -10,6 +10,7 @@ import { AddPlantModal } from "@/components/AddPlantModal";
 import { PlantCard } from "@/components/PlantCard";
 import { PlantFiltersComponent, PlantFilters } from "@/components/PlantFilters";
 import { WaterReminderDialog } from "@/components/WaterReminderDialog";
+import { FertilizerReminderDialog } from "@/components/FertilizerReminderDialog";
 import { Plant, Category } from "@/types/plant";
 import type { Plant as ApiPlant } from "@/types/api";
 import { filterAndSortPlants } from "@/utils/plantFiltering";
@@ -74,6 +75,8 @@ const MyPlants = () => {
   const [selectionMode, setSelectionMode] = useState(false);
   const [reminderPlant, setReminderPlant] = useState<Plant | null>(null);
   const [isReminderDialogOpen, setIsReminderDialogOpen] = useState(false);
+  const [fertilizerReminderPlant, setFertilizerReminderPlant] = useState<Plant | null>(null);
+  const [isFertilizerReminderDialogOpen, setIsFertilizerReminderDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<any | null>(null);
   const [upcomingReminders, setUpcomingReminders] = useState<ReminderType[]>([]);
@@ -474,6 +477,11 @@ const MyPlants = () => {
   const handleSetReminder = (plant: Plant) => {
     setReminderPlant(plant);
     setIsReminderDialogOpen(true);
+  };
+
+  const handleSetFertilizerReminder = (plant: Plant) => {
+    setFertilizerReminderPlant(plant);
+    setIsFertilizerReminderDialogOpen(true);
   };
 
   const handleReminderCreated = async () => {
@@ -992,6 +1000,7 @@ const MyPlants = () => {
                             onDelete={handleDeletePlant}
                             onWatered={handleWateredPlant}
                             onSetReminder={handleSetReminder}
+                            onSetFertilizerReminder={handleSetFertilizerReminder}
                             isSelected={isSelected(plant.id)}
                             onSelectionChange={toggleSelection}
                             selectionMode={selectionMode}
@@ -1386,6 +1395,14 @@ const MyPlants = () => {
         plant={reminderPlant}
         open={isReminderDialogOpen}
         onOpenChange={setIsReminderDialogOpen}
+        onReminderCreated={handleReminderCreated}
+      />
+
+      {/* Fertilizer Reminder Dialog */}
+      <FertilizerReminderDialog
+        plant={fertilizerReminderPlant}
+        open={isFertilizerReminderDialogOpen}
+        onOpenChange={setIsFertilizerReminderDialogOpen}
         onReminderCreated={handleReminderCreated}
       />
 
