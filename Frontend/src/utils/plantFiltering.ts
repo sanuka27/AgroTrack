@@ -94,7 +94,7 @@ export const sortPlants = (plants: Plant[], sortBy: PlantFilters['sortBy'], sort
     } else {
       switch (sortBy) {
       case 'name':
-        comparison = a.name.localeCompare(b.name);
+        comparison = (a.name || '').localeCompare(b.name || '');
         break;
       
       case 'lastWatered': {
@@ -126,7 +126,7 @@ export const sortPlants = (plants: Plant[], sortBy: PlantFilters['sortBy'], sort
         
         case 'dateAdded':
           // Sort by ID as a proxy for date added (assuming newer IDs are later)
-          comparison = a.id.localeCompare(b.id);
+          comparison = (a.id || '').localeCompare(b.id || '');
           break;
           
         case 'careUrgency': {
