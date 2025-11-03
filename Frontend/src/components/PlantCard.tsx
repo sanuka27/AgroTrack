@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plant } from '@/types/plant';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,7 @@ export function PlantCard({
   onSetFertilizerReminder
 }: PlantCardProps) {
   const { toast } = useToast();
+  const [imgError, setImgError] = React.useState(false);
 
   const handleWatered = () => {
     onWatered(plant.id);
@@ -83,48 +84,51 @@ export function PlantCard({
         
         {/* Plant Image */}
         <div className="relative h-24 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20">
-          {plant.imageUrl ? (
+          {plant.imageUrl && !imgError ? (
             <>
               <img
                 src={plant.imageUrl}
                 alt={plant.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                className="w-full h-full object-cover transition-transform duration-300"
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                onError={() => setImgError(true)}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
             </>
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <Leaf className="w-8 h-8 text-green-300 dark:text-green-700" />
+              <Leaf className="w-6 h-6 text-green-300 dark:text-green-700" />
             </div>
           )}
           
           {/* Health Badge Overlay */}
-          <div className="absolute top-1.5 right-1.5">
-            <Badge className={`${healthColor.text} ${healthColor.bg} border border-white shadow-sm text-[10px] px-1.5 py-0`}>
+          <div className="absolute top-1 right-1">
+            <Badge className={`${healthColor.text} ${healthColor.bg} border border-white shadow-sm text-[9px] px-1 py-0`}>
               {plant.health}
             </Badge>
           </div>
         </div>
           
         {/* Content */}
-        <CardContent className="p-2 space-y-1.5">
+        <CardContent className="p-1.5 space-y-1">
           {/* Plant Info Header */}
           <div>
-            <h3 className="font-bold text-base leading-tight mb-0.5 text-gray-900 dark:text-gray-100">
+            <h3 className="font-bold text-sm leading-tight mb-0 text-gray-900 dark:text-gray-100">
               {plant.name}
             </h3>
-            <p className="text-xs text-gray-900 dark:text-emerald-400 flex items-center gap-1 font-bold">
-              <Leaf className="w-3 h-3 text-gray-900 dark:text-emerald-400" />
+            <p className="text-[10px] text-gray-900 dark:text-emerald-400 flex items-center gap-0.5 font-bold">
+              <Leaf className="w-2.5 h-2.5 text-gray-900 dark:text-emerald-400" />
               {plant.category}
               {plant.ageYears && ` • ${plant.ageYears}yr`}
             </p>
           </div>
 
           {/* Plant Details Grid */}
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-center justify-between p-2 rounded-lg bg-blue-900 dark:bg-blue-900/20">
-              <span className="flex items-center gap-1.5 text-white dark:text-blue-300 font-bold">
-                <Droplets className="w-4 h-4 text-white dark:text-blue-300" />
+          <div className="space-y-1 text-[10px]">
+            <div className="flex items-center justify-between p-1.5 rounded bg-blue-900 dark:bg-blue-900/20">
+              <span className="flex items-center gap-1 text-white dark:text-blue-300 font-bold">
+                <Droplets className="w-3 h-3 text-white dark:text-blue-300" />
                 Last watered
               </span>
               <span className="text-white dark:text-blue-300 font-extrabold">
@@ -132,9 +136,9 @@ export function PlantCard({
               </span>
             </div>
             
-            <div className="flex items-center justify-between p-2 rounded-lg bg-amber-900 dark:bg-amber-900/20">
-              <span className="flex items-center gap-1.5 text-white dark:text-amber-300 font-bold">
-                <Sun className="w-4 h-4 text-white dark:text-amber-300" />
+            <div className="flex items-center justify-between p-1.5 rounded bg-amber-900 dark:bg-amber-900/20">
+              <span className="flex items-center gap-1 text-white dark:text-amber-300 font-bold">
+                <Sun className="w-3 h-3 text-white dark:text-amber-300" />
                 Light needs
               </span>
               <span className="text-white dark:text-amber-400 font-extrabold">
@@ -144,19 +148,19 @@ export function PlantCard({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap gap-1 pt-1.5 border-t">
+          <div className="flex flex-wrap gap-0.5 pt-1 border-t">
             {/* Primary Actions */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   onClick={handleWatered}
                   size="sm"
-                  className="flex-1 h-7 text-[10px] shadow-sm px-1.5 font-semibold transition-colors"
+                  className="flex-1 h-6 text-[9px] shadow-sm px-1 font-semibold transition-colors"
                   style={{ backgroundColor: '#38BDF8', color: '#FFFFFF' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0EA5E9'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#38BDF8'}
                 >
-                  <Droplets className="w-2.5 h-2.5 mr-0.5" />
+                  <Droplets className="w-2 h-2 mr-0.5" />
                   Water
                 </Button>
               </TooltipTrigger>
@@ -170,12 +174,12 @@ export function PlantCard({
                 <Button
                   onClick={() => onSetReminder?.(plant)}
                   size="sm"
-                  className="flex-1 h-7 text-[10px] shadow-sm px-1.5 font-semibold transition-colors border"
+                  className="flex-1 h-6 text-[9px] shadow-sm px-1 font-semibold transition-colors border"
                   style={{ backgroundColor: '#E0F2FE', color: '#0369A1', borderColor: '#BAE6FD' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#BAE6FD'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#E0F2FE'}
                 >
-                  <Bell className="w-2.5 h-2.5 mr-0.5" />
+                  <Bell className="w-2 h-2 mr-0.5" />
                   Water
                 </Button>
               </TooltipTrigger>
@@ -189,12 +193,12 @@ export function PlantCard({
                 <Button
                   onClick={() => onSetFertilizerReminder?.(plant)}
                   size="sm"
-                  className="flex-1 h-7 text-[10px] shadow-sm px-1.5 font-semibold transition-colors border"
+                  className="flex-1 h-6 text-[9px] shadow-sm px-1 font-semibold transition-colors border"
                   style={{ backgroundColor: '#D1FAE5', color: '#065F46', borderColor: '#A7F3D0' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#A7F3D0'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#D1FAE5'}
                 >
-                  <Sprout className="w-2.5 h-2.5 mr-0.5" />
+                  <Sprout className="w-2 h-2 mr-0.5" />
                   Feed
                 </Button>
               </TooltipTrigger>
@@ -205,18 +209,18 @@ export function PlantCard({
           </div>
 
           {/* Secondary Actions */}
-          <div className="flex gap-1">
+          <div className="flex gap-0.5">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   onClick={() => onEdit(plant)}
                   size="sm"
-                  className="flex-1 h-6 text-[10px] shadow-sm px-1 font-medium transition-colors border"
+                  className="flex-1 h-5 text-[9px] shadow-sm px-0.5 font-medium transition-colors border"
                   style={{ backgroundColor: '#FFFFFF', color: '#374151', borderColor: '#E5E7EB' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
                 >
-                  <Edit className="w-2.5 h-2.5 mr-0.5" />
+                  <Edit className="w-2 h-2 mr-0.5" />
                   Edit
                 </Button>
               </TooltipTrigger>
@@ -230,12 +234,12 @@ export function PlantCard({
                 <Button
                   onClick={handleDelete}
                   size="sm"
-                  className="flex-1 h-6 text-[10px] shadow-sm px-1 font-medium transition-colors"
+                  className="flex-1 h-5 text-[9px] shadow-sm px-0.5 font-medium transition-colors"
                   style={{ backgroundColor: '#F87171', color: '#FFFFFF' }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EF4444'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F87171'}
                 >
-                  <Trash2 className="w-2.5 h-2.5 mr-0.5" />
+                  <Trash2 className="w-2 h-2 mr-0.5" />
                   Delete
                 </Button>
               </TooltipTrigger>
@@ -250,7 +254,7 @@ export function PlantCard({
                   <Button
                     onClick={() => onViewDetails ? onViewDetails(plant) : (onViewAll ? onViewAll() : window.location.assign('/plants'))}
                     size="sm"
-                    className="flex-1 h-6 text-[10px] shadow-sm px-1 font-semibold transition-colors"
+                    className="flex-1 h-5 text-[9px] shadow-sm px-0.5 font-semibold transition-colors"
                     style={{ backgroundColor: '#059669', color: '#FFFFFF' }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#047857'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#059669'}
