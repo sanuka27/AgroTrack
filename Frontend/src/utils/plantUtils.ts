@@ -24,18 +24,18 @@ export function getHealthStatusColor(health: string) {
     case 'Excellent':
       return {
         text: 'text-emerald-700',
-        bg: 'bg-emerald-50',
+        bg: 'bg-emerald-100',
         border: 'border-emerald-200'
       };
     case 'Good':
       return {
-        text: 'text-green-700',
-        bg: 'bg-green-50',
-        border: 'border-green-200'
+        text: 'text-emerald-700',
+        bg: 'bg-emerald-100',
+        border: 'border-emerald-200'
       };
     case 'Needs light':
       return {
-        text: 'text-amber-700',
+        text: 'text-amber-500',
         bg: 'bg-amber-50',
         border: 'border-amber-200'
       };
