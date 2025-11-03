@@ -26,6 +26,7 @@ import { analyticsApi } from '@/lib/api/analytics';
 import { remindersApi, Reminder as ReminderType } from '@/lib/api/reminders';
 import aiRecommendationApi, { AiRecommendation } from '@/lib/api/aiRecommendations';
 import { useToast } from '@/hooks/use-toast';
+import { normalizeImageUrl } from '@/lib/utils';
 
 // Helper function to map API category to frontend Category type
 const mapCategory = (apiCategory: string): Category => {
@@ -115,8 +116,11 @@ const MyPlants = () => {
       try {
         setLoading(true);
         setError(null);
+        console.log('[MyPlants] Fetching plants from API: /plants?limit=100');
         const resp = await api.get('/plants?limit=100');
+        console.log('[MyPlants] API response:', resp?.data);
         const responsePlants: ApiPlant[] = resp?.data?.data?.plants || resp?.data?.plants || [];
+        console.log('[MyPlants] Raw API plants count:', responsePlants.length);
         const convertedPlants: Plant[] = responsePlants.map((apiPlant: ApiPlant) => ({
           id: apiPlant._id,
           name: apiPlant.name,
@@ -127,7 +131,7 @@ const MyPlants = () => {
           fertilizerEveryWeeks: (apiPlant as any).fertilizerEveryWeeks ?? undefined,
           soil: apiPlant.soilType ?? undefined,
           notes: (apiPlant as any).notes || apiPlant.careInstructions || undefined,
-          imageUrl: apiPlant.imageUrl,
+          imageUrl: normalizeImageUrl(apiPlant.imageUrl),
           lastWatered: (apiPlant as any).lastWatered || undefined,
           health: (apiPlant as any).health || "Good",
           
@@ -181,7 +185,27 @@ const MyPlants = () => {
       }
       // Debug: log loaded plants and their imageUrl fields to aid troubleshooting
       try {
-        console.debug('[MyPlants] Loaded plants:', convertedPlants.map(p => ({ id: p.id, name: p.name, imageUrl: p.imageUrl })));
+        console.log('[MyPlants] Loaded plants:', convertedPlants.map(p => ({ 
+          id: p.id, 
+          name: p.name, 
+          imageUrl: p.imageUrl ? (p.imageUrl.substring(0, 60) + '...') : 'NO IMAGE',
+          fullImageUrl: p.imageUrl 
+        })));
+        console.log('[MyPlants] Total plants loaded:', convertedPlants.length);
+        
+        // Test image URLs
+        convertedPlants.forEach(async (p) => {
+          if (p.imageUrl) {
+            try {
+              const testImg = new Image();
+              testImg.onload = () => console.log(`✅ Image loaded for ${p.name}: ${p.imageUrl}`);
+              testImg.onerror = (e) => console.error(`❌ Image FAILED for ${p.name}: ${p.imageUrl}`, e);
+              testImg.src = p.imageUrl;
+            } catch (e) {
+              console.error(`❌ Image test error for ${p.name}:`, e);
+            }
+          }
+        });
       } catch (e) {
         console.warn('[MyPlants] Failed to log loaded plants', e);
       }
@@ -294,18 +318,22 @@ const MyPlants = () => {
       // If imageFile is provided, send it in FormData so backend can persist imageUrl atomically
       if (imageFile) {
         try {
+          console.log('[MyPlants] Creating FormData with image, file size:', imageFile.size, 'type:', imageFile.type);
           const form = new FormData();
           Object.keys(payload).forEach(key => {
             const val = (payload as any)[key];
             if (val !== undefined && val !== null) form.append(key, String(val));
           });
           form.append('image', imageFile);
+          console.log('[MyPlants] Calling plantsApi.createPlant with FormData...');
           createdPlant = await plantsApi.createPlant(form as any);
+          console.log('[MyPlants] Created plant response:', createdPlant);
         } catch (e) {
-          console.warn('[MyPlants] create with file failed, falling back to metadata-only create', e);
+          console.error('[MyPlants] create with file failed, falling back to metadata-only create', e);
           createdPlant = await plantsApi.createPlant(payload);
         }
       } else {
+        console.log('[MyPlants] No image file, creating plant without image');
         createdPlant = await plantsApi.createPlant(payload);
       }
 
@@ -404,7 +432,7 @@ const MyPlants = () => {
           });
           form.append('image', imageFile);
           const updatedResp = await plantsApi.updatePlant(updatedPlant.id, form as any);
-          const savedUrl = updatedResp?.imageUrl;
+          const savedUrl = normalizeImageUrl(updatedResp?.imageUrl);
           if (savedUrl) {
             setPlants(prev => {
               const next = prev.map(p => p.id === updatedPlant.id ? { ...p, imageUrl: savedUrl } : p);
@@ -421,7 +449,7 @@ const MyPlants = () => {
               const img = await uploadPlantImage(imageFile, userId, (progress) => {});
               if (img?.url) {
                 const updated = await retry(() => plantsApi.updatePlant(updatedPlant.id, { imageUrl: img.url } as any), 3, 500);
-                const savedUrl = updated?.imageUrl || img.url;
+                const savedUrl = normalizeImageUrl(updated?.imageUrl || img.url);
                 setPlants(prev => {
                   const next = prev.map(p => p.id === updatedPlant.id ? { ...p, imageUrl: savedUrl } : p);
                   savePlantsToLocalStorage(next);

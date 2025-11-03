@@ -104,7 +104,8 @@ export class PlantController {
   /**
    * Create a new plant
    */
-  static async createPlant(req: CreatePlantRequest, res: Response, next: NextFunction): Promise<void> {
+  public static async createPlant(req: Request, res: Response, next: NextFunction): Promise<void> {
+    logger.info(`[PlantController] CREATE: Received request. Has file: ${!!req.file}. Body keys: ${Object.keys(req.body).join(', ')}`);
     try {
       const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
       
@@ -119,6 +120,7 @@ export class PlantController {
       if (req.file) {
         try {
           const bucket = firebaseService.getStorage().bucket();
+          logger.info(`[PlantController] CREATE: Uploading to bucket: ${bucket.name}`);
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
           const filename = `plant-${userId}-${uniqueSuffix}${path.extname(req.file.originalname)}`;
           const fileRef = bucket.file(`plant-images/${filename}`);
@@ -140,9 +142,9 @@ export class PlantController {
 
           // Get the public URL
           imageUrl = `https://storage.googleapis.com/${bucket.name}/${fileRef.name}`;
-          logger.info(`Plant image uploaded: ${imageUrl}`);
+          logger.info(`[PlantController] CREATE: Image uploaded successfully: ${imageUrl}`);
         } catch (uploadError) {
-          logger.error('Failed to upload plant image:', uploadError);
+          logger.error('[PlantController] CREATE: Failed to upload plant image:', uploadError);
           // Continue without image rather than failing the whole request
         }
       }
@@ -280,6 +282,14 @@ export class PlantController {
       try {
         const withImages = (plants || []).filter(p => (p as any).imageUrl).length;
         logger.info(`[GetPlants] user=${userId.toString()} returned=${plants.length} withImage=${withImages}`);
+        // Log each plant's imageUrl for debugging
+        plants.forEach((p: any) => {
+          if (p.imageUrl) {
+            logger.info(`[GetPlants] Plant "${p.name}" has imageUrl: ${p.imageUrl.substring(0, 100)}...`);
+          } else {
+            logger.info(`[GetPlants] Plant "${p.name}" has NO imageUrl`);
+          }
+        });
       } catch (logErr) {
         logger.warn('Failed to log GetPlants imageUrl stats', logErr);
       }

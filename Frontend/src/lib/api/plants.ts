@@ -113,15 +113,31 @@ export const plantsApi = {
    */
   async createPlant(plantData: FormData | Partial<ApiPlant>): Promise<ApiPlant> {
     try {
-      const headers = plantData instanceof FormData 
+      const isFormData = plantData instanceof FormData;
+      console.log('[plantsApi] createPlant called with FormData:', isFormData);
+      
+      if (isFormData) {
+        console.log('[plantsApi] FormData entries:');
+        for (const [key, value] of (plantData as FormData).entries()) {
+          if (value instanceof File) {
+            console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+          } else {
+            console.log(`  ${key}:`, value);
+          }
+        }
+      }
+      
+      const headers = isFormData 
         ? { 'Content-Type': 'multipart/form-data' }
         : {};
 
+      console.log('[plantsApi] Sending POST /plants...');
       const response = await api.post<any>(
         '/plants',
         plantData,
         { headers }
       );
+      console.log('[plantsApi] Response received:', response.data);
 
       // Backend returns: { success, message, data: { plant } }
   const plant: ApiPlant = response.data.data?.plant || response.data.plant;

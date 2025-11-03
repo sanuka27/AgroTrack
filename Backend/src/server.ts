@@ -93,9 +93,25 @@ app.use(morgan('combined', {
   }
 }));
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body parsing middleware - skip for multipart/form-data to let multer handle it
+app.use((req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  console.log(`[Middleware] ${req.method} ${req.path} - Content-Type: ${contentType}`);
+  // Skip body parsing for multipart/form-data (file uploads)
+  if (contentType.includes('multipart/form-data')) {
+    console.log('[Middleware] Skipping body parser for multipart/form-data');
+    return next();
+  }
+  // Parse JSON for all other requests
+  express.json({ limit: '10mb' })(req, res, next);
+});
+app.use((req, res, next) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    return next();
+  }
+  express.urlencoded({ extended: true, limit: '10mb' })(req, res, next);
+});
 
 // Session configuration for passport
 app.use(session({

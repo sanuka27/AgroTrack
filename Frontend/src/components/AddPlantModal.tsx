@@ -40,7 +40,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
   const [imagePreview, setImagePreview] = useState<string>('');
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>(''); // Track actual Firebase URL separately from blob preview
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  // Default to server-side upload path to avoid client-side stalls
+  // Changed: Let backend handle uploads (more reliable than client-side Firebase upload)
   const [skipUpload, setSkipUpload] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isValid, setIsValid] = useState(false);
@@ -348,21 +348,13 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
       
     };
 
-  // If a new local image file was chosen and the user hasn't chosen to skip client upload,
-    // try uploading it to Firebase Storage first and use that URL.
-    // If the client upload stalls or fails, fall back to sending the file to the backend (passFile below).
-    let finalImageUrl = plantData.imageUrl;
-    if (imageFile && !skipUpload) {
-      const uploaded = await handleUploadWithTimeout(20000); // 20s timeout
-      if (uploaded) {
-        finalImageUrl = uploaded;
-      }
-    }
+  // Always let the backend handle image uploads for reliability
+    // The backend will upload to Firebase and return the correct URL
+    plantData.imageUrl = uploadedImageUrl || (mode === 'edit' && initial?.imageUrl ? initial.imageUrl : undefined);
 
-    plantData.imageUrl = finalImageUrl;
-
-  // Pass imageFile only when we didn't upload to Firebase (avoid duplicate uploads).
-  const passFile = imageFile && !finalImageUrl ? imageFile : null;
+  // Pass the imageFile to the backend so it can upload to Firebase
+  const passFile = imageFile || null;
+  console.log('[AddPlantModal] Submitting plant with imageFile:', !!passFile, 'existing imageUrl:', !!plantData.imageUrl);
   onSubmit(plantData, passFile);
 
     // Show success toast

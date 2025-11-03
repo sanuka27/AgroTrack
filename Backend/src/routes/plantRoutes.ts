@@ -31,7 +31,18 @@ router.get("/", authMiddleware, PlantController.getPlants);
 router.get("/:id", authMiddleware, PlantController.getPlantById);
 
 // POST /api/plants - Create new plant
-router.post("/", authMiddleware, plantImageUpload.single('image'), PlantController.createPlant);
+router.post("/", authMiddleware, plantImageUpload.single('image'), (req, res, next) => {
+  console.log('[PlantRoutes] POST /plants - After multer. Has file:', !!req.file);
+  if (req.file) {
+    console.log('[PlantRoutes] File details:', {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    });
+  }
+  next();
+}, PlantController.createPlant);
 
 // PUT /api/plants/:id - Update plant
 router.put("/:id", authMiddleware, plantImageUpload.single('image'), PlantController.updatePlant);
