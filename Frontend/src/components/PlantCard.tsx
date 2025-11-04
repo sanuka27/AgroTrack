@@ -68,104 +68,97 @@ export function PlantCard({
   
   return (
     <TooltipProvider delayDuration={300}>
-      <Card className={`group relative overflow-hidden transition-all duration-200 hover:shadow-lg ${healthColor.border} ${
-        isSelected ? 'ring-2 ring-blue-500 ring-opacity-50 shadow-lg' : ''
+      <Card className={`group relative overflow-hidden transition-all duration-300 hover:shadow-xl bg-white ${healthColor.border} ${
+        isSelected ? 'ring-2 ring-green-500 shadow-xl scale-[0.98]' : ''
       }`}>
         {/* Selection Checkbox */}
         {selectionMode && (
-          <div className="absolute top-2 left-2 z-10">
+          <div className="absolute top-3 left-3 z-10">
             <Checkbox
               checked={isSelected}
               onCheckedChange={(checked) => onSelectionChange?.(plant.id, checked as boolean)}
-              className="bg-white border-2 shadow-md"
+              className="bg-white border-2 shadow-lg h-5 w-5"
             />
           </div>
         )}
         
         {/* Plant Image */}
-        <div className="relative h-24 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-900/20 dark:to-emerald-900/20">
+        <div className="relative h-48 overflow-hidden bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 p-4 flex items-center justify-center">
           {plant.imageUrl && !imgError ? (
-            <>
-              <img
-                src={plant.imageUrl}
-                alt={plant.name}
-                className="w-full h-full object-cover transition-transform duration-300"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-                onError={() => setImgError(true)}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-            </>
+            <img
+              src={plant.imageUrl}
+              alt={plant.name}
+              className="h-40 w-auto max-w-[90%] object-contain transition-transform duration-300 group-hover:scale-105 rounded-lg shadow-md"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={() => setImgError(true)}
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <Leaf className="w-6 h-6 text-green-300 dark:text-green-700" />
+              <Leaf className="w-16 h-16 text-green-400/40" />
             </div>
           )}
           
           {/* Health Badge Overlay */}
-          <div className="absolute top-1 right-1">
-            <Badge className={`${healthColor.text} ${healthColor.bg} border border-white shadow-sm text-[9px] px-1 py-0`}>
+          <div className="absolute top-3 right-3">
+            <Badge className={`${healthColor.text} ${healthColor.bg} border-2 border-white shadow-lg text-xs px-2.5 py-0.5 font-semibold`}>
               {plant.health}
             </Badge>
           </div>
         </div>
           
         {/* Content */}
-        <CardContent className="p-1.5 space-y-1">
+        <CardContent className="p-4 space-y-3">
           {/* Plant Info Header */}
-          <div>
-            <h3 className="font-bold text-sm leading-tight mb-0 text-gray-900 dark:text-gray-100">
+          <div className="space-y-1">
+            <h3 className="font-bold text-lg text-gray-900 truncate">
               {plant.name}
             </h3>
-            <p className="text-[10px] text-gray-900 dark:text-emerald-400 flex items-center gap-0.5 font-bold">
-              <Leaf className="w-2.5 h-2.5 text-gray-900 dark:text-emerald-400" />
-              {plant.category}
-              {plant.ageYears && ` • ${plant.ageYears}yr`}
+            <p className="text-xs text-gray-600 flex items-center gap-1.5">
+              <Leaf className="w-3.5 h-3.5 text-green-600" />
+              <span className="font-medium">{plant.category}</span>
+              {plant.ageYears && <span className="text-gray-400">• {plant.ageYears}yr old</span>}
             </p>
           </div>
 
           {/* Plant Details Grid */}
-          <div className="space-y-1 text-[10px]">
-            <div className="flex items-center justify-between p-1.5 rounded bg-blue-900 dark:bg-blue-900/20">
-              <span className="flex items-center gap-1 text-white dark:text-blue-300 font-bold">
-                <Droplets className="w-3 h-3 text-white dark:text-blue-300" />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-blue-50 border border-blue-100">
+              <span className="flex items-center gap-2 text-blue-700 text-xs font-medium">
+                <Droplets className="w-4 h-4" />
                 Last watered
               </span>
-              <span className="text-white dark:text-blue-300 font-extrabold">
+              <span className="text-blue-900 text-xs font-bold">
                 {formatLastWatered(plant.lastWatered)}
               </span>
             </div>
             
-            <div className="flex items-center justify-between p-1.5 rounded bg-amber-900 dark:bg-amber-900/20">
-              <span className="flex items-center gap-1 text-white dark:text-amber-300 font-bold">
-                <Sun className="w-3 h-3 text-white dark:text-amber-300" />
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50 border border-amber-100">
+              <span className="flex items-center gap-2 text-amber-700 text-xs font-medium">
+                <Sun className="w-4 h-4" />
                 Light needs
               </span>
-              <span className="text-white dark:text-amber-400 font-extrabold">
+              <span className="text-amber-900 text-xs font-bold">
                 {plant.sunlight}
               </span>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-wrap gap-0.5 pt-1 border-t">
-            {/* Primary Actions */}
+          <div className="flex gap-2 pt-2 border-t border-gray-100">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   onClick={handleWatered}
                   size="sm"
-                  className="flex-1 h-6 text-[9px] shadow-sm px-1 font-semibold transition-colors"
-                  style={{ backgroundColor: '#38BDF8', color: '#FFFFFF' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0EA5E9'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#38BDF8'}
+                  className="flex-1 h-9 text-xs font-semibold bg-blue-500 hover:bg-blue-600 text-white shadow-sm"
                 >
-                  <Droplets className="w-2 h-2 mr-0.5" />
+                  <Droplets className="w-3.5 h-3.5 mr-1.5" />
                   Water
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top" className="bg-gray-900 text-white border-gray-700 z-50">
-                <p className="text-xs font-medium">Mark as watered today</p>
+              <TooltipContent>
+                <p>Mark as watered today</p>
               </TooltipContent>
             </Tooltip>
 
@@ -174,17 +167,14 @@ export function PlantCard({
                 <Button
                   onClick={() => onSetReminder?.(plant)}
                   size="sm"
-                  className="flex-1 h-6 text-[9px] shadow-sm px-1 font-semibold transition-colors border"
-                  style={{ backgroundColor: '#E0F2FE', color: '#0369A1', borderColor: '#BAE6FD' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#BAE6FD'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#E0F2FE'}
+                  className="flex-1 h-9 text-xs font-semibold bg-blue-100 text-blue-700 hover:bg-blue-500 hover:text-white border border-blue-200 hover:border-blue-500"
                 >
-                  <Bell className="w-2 h-2 mr-0.5" />
-                  Water
+                  <Bell className="w-3.5 h-3.5 mr-1.5" />
+                  Remind
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top" className="bg-gray-900 text-white border-gray-700 z-50">
-                <p className="text-xs font-medium">Set water reminder with AI</p>
+              <TooltipContent>
+                <p>Set water reminder</p>
               </TooltipContent>
             </Tooltip>
 
@@ -193,39 +183,34 @@ export function PlantCard({
                 <Button
                   onClick={() => onSetFertilizerReminder?.(plant)}
                   size="sm"
-                  className="flex-1 h-6 text-[9px] shadow-sm px-1 font-semibold transition-colors border"
-                  style={{ backgroundColor: '#D1FAE5', color: '#065F46', borderColor: '#A7F3D0' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#A7F3D0'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#D1FAE5'}
+                  className="flex-1 h-9 text-xs font-semibold bg-green-100 text-green-700 hover:bg-green-500 hover:text-white border border-green-200 hover:border-green-500"
                 >
-                  <Sprout className="w-2 h-2 mr-0.5" />
+                  <Sprout className="w-3.5 h-3.5 mr-1.5" />
                   Feed
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="top" className="bg-gray-900 text-white border-gray-700 z-50">
-                <p className="text-xs font-medium">Set fertilizer reminder with AI</p>
+              <TooltipContent>
+                <p>Set fertilizer reminder</p>
               </TooltipContent>
             </Tooltip>
           </div>
 
           {/* Secondary Actions */}
-          <div className="flex gap-0.5">
+          <div className="flex gap-2">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   onClick={() => onEdit(plant)}
                   size="sm"
-                  className="flex-1 h-5 text-[9px] shadow-sm px-0.5 font-medium transition-colors border"
-                  style={{ backgroundColor: '#FFFFFF', color: '#374151', borderColor: '#E5E7EB' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
+                  variant="ghost"
+                  className="flex-1 h-8 text-xs font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100"
                 >
-                  <Edit className="w-2 h-2 mr-0.5" />
+                  <Edit className="w-3.5 h-3.5 mr-1" />
                   Edit
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="bg-gray-900 text-white border-gray-700 z-50">
-                <p className="text-xs font-medium">Edit plant details</p>
+              <TooltipContent>
+                <p>Edit plant details</p>
               </TooltipContent>
             </Tooltip>
 
@@ -234,17 +219,15 @@ export function PlantCard({
                 <Button
                   onClick={handleDelete}
                   size="sm"
-                  className="flex-1 h-5 text-[9px] shadow-sm px-0.5 font-medium transition-colors"
-                  style={{ backgroundColor: '#F87171', color: '#FFFFFF' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EF4444'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F87171'}
+                  variant="ghost"
+                  className="flex-1 h-8 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
-                  <Trash2 className="w-2 h-2 mr-0.5" />
+                  <Trash2 className="w-3.5 h-3.5 mr-1" />
                   Delete
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="bg-gray-900 text-white border-gray-700 z-50">
-                <p className="text-xs font-medium">Remove from collection</p>
+              <TooltipContent>
+                <p>Remove plant</p>
               </TooltipContent>
             </Tooltip>
 
@@ -254,16 +237,13 @@ export function PlantCard({
                   <Button
                     onClick={() => onViewDetails ? onViewDetails(plant) : (onViewAll ? onViewAll() : window.location.assign('/plants'))}
                     size="sm"
-                    className="flex-1 h-5 text-[9px] shadow-sm px-0.5 font-semibold transition-colors"
-                    style={{ backgroundColor: '#059669', color: '#FFFFFF' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#047857'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+                    className="flex-1 h-8 text-xs font-semibold bg-green-600 hover:bg-green-700 text-white"
                   >
-                    View All
+                    View Details
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="bg-gray-900 text-white border-gray-700 z-50">
-                  <p className="text-xs font-medium">View full plant details</p>
+                <TooltipContent>
+                  <p>View full details</p>
                 </TooltipContent>
               </Tooltip>
             )}
