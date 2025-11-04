@@ -253,7 +253,7 @@ const SettingsPage: React.FC = () => {
                           // Update auth context to reflect changes in header
                           updateUser({ 
                             name: updated.name,
-                            id: updated.id || updated._id
+                            id: updated._id
                           });
                           
                           toast({ title: 'Profile saved', description: 'Profile updated successfully.', duration: 3000 });
