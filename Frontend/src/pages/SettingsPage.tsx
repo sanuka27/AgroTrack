@@ -112,7 +112,7 @@ const SettingsPage: React.FC = () => {
       // persist notification settings under profile.preferences.notifications
       await usersApi.updateProfile({ preferences: { notifications: notificationPrefs } as any } as any);
       localStorage.setItem(SETTINGS_KEY, JSON.stringify({ notifications: settings.notifications }));
-      toast({ title: 'Settings Saved', description: 'Your preferences have been updated successfully.' });
+      toast({ title: 'Settings Saved', description: 'Your preferences have been updated successfully.', duration: 3000 });
     } catch (error) {
       console.error('Error saving settings:', error);
       toast({ title: 'Error', description: 'Failed to save settings. Please try again.', variant: 'destructive' });
@@ -136,7 +136,7 @@ const SettingsPage: React.FC = () => {
     setChangingPassword(true);
     try {
       await usersApi.changePassword({ currentPassword: passwordData.currentPassword, newPassword: passwordData.newPassword, confirmPassword: passwordData.confirmPassword });
-      toast({ title: 'Password Changed', description: 'Your password has been updated successfully.' });
+      toast({ title: 'Password Changed', description: 'Your password has been updated successfully.', duration: 3000 });
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
       console.error('Error changing password:', error);
@@ -231,7 +231,7 @@ const SettingsPage: React.FC = () => {
                           setBio(updated.bio || ''); 
                           setAvatarPreview(updated.avatar || avatarPreview);
                           
-                          toast({ title: 'Profile saved', description: 'Profile updated successfully.' });
+                          toast({ title: 'Profile saved', description: 'Profile updated successfully.', duration: 3000 });
                         } catch (err: any) { 
                           console.error('[Profile Save] Error saving profile:', err);
                           console.error('[Profile Save] Error details:', {
