@@ -5,6 +5,7 @@ import { CommunityPost } from '../models/CommunityPost';
 import { CommunityComment } from '../models/CommunityComment';
 import { CommunityVote } from '../models/CommunityVote';
 import { CommunityReport } from '../models/CommunityReport';
+import { Plant } from '../models/Plant';
 
 // Escape regex special characters in user input to avoid unintended patterns
 function escapeRegex(input: string): string {
@@ -30,11 +31,11 @@ export class AdminController {
         ])
       ]);
 
-      // Content statistics (Removed models: Plant, CareLog, Reminder)
-      const [postsCount] = await Promise.all([
-        CommunityPost.countDocuments({})
+      // Content statistics
+      const [postsCount, plantsCount] = await Promise.all([
+        CommunityPost.countDocuments({}),
+        Plant.countDocuments({})
       ]);
-      const plantsCount = 0; // Model removed
       const careLogsCount = 0; // Model removed
       const remindersCount = 0; // Model removed
 
@@ -1168,6 +1169,179 @@ export class AdminController {
       res.status(500).json({
         success: false,
         message: 'Failed to delete post',
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
+      });
+    }
+  }
+
+  // ==================== PLANT MANAGEMENT ====================
+
+  /**
+   * Get all plants (admin only)
+   * GET /api/admin/plants
+   */
+  async getPlants(req: Request, res: Response): Promise<void> {
+    try {
+      const {
+        search,
+        health,
+        page = 1,
+        limit = 50,
+        sortBy = 'createdAt',
+        sortOrder = 'desc'
+      } = req.query;
+
+      // Build query
+      const query: any = {};
+      
+      if (search) {
+        query.$or = [
+          { name: { $regex: search, $options: 'i' } },
+          { species: { $regex: search, $options: 'i' } },
+          { category: { $regex: search, $options: 'i' } }
+        ];
+      }
+
+      if (health) {
+        query.health = health;
+      }
+
+      // Pagination
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const skip = (pageNum - 1) * limitNum;
+
+      // Sort
+      const sort: any = {};
+      sort[sortBy as string] = sortOrder === 'asc' ? 1 : -1;
+
+      // Fetch plants with user information
+      const [plants, totalPlants] = await Promise.all([
+        Plant.find(query)
+          .populate('userId', 'name email')
+          .sort(sort)
+          .skip(skip)
+          .limit(limitNum)
+          .lean(),
+        Plant.countDocuments(query)
+      ]);
+
+      const totalPages = Math.ceil(totalPlants / limitNum);
+
+      res.json({
+        success: true,
+        data: {
+          plants: plants.map(plant => ({
+            ...plant,
+            ownerName: (plant.userId as any)?.name || 'Unknown',
+            ownerEmail: (plant.userId as any)?.email || 'N/A'
+          })),
+          pagination: {
+            currentPage: pageNum,
+            totalPages,
+            totalPlants,
+            hasNextPage: pageNum < totalPages,
+            hasPrevPage: pageNum > 1
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Get plants error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch plants',
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
+      });
+    }
+  }
+
+  /**
+   * Get a single plant by ID (admin only)
+   * GET /api/admin/plants/:id
+   */
+  async getPlant(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid plant ID'
+        });
+        return;
+      }
+
+      const plant = await Plant.findById(id)
+        .populate('userId', 'name email role')
+        .lean();
+
+      if (!plant) {
+        res.status(404).json({
+          success: false,
+          message: 'Plant not found'
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        data: {
+          plant: {
+            ...plant,
+            ownerName: (plant.userId as any)?.name || 'Unknown',
+            ownerEmail: (plant.userId as any)?.email || 'N/A',
+            ownerRole: (plant.userId as any)?.role || 'user'
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Get plant error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch plant',
+        error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
+      });
+    }
+  }
+
+  /**
+   * Delete a plant (admin only)
+   * DELETE /api/admin/plants/:id
+   */
+  async deletePlant(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+
+      if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid plant ID'
+        });
+        return;
+      }
+
+      const plant = await Plant.findById(id);
+      if (!plant) {
+        res.status(404).json({
+          success: false,
+          message: 'Plant not found'
+        });
+        return;
+      }
+
+      // Delete the plant
+      await Plant.findByIdAndDelete(id);
+
+      res.json({
+        success: true,
+        message: 'Plant permanently deleted successfully'
+      });
+    } catch (error) {
+      console.error('Delete plant error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete plant',
         error: process.env.NODE_ENV === 'development' ? (error as Error).message : 'Internal server error'
       });
     }

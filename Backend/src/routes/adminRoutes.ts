@@ -545,4 +545,54 @@ router.delete('/community/posts/:postId',
   adminController.deleteCommunityPost
 );
 
+// ==================== PLANT MANAGEMENT ROUTES ====================
+
+/**
+ * @route   GET /api/admin/plants
+ * @desc    Get all plants with filtering and pagination
+ * @access  Private (Admin/Super Admin)
+ */
+router.get('/plants',
+  adminLimiter,
+  [
+    query('search').optional().isString().withMessage('Search must be a string'),
+    query('health').optional().isIn(['Healthy', 'Needs Attention', 'Critical']).withMessage('Invalid health status'),
+    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+    query('sortBy').optional().isString().withMessage('Sort by must be a string'),
+    query('sortOrder').optional().isIn(['asc', 'desc']).withMessage('Sort order must be asc or desc')
+  ],
+  validate,
+  adminController.getPlants
+);
+
+/**
+ * @route   GET /api/admin/plants/:id
+ * @desc    Get a single plant by ID
+ * @access  Private (Admin/Super Admin)
+ */
+router.get('/plants/:id',
+  adminLimiter,
+  [
+    param('id').isMongoId().withMessage('Invalid plant ID')
+  ],
+  validate,
+  adminController.getPlant
+);
+
+/**
+ * @route   DELETE /api/admin/plants/:id
+ * @desc    Permanently delete a plant
+ * @access  Private (Admin/Super Admin)
+ */
+router.delete('/plants/:id',
+  sensitiveAdminLimiter,
+  [
+    param('id').isMongoId().withMessage('Invalid plant ID'),
+    body('reason').optional().isLength({ min: 1, max: 500 }).withMessage('Reason must be between 1 and 500 characters')
+  ],
+  validate,
+  adminController.deletePlant
+);
+
 export default router;
