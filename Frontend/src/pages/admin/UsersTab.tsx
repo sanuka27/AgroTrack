@@ -178,8 +178,8 @@ export function UsersTab() {
     switch (role) {
       case 'admin':
         return <Badge className="bg-orange-100 text-orange-800 border-orange-200">Admin</Badge>;
-      case 'mod':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Moderator</Badge>;
+      case 'guest':
+        return <Badge variant="secondary">Guest</Badge>;
       default:
         return <Badge variant="outline">User</Badge>;
     }
@@ -634,7 +634,6 @@ export function UsersTab() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="mod">Moderator</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
