@@ -212,15 +212,6 @@ const SettingsPage: React.FC = () => {
                   <div className="md:col-span-2 space-y-4">
                     <input ref={(el) => fileInputRef.current = el} type="file" accept="image/*" onChange={(e) => handleFileSelection(e.target.files?.[0] || null)} className="hidden" />
 
-                    <div onClick={() => fileInputRef.current?.click()} onDrop={(e) => { e.preventDefault(); handleFileSelection(e.dataTransfer?.files?.[0] || null); }} onDragOver={(e) => e.preventDefault()} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }} className="w-full p-4 border border-dashed rounded-lg flex items-center space-x-4 cursor-pointer hover:bg-muted/50 transition">
-                      <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center flex-shrink-0">{avatarPreview ? <img src={avatarPreview} alt="Avatar preview" className="w-full h-full object-cover" /> : <UserIcon className="h-7 w-7 text-muted-foreground" />}</div>
-                      <div className="flex-1">
-                        <div className="text-base font-semibold text-foreground">Click or drag an image here</div>
-                        <div className="text-sm text-muted-foreground">Square images work best — max 2MB</div>
-                      </div>
-                      <div className="text-sm text-primary">Change</div>
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2"><Label htmlFor="profile-name">Display Name</Label><Input id="profile-name" type="text" value={name} onChange={(e) => setName(e.target.value)} /></div>
                       <div className="space-y-2"><Label htmlFor="profile-location">City</Label><Input id="profile-location" type="text" value={location} onChange={(e) => setLocation(e.target.value)} /></div>
