@@ -48,9 +48,20 @@ const updateUserValidation = [
   param('userId')
     .isMongoId()
     .withMessage('Invalid user ID'),
+  body('name')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Name must be between 2 and 100 characters'),
+  body('email')
+    .optional()
+    .trim()
+    .isEmail()
+    .withMessage('Invalid email format')
+    .normalizeEmail(),
   body('role')
     .optional()
-    .isIn(['user', 'moderator', 'admin'])
+    .isIn(['guest', 'user', 'admin'])
     .withMessage('Invalid role'),
   body('isActive')
     .optional()

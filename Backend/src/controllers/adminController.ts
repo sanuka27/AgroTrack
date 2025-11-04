@@ -270,7 +270,7 @@ export class AdminController {
   async updateUser(req: Request, res: Response): Promise<void> {
     try {
       const { userId } = req.params;
-      const { role, isActive, reason } = req.body;
+      const { name, email, role, isActive, reason } = req.body;
 
       if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
         res.status(400).json({
@@ -289,7 +289,21 @@ export class AdminController {
         return;
       }
 
+      // Check if email is being changed and if it's already in use
+      if (email && email !== user.email) {
+        const emailExists = await User.findOne({ email, _id: { $ne: userId } });
+        if (emailExists) {
+          res.status(400).json({
+            success: false,
+            message: 'Email is already in use by another user'
+          });
+          return;
+        }
+      }
+
       const updateData: any = {};
+      if (name !== undefined && name.trim()) updateData.name = name.trim();
+      if (email !== undefined && email.trim()) updateData.email = email.trim().toLowerCase();
       if (role !== undefined) updateData.role = role;
       if (isActive !== undefined) updateData.isActive = isActive;
 
