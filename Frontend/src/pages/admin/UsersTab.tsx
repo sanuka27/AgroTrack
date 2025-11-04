@@ -230,7 +230,9 @@ export function UsersTab() {
     
     setActionLoading(selectedUser._id);
     try {
-      const updatedUser = await adminApi.updateUser(selectedUser._id, editForm);
+      // Only send editable fields (exclude email as it's locked)
+      const { email, ...updateData } = editForm;
+      const updatedUser = await adminApi.updateUser(selectedUser._id, updateData);
       setUsers(prev => prev.map(u =>
         u._id === selectedUser._id ? updatedUser : u
       ));
@@ -622,7 +624,9 @@ export function UsersTab() {
                 id="edit-email"
                 type="email"
                 value={editForm.email}
-                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                readOnly
+                disabled
+                className="bg-gray-100 cursor-not-allowed"
                 placeholder="Enter email"
               />
             </div>
