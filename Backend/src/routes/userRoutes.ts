@@ -340,6 +340,70 @@ router.post('/profile/avatar',
   }
 );
 
+/**
+ * @route   DELETE /api/users/profile/avatar
+ * @desc    Delete user's avatar
+ * @access  Private
+ */
+router.delete('/profile/avatar',
+  userRateLimit,
+  authMiddleware,
+  async (req: express.Request, res: express.Response) => {
+    try {
+      const userId = (req.user as any)._id || (req.user as any).uid;
+      
+      // Get user to check if they have an avatar
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      // If user has an avatar URL, try to delete from Firebase Storage
+      if (user.avatar) {
+        try {
+          const bucket = firebaseService.getStorage().bucket();
+          // Extract filename from URL (e.g., profile-pictures/filename.jpg)
+          const urlParts = user.avatar.split('/');
+          const filename = urlParts.slice(-2).join('/'); // Get last two parts
+          
+          const file = bucket.file(filename);
+          const [exists] = await file.exists();
+          if (exists) {
+            await file.delete();
+          }
+        } catch (storageError) {
+          console.error('Error deleting avatar from storage:', storageError);
+          // Continue even if storage deletion fails
+        }
+      }
+
+      // Remove avatar from user profile
+      await User.findByIdAndUpdate(userId, { avatar: null });
+
+      // Get updated user
+      const updatedUser = await User.findById(userId).select('-password -refreshTokens');
+
+      res.json({
+        success: true,
+        message: 'Avatar deleted successfully',
+        data: {
+          user: updatedUser
+        }
+      });
+    } catch (error: any) {
+      console.error('Avatar deletion error:', error?.message || error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete avatar',
+        error: process.env.NODE_ENV === 'development' ? (error?.message || String(error)) : undefined,
+      });
+    }
+  }
+);
+
 // Allow multipart/form-data with optional `avatar` file so clients can send an image together with profile fields
 router.put('/profile', 
   userRateLimit,

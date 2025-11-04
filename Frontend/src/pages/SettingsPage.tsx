@@ -169,13 +169,41 @@ const SettingsPage: React.FC = () => {
                     <div className="w-36 h-36 rounded-full overflow-hidden bg-muted flex items-center justify-center shadow-sm">
                       {avatarPreview ? <img src={avatarPreview} alt="Avatar preview" className="w-full h-full object-cover" /> : <UserIcon className="h-10 w-10 text-muted-foreground" />}
                     </div>
-                    <div className="flex space-x-2">
-                      {avatarPreview ? (
-                        <Button variant="outline" size="sm" onClick={() => { if (avatarPreview && avatarPreview.startsWith('blob:')) URL.revokeObjectURL(avatarPreview); setAvatarFile(null); setAvatarPreview(undefined); }}>
+                    <div className="flex flex-col space-y-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full"
+                      >
+                        {avatarPreview ? 'Change Photo' : 'Upload Photo'}
+                      </Button>
+                      {avatarPreview && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={async () => { 
+                            if (avatarPreview && avatarPreview.startsWith('blob:')) {
+                              URL.revokeObjectURL(avatarPreview);
+                            }
+                            setAvatarFile(null); 
+                            setAvatarPreview(undefined);
+                            // If there's an existing avatar on the server, delete it
+                            if (profile?.avatar) {
+                              try {
+                                await usersApi.deleteAvatar();
+                                setProfile({ ...profile, avatar: undefined });
+                                toast({ title: 'Avatar Removed', description: 'Your profile photo has been removed.', duration: 3000 });
+                              } catch (error) {
+                                console.error('Error removing avatar:', error);
+                                toast({ title: 'Error', description: 'Failed to remove avatar. Please try again.', variant: 'destructive' });
+                              }
+                            }
+                          }}
+                          className="w-full"
+                        >
                           Remove
                         </Button>
-                      ) : (
-                        <div className="text-sm text-muted-foreground">No photo yet</div>
                       )}
                     </div>
                     <div className="text-sm text-muted-foreground">Recommended: square image, &lt; 2MB</div>

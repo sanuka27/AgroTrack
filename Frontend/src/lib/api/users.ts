@@ -130,6 +130,27 @@ export const usersApi = {
   },
 
   /**
+   * Delete user avatar
+   * 
+   * DELETE /api/users/profile/avatar
+   * 
+   * @returns Promise with updated user
+   */
+  async deleteAvatar(): Promise<User> {
+    try {
+      const response = await api.delete<UserResponse>('/users/profile/avatar');
+
+      // Update user in localStorage
+      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+
+      return response.data.data.user;
+    } catch (error) {
+      console.error('Error deleting avatar:', getErrorMessage(error));
+      throw error;
+    }
+  },
+
+  /**
    * Change user password
    * 
    * PUT /api/users/change-password
