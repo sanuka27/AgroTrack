@@ -33,7 +33,7 @@ const defaultSettings: SettingsData = {
 
 const SettingsPage: React.FC = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const [settings, setSettings] = useState<SettingsData>(defaultSettings);
   const [loading, setLoading] = useState(true);
@@ -249,6 +249,12 @@ const SettingsPage: React.FC = () => {
                           setLocation(updated.location || ''); 
                           setBio(updated.bio || ''); 
                           setAvatarPreview(updated.avatar || avatarPreview);
+                          
+                          // Update auth context to reflect changes in header
+                          updateUser({ 
+                            name: updated.name,
+                            id: updated.id || updated._id
+                          });
                           
                           toast({ title: 'Profile saved', description: 'Profile updated successfully.', duration: 3000 });
                         } catch (err: any) { 

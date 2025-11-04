@@ -317,6 +317,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return PERMISSIONS[role]?.includes(permission) || false;
   };
 
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+    }
+  };
+
   const isAuthenticated = role !== 'guest' && user !== null;
 
   return (
@@ -330,7 +337,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logout,
       register,
       hasPermission,
-      refreshToken
+      refreshToken,
+      updateUser
     }}>
       {children}
     </AuthContext.Provider>

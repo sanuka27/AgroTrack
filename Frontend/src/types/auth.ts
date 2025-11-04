@@ -20,4 +20,5 @@ export interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   hasPermission: (permission: string) => boolean;
   refreshToken: () => Promise<boolean>;
+  updateUser: (userData: Partial<User>) => void;
 }
