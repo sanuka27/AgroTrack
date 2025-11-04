@@ -6,6 +6,7 @@ import { communityForumApi } from '../../api/communityForum';
 import { PostImage } from '../../types/community';
 import { useAuth } from '../../hooks/useAuth';
 import { uploadMultipleImages } from '../../utils/firebaseStorage';
+import { Header } from '../../components/Header';
 
 export default function PostEditor() {
   const { user } = useAuth();
@@ -101,8 +102,9 @@ export default function PostEditor() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background text-foreground">
+      <Header />
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-card rounded-lg shadow-soft border border-border">
           <div className="p-6 border-b border-border">
             <h1 className="text-2xl font-bold text-foreground">
