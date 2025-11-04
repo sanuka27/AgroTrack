@@ -646,7 +646,112 @@ export const adminApi = {
     });
     return response.data.data;
   },
+
+  // ==================== PLANT MANAGEMENT ====================
+
+  /**
+   * Get all plants (admin only)
+   * 
+   * GET /api/admin/plants
+   * 
+   * @param params - Query parameters
+   * @returns Promise with array of plants
+   */
+  async getPlants(params?: {
+    search?: string;
+    health?: string;
+    page?: number;
+    limit?: number;
+    sortBy?: 'createdAt' | 'updatedAt' | 'name';
+    sortOrder?: 'asc' | 'desc';
+  }): Promise<{
+    plants: AdminPlant[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalPlants: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  }> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.search) queryParams.append('search', params.search);
+      if (params?.health) queryParams.append('health', params.health);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+      if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
+
+      const response = await api.get(`/admin/plants?${queryParams.toString()}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching plants:', getErrorMessage(error));
+      throw error;
+    }
+  },
+
+  /**
+   * Get a single plant by ID (admin only)
+   * 
+   * GET /api/admin/plants/:id
+   * 
+   * @param id - Plant ID
+   * @returns Promise with plant data
+   */
+  async getPlant(id: string): Promise<AdminPlant> {
+    try {
+      const response = await api.get(`/admin/plants/${id}`);
+      return response.data.data.plant;
+    } catch (error) {
+      console.error('Error fetching plant:', getErrorMessage(error));
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a plant (admin only)
+   * 
+   * DELETE /api/admin/plants/:id
+   * 
+   * @param id - Plant ID
+   * @param reason - Reason for deletion
+   * @returns Promise that resolves when plant is deleted
+   */
+  async deletePlant(id: string, reason?: string): Promise<void> {
+    try {
+      await api.delete(`/admin/plants/${id}`, { data: { reason } });
+    } catch (error) {
+      console.error('Error deleting plant:', getErrorMessage(error));
+      throw error;
+    }
+  },
 };
+
+// Type definitions for Admin Plant
+export interface AdminPlant {
+  _id: string;
+  userId: {
+    _id: string;
+    name: string;
+    email: string;
+  } | string;
+  ownerName: string;
+  ownerEmail: string;
+  name: string;
+  species?: string;
+  category: string;
+  health: 'Healthy' | 'Needs Attention' | 'Critical';
+  lastWatered: string;
+  wateringFrequency: number;
+  sunlight: string;
+  imageUrl?: string;
+  notes?: string;
+  location?: string;
+  ageYears?: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 // Type definitions for Community Posts
 export interface CommunityPost {

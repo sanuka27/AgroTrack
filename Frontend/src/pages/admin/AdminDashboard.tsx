@@ -4,13 +4,14 @@ import { Footer } from '@/components/Footer';
 import { RoleGuard } from '@/components/RoleGuard';
 import { AdminAccessCheck } from '@/components/admin/AdminAccessCheck';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, BarChart3, Users, AlertTriangle, FileText } from 'lucide-react';
+import { Shield, BarChart3, Users, AlertTriangle, FileText, Leaf } from 'lucide-react';
 
 // Import the new admin components
 import { Overview } from './Overview';
 import { UsersTab } from './UsersTab';
 import { ReportsTab } from './ReportsTab';
 import { ContentTab } from './ContentTab';
+import { PlantsTab } from './PlantsTab';
 
 export function AdminDashboard() {
   const [selectedTab, setSelectedTab] = useState('overview');
@@ -50,7 +51,7 @@ export function AdminDashboard() {
 
           {/* Tabs */}
           <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-4 bg-muted rounded-2xl p-1">
+            <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-5 bg-muted rounded-2xl p-1">
               <TabsTrigger 
                 value="overview" 
                 className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-xl"
@@ -64,6 +65,13 @@ export function AdminDashboard() {
               >
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Users</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="plants"
+                className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-xl"
+              >
+                <Leaf className="w-4 h-4" />
+                <span className="hidden sm:inline">Plants</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="reports"
@@ -87,6 +95,10 @@ export function AdminDashboard() {
 
             <TabsContent value="users" className="space-y-6">
               <UsersTab />
+            </TabsContent>
+
+            <TabsContent value="plants" className="space-y-6">
+              <PlantsTab />
             </TabsContent>
 
             <TabsContent value="reports" className="space-y-6">

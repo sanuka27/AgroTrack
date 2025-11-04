@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Users, Flag, Activity } from 'lucide-react';
+import { TrendingUp, Users, Flag, Activity, Leaf } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { adminApi, DashboardStats } from '@/api/admin';
 import { RecentActivity } from '@/components/admin/RecentActivity';
@@ -47,8 +47,8 @@ export function Overview() {
   if (loading || !stats) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          {[...Array(5)].map((_, i) => (
             <Card key={i} className="animate-pulse rounded-2xl ring-1 ring-slate-200 shadow-sm">
               <CardContent className="p-6">
                 <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
@@ -70,7 +70,7 @@ export function Overview() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card className="rounded-2xl ring-1 ring-slate-200 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -149,6 +149,23 @@ export function Overview() {
               </div>
               <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
                 <TrendingUp className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl ring-1 ring-slate-200 shadow-sm hover:shadow-md transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Plants</p>
+                <p className="text-3xl font-bold text-foreground animate-[countUp_0.5s_ease-out]">
+                  {stats.content.plants.toLocaleString()}
+                </p>
+                <p className="text-xs text-emerald-600">Tracked plants</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                <Leaf className="h-6 w-6 text-emerald-600" />
               </div>
             </div>
           </CardContent>
