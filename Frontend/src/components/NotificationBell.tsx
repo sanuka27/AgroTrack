@@ -95,6 +95,17 @@ export function NotificationBell() {
     }
   };
 
+  const getNotificationStyle = (type: string, isRead: boolean) => {
+    // Admin actions get special styling
+    if (type === 'admin_action') {
+      return isRead 
+        ? 'bg-orange-50 border-l-4 border-orange-400'
+        : 'bg-orange-100 border-l-4 border-orange-500';
+    }
+    // Other notifications
+    return isRead ? '' : 'bg-blue-50/50';
+  };
+
   if (!user) return null;
 
   return (
@@ -137,7 +148,7 @@ export function NotificationBell() {
               <div
                 key={notification._id}
                 className={`p-3 hover:bg-muted/50 transition-colors ${
-                  !notification.isRead ? 'bg-blue-50/50' : ''
+                  getNotificationStyle(notification.type, notification.isRead)
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
@@ -145,8 +156,15 @@ export function NotificationBell() {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-lg">{getNotificationIcon(notification.type)}</span>
                       <h4 className="font-medium text-sm">{notification.title}</h4>
+                      {notification.type === 'admin_action' && (
+                        <span className="text-xs px-2 py-0.5 bg-orange-500 text-white rounded-full font-semibold">
+                          ADMIN
+                        </span>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground mb-1 whitespace-pre-wrap break-words">
+                    <p className={`text-sm mb-1 whitespace-pre-wrap break-words ${
+                      notification.type === 'admin_action' ? 'text-gray-700 font-medium' : 'text-muted-foreground'
+                    }`}>
                       {notification.message}
                     </p>
                     <span className="text-xs text-muted-foreground">
