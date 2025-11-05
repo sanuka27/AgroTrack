@@ -3,7 +3,9 @@ import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
   GoogleAuthProvider, 
-  signInWithPopup, 
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut, 
   onAuthStateChanged, 
   User as FirebaseUser,
@@ -157,13 +159,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [refreshToken]);
 
   useEffect(() => {
-    // Check for existing auth on mount
-    checkExistingAuth();
+    // Check for redirect result from Google Sign-In FIRST
+    const handleRedirectResult = async () => {
+      if (auth) {
+        try {
+          console.log('Checking for redirect result...');
+          const result = await getRedirectResult(auth);
+          if (result) {
+            console.log('Redirect result found, authenticating...');
+            const idToken = await result.user.getIdToken();
+            const success = await authenticateWithFirebase(idToken);
+            if (success) {
+              console.log('Authentication successful after redirect');
+              // Force reload to update UI
+              window.location.href = '/';
+            }
+          } else {
+            console.log('No redirect result found');
+            // Check for existing auth only if no redirect result
+            checkExistingAuth();
+          }
+        } catch (error: any) {
+          console.error('Redirect result error:', error);
+          // Check for existing auth on error
+          checkExistingAuth();
+        }
+      } else {
+        // No Firebase auth, check existing auth
+        checkExistingAuth();
+      }
+    };
+    
+    handleRedirectResult();
     
     // Listen to Firebase auth changes (only if Firebase is configured)
     if (auth) {
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        if (firebaseUser) {
+        if (firebaseUser && !user) {
           // Get Firebase ID token and authenticate with backend
           const idToken = await firebaseUser.getIdToken();
           await authenticateWithFirebase(idToken);
@@ -172,7 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return () => unsubscribe();
     }
-  }, [checkExistingAuth]);
+  }, [checkExistingAuth, user]);
 
   const authenticateWithFirebase = async (idToken: string) => {
     try {
@@ -234,18 +266,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       setLoading(true);
-      const result = await signInWithPopup(auth, googleProvider);
-      const idToken = await result.user.getIdToken();
+      console.log('Starting Google login with redirect...');
       
-      return await authenticateWithFirebase(idToken);
+      // Use redirect method directly - more reliable than popup
+      await signInWithRedirect(auth, googleProvider);
+      // The page will redirect, so we return true here
+      // The actual authentication will happen in the redirect callback
+      return true;
     } catch (error: any) {
-      // Only log actual errors, not user-cancelled actions
-      if (error?.code !== 'auth/popup-closed-by-user' && error?.code !== 'auth/cancelled-popup-request') {
-        console.error('Google login error:', error);
-      }
-      return false;
-    } finally {
+      console.error('Google login error:', error);
       setLoading(false);
+      return false;
     }
   };
 
