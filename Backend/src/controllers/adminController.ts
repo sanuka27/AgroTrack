@@ -6,6 +6,7 @@ import { CommunityComment } from '../models/CommunityComment';
 import { CommunityVote } from '../models/CommunityVote';
 import { CommunityReport } from '../models/CommunityReport';
 import { Plant } from '../models/Plant';
+import Notification from '../models/Notification';
 
 // Escape regex special characters in user input to avoid unintended patterns
 function escapeRegex(input: string): string {
@@ -1351,7 +1352,7 @@ export class AdminController {
         return;
       }
 
-      const plant = await Plant.findById(id);
+      const plant = await Plant.findById(id).populate('userId', 'name');
       if (!plant) {
         res.status(404).json({
           success: false,
@@ -1360,12 +1361,46 @@ export class AdminController {
         return;
       }
 
+      // Store plant info for notification
+      const plantName = plant.name;
+      const ownerId = plant.userId;
+      const adminId = req.user ? (req.user as any)._id || (req.user as any).id : null;
+
       // Delete the plant
       await Plant.findByIdAndDelete(id);
 
+      // Send notification to plant owner
+      if (ownerId) {
+        try {
+          const notificationMessage = reason 
+            ? `Your plant "${plantName}" has been removed by an admin. Reason: ${reason}`
+            : `Your plant "${plantName}" has been removed by an admin.`;
+          
+          await Notification.create({
+            userId: ownerId,
+            type: 'admin_action',
+            title: 'Plant Removed',
+            message: notificationMessage,
+            data: {
+              plantName,
+              deletedBy: 'admin',
+              reason: reason || 'No reason provided',
+              deletedAt: new Date()
+            },
+            read: false
+          });
+        } catch (notificationError) {
+          console.error('Error creating notification:', notificationError);
+          // Continue even if notification fails
+        }
+      }
+
       res.json({
         success: true,
-        message: 'Plant permanently deleted successfully'
+        message: 'Plant permanently deleted successfully',
+        data: {
+          notificationSent: !!ownerId
+        }
       });
     } catch (error) {
       console.error('Delete plant error:', error);

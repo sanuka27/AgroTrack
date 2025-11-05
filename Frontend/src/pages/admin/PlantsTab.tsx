@@ -104,15 +104,31 @@ export function PlantsTab() {
       try {
         await adminApi.deletePlant(selectedPlant._id, actionReason);
         setPlants(prev => prev.filter(p => p._id !== selectedPlant._id));
-        toast({ title: 'Plant Deleted', description: 'The plant has been permanently deleted.' });
-      } catch (error) {
-        toast({ title: 'Error', description: 'Failed to delete plant.', variant: 'destructive' });
-      } finally {
-        setActionLoading(null);
+        
+        const description = actionReason 
+          ? `The plant has been deleted. The owner (${selectedPlant.ownerName}) has been notified with your reason.`
+          : `The plant has been deleted. The owner (${selectedPlant.ownerName}) has been notified.`;
+        
+        toast({ 
+          title: 'Plant Deleted Successfully', 
+          description, 
+          duration: 5000 
+        });
+        
         setDialogOpen(false);
         setSelectedPlant(null);
         setDialogAction(null);
         setActionReason('');
+      } catch (error: any) {
+        console.error('Error deleting plant:', error);
+        const errorMsg = error?.response?.data?.message || 'Failed to delete plant. Please try again.';
+        toast({ 
+          title: 'Error', 
+          description: errorMsg, 
+          variant: 'destructive' 
+        });
+      } finally {
+        setActionLoading(null);
       }
     }
   };
@@ -407,21 +423,36 @@ export function PlantsTab() {
                 </div>
               </div>
             ) : (
-              <AlertDialogDescription>
-                {dialogAction === 'delete' && 'This action cannot be undone. The plant will be permanently deleted from the system.'}
+              <AlertDialogDescription className="space-y-3">
+                {dialogAction === 'delete' && (
+                  <>
+                    <p>This action cannot be undone. The plant will be permanently deleted from the system.</p>
+                    {selectedPlant && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                        <p className="text-sm text-blue-900">
+                          <strong>Note:</strong> The plant owner (<strong>{selectedPlant.ownerName}</strong>) will be notified about this deletion{actionReason ? ' along with your reason' : ''}.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
               </AlertDialogDescription>
             )}
           </AlertDialogHeader>
           {dialogAction === 'delete' && (
             <div className="space-y-2 my-4">
-              <Label htmlFor="reason">Reason (optional)</Label>
+              <Label htmlFor="reason">Reason for deletion</Label>
               <Textarea
                 id="reason"
-                placeholder="Enter reason for deleting this plant..."
+                placeholder="Enter reason for deleting this plant (will be sent to the owner)..."
                 value={actionReason}
                 onChange={(e) => setActionReason(e.target.value)}
                 rows={3}
+                className="resize-none"
               />
+              <p className="text-xs text-muted-foreground">
+                This message will be included in the notification sent to {selectedPlant?.ownerName}.
+              </p>
             </div>
           )}
           <AlertDialogFooter>
