@@ -9,7 +9,9 @@ import {
   signOut, 
   onAuthStateChanged, 
   User as FirebaseUser,
-  Auth 
+  Auth,
+  browserLocalPersistence,
+  setPersistence
 } from 'firebase/auth';
 import type { UserRole, User, AuthContextType } from '../types/auth';
 import api from '../lib/api';
@@ -31,7 +33,17 @@ let googleProvider: GoogleAuthProvider | null = null;
 if (firebaseConfig.apiKey) {
   const app = initializeApp(firebaseConfig);
   auth = getAuth(app);
+  
+  // Set persistence to LOCAL so auth state survives redirects
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.error('Failed to set persistence:', error);
+  });
+  
   googleProvider = new GoogleAuthProvider();
+  // Force account selection every time
+  googleProvider.setCustomParameters({
+    prompt: 'select_account'
+  });
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -159,43 +171,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [refreshToken]);
 
   useEffect(() => {
-    // Check for redirect result from Google Sign-In FIRST
-    const handleRedirectResult = async () => {
-      if (auth) {
-        try {
-          console.log('Checking for redirect result...');
-          const result = await getRedirectResult(auth);
-          if (result) {
-            console.log('Redirect result found, authenticating...');
-            const idToken = await result.user.getIdToken();
-            const success = await authenticateWithFirebase(idToken);
-            if (success) {
-              console.log('Authentication successful after redirect');
-              // Force reload to update UI
-              window.location.href = '/';
-            }
-          } else {
-            console.log('No redirect result found');
-            // Check for existing auth only if no redirect result
-            checkExistingAuth();
-          }
-        } catch (error: any) {
-          console.error('Redirect result error:', error);
-          // Check for existing auth on error
-          checkExistingAuth();
-        }
-      } else {
-        // No Firebase auth, check existing auth
-        checkExistingAuth();
-      }
-    };
-    
-    handleRedirectResult();
+    // Check for existing auth on mount
+    console.log('=== useEffect: Starting auth check ===');
+    checkExistingAuth();
     
     // Listen to Firebase auth changes (only if Firebase is configured)
     if (auth) {
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser && !user) {
+          console.log('🔥 Firebase auth state changed, user logged in:', firebaseUser.email);
           // Get Firebase ID token and authenticate with backend
           const idToken = await firebaseUser.getIdToken();
           await authenticateWithFirebase(idToken);
@@ -208,19 +192,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const authenticateWithFirebase = async (idToken: string) => {
     try {
+      console.log('🔐 Calling /auth/firebase with token...');
       const response = await api.post('/auth/firebase', { idToken });
+      console.log('🔐 Response received:', response.status, response.data);
+      
       if (response.data.success) {
         const { user: userData, tokens } = response.data.data;
+        console.log('🔐 Setting user data:', userData.email, userData.role);
         
         setUser(userData);
         setRole(userData.role || 'user');
         localStorage.setItem('agrotrack_token', tokens.accessToken);
         localStorage.setItem('agrotrack_refresh_token', tokens.refreshToken);
         localStorage.setItem('userId', userData.id); // Store userId for FCM token storage
+        console.log('🔐 Token stored in localStorage');
         return true;
+      } else {
+        console.error('🔐 Response success = false');
       }
     } catch (error) {
-      console.error('Firebase auth error:', error);
+      console.error('🔐 Firebase auth error:', error);
+      console.error('🔐 Error details:', (error as any)?.response?.data);
     }
     return false;
   };
@@ -266,15 +258,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       setLoading(true);
-      console.log('Starting Google login with redirect...');
+      console.log('🔑 Starting Google login with popup...');
       
-      // Use redirect method directly - more reliable than popup
-      await signInWithRedirect(auth, googleProvider);
-      // The page will redirect, so we return true here
-      // The actual authentication will happen in the redirect callback
-      return true;
+      // Try popup method - it works despite COOP warnings
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log('🔑 Popup succeeded! User:', result.user.email);
+      
+      const idToken = await result.user.getIdToken();
+      console.log('🔑 Got ID token, authenticating with backend...');
+      
+      const success = await authenticateWithFirebase(idToken);
+      console.log('🔑 Backend authentication:', success ? 'SUCCESS' : 'FAILED');
+      
+      return success;
     } catch (error: any) {
-      console.error('Google login error:', error);
+      console.error('🔑 Google login error:', error);
+      console.error('🔑 Error code:', error?.code);
+      console.error('🔑 Error message:', error?.message);
+      
+      // Only suppress user cancellation errors
+      if (error?.code === 'auth/popup-closed-by-user' || 
+          error?.code === 'auth/cancelled-popup-request') {
+        console.log('🔑 User cancelled login');
+      }
+      
       setLoading(false);
       return false;
     }
