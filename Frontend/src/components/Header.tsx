@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Leaf, Menu, X, User, MessageSquare, BarChart3, LogOut, Shield, Settings, Bot } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -122,6 +123,7 @@ export function Header() {
             {user ? (
               <div className="flex items-center space-x-3">
                 {getUserDisplayName()}
+                <NotificationBell />
                 <Button variant="ghost" size="sm" asChild>
                   <NavLink to="/settings">
                     <Settings className="w-4 h-4 mr-2" />
@@ -188,8 +190,9 @@ export function Header() {
               <div className="flex flex-col space-y-2 px-3 py-2 border-t border-border mt-2 pt-2">
                 {user ? (
                   <>
-                    <div className="py-2">
+                    <div className="py-2 flex items-center justify-between">
                       {getUserDisplayName()}
+                      <NotificationBell />
                     </div>
                     <Button variant="ghost" size="sm" className="justify-start" asChild>
                       <NavLink to="/settings" onClick={() => setIsMenuOpen(false)}>
