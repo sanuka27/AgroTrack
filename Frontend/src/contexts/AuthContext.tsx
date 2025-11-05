@@ -167,31 +167,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [refreshToken]);
 
   useEffect(() => {
-    // Handle redirect result from Google Sign-In
-    const handleRedirectResult = async () => {
-      if (auth) {
-        try {
-          const result = await getRedirectResult(auth);
-          if (result) {
-            // User just came back from Google login
-            const idToken = await result.user.getIdToken();
-            const success = await authenticateWithFirebase(idToken);
-            if (success) {
-              // Redirect to home page after successful login
-              window.location.href = '/';
-              return;
-            }
-          }
-        } catch (error) {
-          console.error('Redirect result error:', error);
-        }
-      }
-      
-      // Check for existing auth if no redirect result
-      checkExistingAuth();
-    };
-
-    handleRedirectResult();
+    // Check for existing auth on mount - only run once
+    checkExistingAuth();
     
     // Listen to Firebase auth changes (only if Firebase is configured)
     if (auth) {
@@ -270,13 +247,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setLoading(true);
       
-      // Use redirect method for full-page Google login
-      await signInWithRedirect(auth, googleProvider);
-      // The page will redirect to Google, so we return true here
-      // The actual authentication will happen when redirected back
-      return true;
+      // Use popup method for Google login
+      const result = await signInWithPopup(auth, googleProvider);
+      const idToken = await result.user.getIdToken();
+      const success = await authenticateWithFirebase(idToken);
+      
+      return success;
     } catch (error: any) {
-      console.error('Google login error:', error);
+      // Only log non-cancellation errors
+      if (error?.code !== 'auth/popup-closed-by-user' && 
+          error?.code !== 'auth/cancelled-popup-request') {
+        console.error('Google login error:', error);
+      }
+      
       setLoading(false);
       return false;
     }
