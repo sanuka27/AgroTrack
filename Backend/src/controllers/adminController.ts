@@ -6,7 +6,7 @@ import { CommunityComment } from '../models/CommunityComment';
 import { CommunityVote } from '../models/CommunityVote';
 import { CommunityReport } from '../models/CommunityReport';
 import { Plant } from '../models/Plant';
-import Notification from '../models/Notification';
+import { Notification } from '../models/Notification';
 
 // Escape regex special characters in user input to avoid unintended patterns
 function escapeRegex(input: string): string {
