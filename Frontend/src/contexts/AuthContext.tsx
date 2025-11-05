@@ -238,8 +238,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const idToken = await result.user.getIdToken();
       
       return await authenticateWithFirebase(idToken);
-    } catch (error) {
-      console.error('Google login error:', error);
+    } catch (error: any) {
+      // Only log actual errors, not user-cancelled actions
+      if (error?.code !== 'auth/popup-closed-by-user' && error?.code !== 'auth/cancelled-popup-request') {
+        console.error('Google login error:', error);
+      }
       return false;
     } finally {
       setLoading(false);
