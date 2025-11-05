@@ -121,12 +121,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkExistingAuth = useCallback(async () => {
     const token = localStorage.getItem('agrotrack_token');
-    console.log('checkExistingAuth: token present?', !!token);
     if (token) {
       try {
-        console.log('checkExistingAuth: calling /users/profile');
         const response = await api.get('/users/profile');
-        console.log('checkExistingAuth: response', response.status, response.data);
         if (response.data.success) {
           // Backend returns { success: true, data: { user: {...} } }
           const userData = response.data.data.user || response.data.data;
@@ -135,14 +132,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem('userId', userData.id || userData._id); // Store userId for FCM token storage
         }
       } catch (error) {
-        console.error('Auth check failed:', error);
-        console.log('Auth check error response:', (error as any)?.response?.status, (error as any)?.response?.data);
         // If 401, try to refresh token
         if ((error as any)?.response?.status === 401) {
-          console.log('Trying to refresh token');
           const refreshed = await refreshToken();
           if (refreshed) {
-            console.log('Token refreshed, retrying profile call');
             try {
               const response = await api.get('/users/profile');
               if (response.data.success) {
@@ -152,7 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 localStorage.setItem('userId', userData.id || userData._id);
               }
             } catch (retryError) {
-              console.error('Retry failed:', retryError);
+              console.error('Auth retry failed:', retryError);
               // Clear storage
               localStorage.removeItem('agrotrack_token');
               localStorage.removeItem('agrotrack_refresh_token');
@@ -164,6 +157,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.removeItem('agrotrack_refresh_token');
             localStorage.removeItem('userId');
           }
+        } else if ((error as any)?.response?.status !== 429) {
+          // Don't log rate limit errors
+          console.error('Auth check failed:', error);
         }
       }
     }
@@ -171,15 +167,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [refreshToken]);
 
   useEffect(() => {
-    // Check for existing auth on mount
-    console.log('=== useEffect: Starting auth check ===');
+    // Check for existing auth on mount - only run once
     checkExistingAuth();
     
     // Listen to Firebase auth changes (only if Firebase is configured)
     if (auth) {
       const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         if (firebaseUser && !user) {
-          console.log('🔥 Firebase auth state changed, user logged in:', firebaseUser.email);
           // Get Firebase ID token and authenticate with backend
           const idToken = await firebaseUser.getIdToken();
           await authenticateWithFirebase(idToken);
@@ -188,31 +182,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return () => unsubscribe();
     }
-  }, [checkExistingAuth, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   const authenticateWithFirebase = async (idToken: string) => {
     try {
-      console.log('🔐 Calling /auth/firebase with token...');
       const response = await api.post('/auth/firebase', { idToken });
-      console.log('🔐 Response received:', response.status, response.data);
       
       if (response.data.success) {
         const { user: userData, tokens } = response.data.data;
-        console.log('🔐 Setting user data:', userData.email, userData.role);
         
         setUser(userData);
         setRole(userData.role || 'user');
         localStorage.setItem('agrotrack_token', tokens.accessToken);
         localStorage.setItem('agrotrack_refresh_token', tokens.refreshToken);
         localStorage.setItem('userId', userData.id); // Store userId for FCM token storage
-        console.log('🔐 Token stored in localStorage');
         return true;
-      } else {
-        console.error('🔐 Response success = false');
       }
     } catch (error) {
-      console.error('🔐 Firebase auth error:', error);
-      console.error('🔐 Error details:', (error as any)?.response?.data);
+      console.error('Firebase auth error:', error);
     }
     return false;
   };
@@ -258,28 +246,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       setLoading(true);
-      console.log('🔑 Starting Google login with popup...');
       
-      // Try popup method - it works despite COOP warnings
+      // Use popup method for Google login
       const result = await signInWithPopup(auth, googleProvider);
-      console.log('🔑 Popup succeeded! User:', result.user.email);
-      
       const idToken = await result.user.getIdToken();
-      console.log('🔑 Got ID token, authenticating with backend...');
-      
       const success = await authenticateWithFirebase(idToken);
-      console.log('🔑 Backend authentication:', success ? 'SUCCESS' : 'FAILED');
       
       return success;
     } catch (error: any) {
-      console.error('🔑 Google login error:', error);
-      console.error('🔑 Error code:', error?.code);
-      console.error('🔑 Error message:', error?.message);
-      
-      // Only suppress user cancellation errors
-      if (error?.code === 'auth/popup-closed-by-user' || 
-          error?.code === 'auth/cancelled-popup-request') {
-        console.log('🔑 User cancelled login');
+      // Only log non-cancellation errors
+      if (error?.code !== 'auth/popup-closed-by-user' && 
+          error?.code !== 'auth/cancelled-popup-request') {
+        console.error('Google login error:', error);
       }
       
       setLoading(false);
