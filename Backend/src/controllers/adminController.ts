@@ -1387,10 +1387,11 @@ export class AdminController {
               reason: reason || 'No reason provided',
               deletedAt: new Date()
             },
-            read: false
+            isRead: false
           });
+          console.log(`✅ Notification sent to user ${ownerId} for plant deletion: ${plantName}`);
         } catch (notificationError) {
-          console.error('Error creating notification:', notificationError);
+          console.error('❌ Error creating notification:', notificationError);
           // Continue even if notification fails
         }
       }

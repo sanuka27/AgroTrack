@@ -109,7 +109,7 @@ export function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 max-h-[500px] overflow-y-auto">
+      <DropdownMenuContent align="end" className="w-96 max-h-[500px] overflow-y-auto">
         <div className="flex items-center justify-between p-3 border-b">
           <h3 className="font-semibold text-sm">Notifications</h3>
           {unreadCount > 0 && (
@@ -144,9 +144,9 @@ export function NotificationBell() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-lg">{getNotificationIcon(notification.type)}</span>
-                      <h4 className="font-medium text-sm truncate">{notification.title}</h4>
+                      <h4 className="font-medium text-sm">{notification.title}</h4>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-1 line-clamp-2">
+                    <p className="text-sm text-muted-foreground mb-1 whitespace-pre-wrap break-words">
                       {notification.message}
                     </p>
                     <span className="text-xs text-muted-foreground">
