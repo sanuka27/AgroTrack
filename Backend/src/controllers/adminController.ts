@@ -816,100 +816,116 @@ export class AdminController {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
 
-      // Predefined names to show in activity
-      const displayNames = [
-        { original: 'Sanuka Marasinghe', role: 'admin' },
-        { original: 'Asma Fahim', role: 'user' },
-        { original: 'Pathumi Arunodya', role: 'admin' }
-      ];
-
-      // Helper function to get display name or fallback to predefined names
-      const getDisplayName = (userName: string | undefined, preferredRole?: string): string => {
-        if (userName) {
-          // If the name matches one of our predefined names, use it
-          const match = displayNames.find(dn => dn.original === userName);
-          if (match) return match.original;
-          
-          // Otherwise return the actual name
-          return userName;
-        }
-        
-        // Fallback: cycle through predefined names based on role
-        if (preferredRole === 'admin') {
-          const adminNames = displayNames.filter(dn => dn.role === 'admin');
-          return adminNames[Math.floor(Math.random() * adminNames.length)].original;
-        }
-        
-        // Default to cycling through all names
-        return displayNames[Math.floor(Math.random() * displayNames.length)].original;
-      };
-
-      // Fetch recent user registrations
-      const recentUsers = await User.find({})
-        .sort({ createdAt: -1 })
-        .limit(10)
-        .select('name createdAt')
-        .lean();
-
-      // Fetch recent resolved reports (UserAnalytics model removed)
-      const recentReportActions: any[] = []; // await UserAnalytics.find({
-      //   eventType: AnalyticsEventType.ADMIN_ACTION,
-      //   'eventData.action': { $in: ['RESOLVE_REPORT', 'DISMISS_REPORT'] }
-      // })
-      //   .sort({ timestamp: -1 })
-      //   .limit(10)
-      //   .lean();
-
-      // Fetch recent posts
-      const recentPosts = await CommunityPost.find({}) // Changed from Post
-        .sort({ createdAt: -1 })
-        .limit(10)
-        .select('author createdAt')
-        .populate('author', 'name')
-        .lean();
-
       // Combine all activities
       const activities: Array<{
         id: string;
-        kind: 'user_joined' | 'report_resolved' | 'report_submitted' | 'post_created';
+        kind: 'user_joined' | 'report_resolved' | 'report_submitted' | 'post_created' | 'admin_action' | 'user_updated' | 'post_deleted';
         message: string;
         ts: number;
       }> = [];
 
-      // Add user registrations (use display names)
-      recentUsers.forEach((user, index) => {
-        const displayName = getDisplayName(user.name);
+      // 1. Fetch recent user registrations (last 7 days)
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const recentUsers = await User.find({
+        createdAt: { $gte: sevenDaysAgo }
+      })
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .select('name createdAt')
+        .lean();
+
+      recentUsers.forEach((user) => {
         activities.push({
           id: `user_${user._id}`,
           kind: 'user_joined',
-          message: `${displayName} joined the community`,
+          message: `${user.name} joined the community`,
           ts: new Date(user.createdAt).getTime()
         });
       });
 
-      // Add report actions (use admin names)
-      recentReportActions.forEach((action, index) => {
-        const actionType = action.eventData.action;
-        const isResolved = actionType === 'RESOLVE_REPORT';
-        const adminName = getDisplayName(undefined, 'admin');
+      // 2. Fetch recent reports (submitted)
+      const recentReports = await CommunityReport.find({
+        createdAt: { $gte: sevenDaysAgo }
+      })
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .populate('reporterId', 'name')
+        .lean();
+
+      recentReports.forEach((report: any) => {
+        const reporterName = report.reporterId?.name || 'Anonymous';
         activities.push({
-          id: `report_${action._id}`,
-          kind: isResolved ? 'report_resolved' : 'report_submitted',
-          message: isResolved 
-            ? `Report #${index + 1} resolved by ${adminName}`
-            : `Report dismissed by ${adminName}`,
-          ts: new Date(action.timestamp).getTime()
+          id: `report_sub_${report._id}`,
+          kind: 'report_submitted',
+          message: `${reporterName} submitted a ${report.reportType} report`,
+          ts: new Date(report.createdAt).getTime()
         });
       });
 
-      // Add recent posts (use display names)
-      recentPosts.forEach((post: any) => {
-        const authorName = getDisplayName(post.author?.name);
+      // 3. Fetch resolved/dismissed reports
+      const resolvedReports = await CommunityReport.find({
+        status: { $in: ['resolved', 'dismissed'] },
+        updatedAt: { $gte: sevenDaysAgo }
+      })
+        .sort({ updatedAt: -1 })
+        .limit(20)
+        .populate('resolvedBy', 'name')
+        .lean();
+
+      resolvedReports.forEach((report: any) => {
+        const adminName = report.resolvedBy?.name || 'Admin';
+        const action = report.status === 'resolved' ? 'resolved' : 'dismissed';
         activities.push({
-          id: `post_${post._id}`,
-          kind: 'post_created',
-          message: `${authorName} created a new post`,
-          ts: new Date(post.createdAt).getTime()
+          id: `report_res_${report._id}`,
+          kind: 'report_resolved',
+          message: `${adminName} ${action} a ${report.reportType} report`,
+          ts: new Date(report.updatedAt).getTime()
+        });
+      });
+
+      // 4. Fetch recently deleted/moderated posts
+      const moderatedPosts = await CommunityPost.find({
+        status: { $in: ['hidden', 'deleted'] },
+        updatedAt: { $gte: sevenDaysAgo }
+      })
+        .sort({ updatedAt: -1 })
+        .limit(20)
+        .populate('authorId', 'name')
+        .lean();
+
+      moderatedPosts.forEach((post: any) => {
+        const authorName = post.authorId?.name || 'Unknown';
+        activities.push({
+          id: `post_mod_${post._id}`,
+          kind: 'post_deleted',
+          message: `Post by ${authorName} was ${post.status}`,
+          ts: new Date(post.updatedAt).getTime()
+        });
+      });
+
+      // 5. Fetch recent user role/status changes (users updated by admin)
+      const recentlyUpdatedUsers = await User.find({
+        updatedAt: { $gte: sevenDaysAgo },
+        // Only include if updated significantly after creation (admin action)
+        $expr: {
+          $gt: [
+            { $subtract: ['$updatedAt', '$createdAt'] },
+            60000 // More than 1 minute after creation
+          ]
+        }
+      })
+        .sort({ updatedAt: -1 })
+        .limit(20)
+        .select('name role isActive updatedAt')
+        .lean();
+
+      recentlyUpdatedUsers.forEach((user) => {
+        const status = user.isActive ? 'activated' : 'deactivated';
+        activities.push({
+          id: `user_upd_${user._id}`,
+          kind: 'admin_action',
+          message: `User ${user.name} was ${status} by admin`,
+          ts: new Date(user.updatedAt).getTime()
         });
       });
 
