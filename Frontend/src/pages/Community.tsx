@@ -8,7 +8,7 @@ import { RoleGuard, PermissionCheck, GuestPrompt } from "@/components/RoleGuard"
 import VoteButton from "@/components/community/VoteButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from '@/hooks/use-toast';
-import apiService from "@/lib/apiService";
+import { communityForumApi } from "@/api/communityForum";
 import type { CommunityPost, CommunityStats, TrendingTopic } from "@/types/api";
 import { Users, MessageCircle, Heart, TrendingUp, Shield, Flag, Trash2, Edit, Sparkles, ArrowUp, ArrowDown, Minus, MessageSquare } from "lucide-react";
 
@@ -25,23 +25,48 @@ const Community = () => {
       try {
         setLoading(true);
         const [postsResponse, statsData, topicsData] = await Promise.all([
-          (apiService as any).community.getPosts({ limit: 10 }),
-          (apiService as any).community.getStats(),
-          (apiService as any).community.getTrendingTopics(),
+          communityForumApi.getPosts({ limit: 10, sort: 'latest' }),
+          communityForumApi.getStats ? communityForumApi.getStats() : Promise.resolve({ totalMembers: 0, postsToday: 0, totalLikes: 0, activeUsers: 0 }),
+          communityForumApi.getTrendingTags ? communityForumApi.getTrendingTags({ limit: 5 }) : Promise.resolve([]),
         ]);
 
-        setPosts(postsResponse.posts);
-        setStats(statsData);
-        setTrendingTopics(topicsData);
+        // Map the response to match expected format
+        const mappedPosts = postsResponse.data.posts.map((post: any) => ({
+          _id: post._id,
+          title: post.title,
+          content: post.bodyMarkdown || post.body,
+          likes: post.voteScore ?? post.score ?? 0,
+          voteScore: post.voteScore ?? post.score ?? 0,
+          userVote: post.userVote,
+          comments: post.commentCount || 0,
+          tags: post.tags || [],
+          isPinned: post.isPinned || false,
+          author: post.author,
+          createdAt: new Date(post.createdAt),
+          updatedAt: new Date(post.updatedAt || post.createdAt),
+        }));
+
+        setPosts(mappedPosts);
+        setStats(statsData || { totalMembers: 0, postsToday: 0, totalLikes: 0, activeUsers: 0 });
+        setTrendingTopics((topicsData as any)?.data?.tags?.map((tag: any) => ({
+          tag: tag.tag || tag.name,
+          postCount: tag.count || 0,
+          trend: 'stable' as const,
+        })) || []);
       } catch (error) {
         console.error('Error loading community data:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load community data. Please try again.',
+          variant: 'destructive'
+        });
       } finally {
         setLoading(false);
       }
     };
 
     loadCommunityData();
-  }, []);
+  }, [toast]);
 
   const formatTimestamp = (date: Date) => {
     const now = new Date();
@@ -240,13 +265,13 @@ const Community = () => {
                             <div className="flex items-center">
                               <VoteButton
                                 postId={post._id}
-                                initialScore={post.likes}
-                                initialUserVote={null}
+                                initialScore={(post as any).voteScore ?? (post as any).score ?? post.likes ?? 0}
+                                initialUserVote={(post as any).userVote}
                                 onVoteChange={(newScore, newVote) => {
                                   // Update local state for UI feedback
                                   setPosts(prevPosts =>
                                     prevPosts.map(p =>
-                                      p._id === post._id ? { ...p, likes: newScore } : p
+                                      p._id === post._id ? { ...p, likes: newScore, voteScore: newScore, userVote: newVote } : p
                                     )
                                   );
                                 }}
