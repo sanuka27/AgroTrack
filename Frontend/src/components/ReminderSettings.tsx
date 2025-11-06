@@ -158,12 +158,7 @@ export const ReminderSettings: React.FC<ReminderSettingsProps> = ({
   const getNotificationStatusBadge = (method: NotificationMethod) => {
     const status = getNotificationStatus(method);
     if (status === 'working') {
-      return (
-        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
-          <CheckCircle className="w-3 h-3" />
-          Active
-        </span>
-      );
+      return null; // Don't show badge for working methods
     } else {
       return (
         <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
