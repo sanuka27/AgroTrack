@@ -293,14 +293,14 @@ export default function WatchDemo({ onStart }: WatchDemoProps) {
           <div
             ref={modalRef}
             data-testid="demo-modal"
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+            className="bg-card rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col border border-border"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-muted-foreground">
                     Step {currentSlide + 1} of {slides.length}
                   </span>
                 </div>
@@ -308,7 +308,7 @@ export default function WatchDemo({ onStart }: WatchDemoProps) {
                   data-testid="autoplay-btn"
                   onClick={toggleAutoPlay}
                   aria-label={isAutoPlaying ? 'Pause auto-play' : 'Start auto-play'}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
+                  className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
                 >
                   {isAutoPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 </button>
@@ -317,7 +317,7 @@ export default function WatchDemo({ onStart }: WatchDemoProps) {
               <button
                 onClick={closeModal}
                 aria-label="Close demo"
-                className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
+                className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -326,8 +326,8 @@ export default function WatchDemo({ onStart }: WatchDemoProps) {
             {/* Slide Content */}
             <div className="flex-1 p-6 md:p-10 overflow-y-auto">
               <div className="text-center space-y-6">
-                <div className="w-16 h-16 mx-auto bg-emerald-100 rounded-full flex items-center justify-center">
-                  <currentSlideData.icon className="w-8 h-8 text-emerald-600" />
+                <div className="w-16 h-16 mx-auto bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center">
+                  <currentSlideData.icon className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 
                 <div>
@@ -335,23 +335,23 @@ export default function WatchDemo({ onStart }: WatchDemoProps) {
                     ref={headingRef}
                     id="demo-modal-title"
                     data-testid="slide-title"
-                    className="text-2xl md:text-3xl font-bold text-gray-900 mb-4"
+                    className="text-2xl md:text-3xl font-bold text-foreground mb-4"
                     tabIndex={-1}
                   >
                     {currentSlideData.title}
                   </h2>
-                  <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                  <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                     {currentSlideData.description}
                   </p>
                 </div>
 
                 {/* Example Box */}
                 {currentSlideData.example && (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 max-w-lg mx-auto">
-                    <h3 className="font-semibold text-emerald-800 mb-2">
+                  <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-4 max-w-lg mx-auto">
+                    <h3 className="font-semibold text-emerald-800 dark:text-emerald-300 mb-2">
                       {currentSlideData.example.title}
                     </h3>
-                    <p className="text-sm text-emerald-700">
+                    <p className="text-sm text-emerald-700 dark:text-emerald-400">
                       {currentSlideData.example.content}
                     </p>
                   </div>
@@ -376,7 +376,7 @@ export default function WatchDemo({ onStart }: WatchDemoProps) {
                         Explore Again
                       </button>
                     </div>
-                    <p className="text-sm text-gray-500 text-center">
+                    <p className="text-sm text-muted-foreground text-center">
                       30-second signup • Forever free • No credit card required
                     </p>
                   </div>
@@ -385,12 +385,12 @@ export default function WatchDemo({ onStart }: WatchDemoProps) {
             </div>
 
             {/* Footer Controls */}
-            <div className="border-t border-gray-200 p-4">
+            <div className="border-t border-border p-4">
               <div className="flex items-center justify-between">
                 <button
                   data-testid="skip-btn"
                   onClick={closeModal}
-                  className="text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
+                  className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                 >
                   <SkipForward className="w-4 h-4" />
                   Skip tour
@@ -406,7 +406,7 @@ export default function WatchDemo({ onStart }: WatchDemoProps) {
                       aria-label={`Go to slide ${index + 1}`}
                       aria-current={index === currentSlide ? 'true' : 'false'}
                       className={`w-2 h-2 rounded-full transition-colors ${
-                        index === currentSlide ? 'bg-emerald-600' : 'bg-gray-300 hover:bg-gray-400'
+                        index === currentSlide ? 'bg-emerald-600' : 'bg-muted hover:bg-muted-foreground/50'
                       }`}
                     />
                   ))}
@@ -418,7 +418,7 @@ export default function WatchDemo({ onStart }: WatchDemoProps) {
                     data-testid="prev-btn"
                     onClick={prevSlide}
                     aria-label="Previous slide"
-                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-600 transition-colors"
+                    className="p-2 rounded-lg border border-border hover:bg-muted text-muted-foreground transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
