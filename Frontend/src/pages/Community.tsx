@@ -24,10 +24,9 @@ const Community = () => {
     const loadCommunityData = async () => {
       try {
         setLoading(true);
-        const [postsResponse, statsData, topicsData] = await Promise.all([
+        const [postsResponse, topicsData] = await Promise.all([
           communityForumApi.getPosts({ limit: 10, sort: 'latest' }),
-          communityForumApi.getStats ? communityForumApi.getStats() : Promise.resolve({ totalMembers: 0, postsToday: 0, totalLikes: 0, activeUsers: 0 }),
-          communityForumApi.getTrendingTags ? communityForumApi.getTrendingTags({ limit: 5 }) : Promise.resolve([]),
+          communityForumApi.getTrendingTags({ limit: 5 }).catch(() => ({ data: { tags: [] } })),
         ]);
 
         // Map the response to match expected format
@@ -47,7 +46,19 @@ const Community = () => {
         }));
 
         setPosts(mappedPosts);
-        setStats(statsData || { totalMembers: 0, postsToday: 0, totalLikes: 0, activeUsers: 0 });
+        
+        // Set stats with calculated values from posts
+        setStats({
+          totalMembers: 0, // This would need a separate endpoint
+          postsToday: mappedPosts.filter(p => {
+            const today = new Date();
+            const postDate = new Date(p.createdAt);
+            return postDate.toDateString() === today.toDateString();
+          }).length,
+          totalLikes: mappedPosts.reduce((sum, p) => sum + (p.likes || 0), 0),
+          activeUsers: 0, // This would need a separate endpoint
+        });
+        
         setTrendingTopics((topicsData as any)?.data?.tags?.map((tag: any) => ({
           tag: tag.tag || tag.name,
           postCount: tag.count || 0,
