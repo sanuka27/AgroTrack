@@ -236,4 +236,57 @@ export const usersApi = {
       throw error;
     }
   },
+
+  /**
+   * Get reminder preferences
+   * 
+   * GET /api/users/reminder-preferences
+   * 
+   * @returns Promise with reminder preferences
+   */
+  async getReminderPreferences(): Promise<any> {
+    try {
+      const response = await api.get('/users/reminder-preferences');
+      return response.data.data.preferences;
+    } catch (error) {
+      console.error('Error fetching reminder preferences:', getErrorMessage(error));
+      throw error;
+    }
+  },
+
+  /**
+   * Update reminder preferences
+   * 
+   * PUT /api/users/reminder-preferences
+   * 
+   * @param preferences - Reminder preferences to update
+   * @returns Promise with updated preferences
+   */
+  async updateReminderPreferences(preferences: {
+    enabled?: boolean;
+    notificationMethods?: ('in-app' | 'browser' | 'email' | 'push')[];
+    advanceNoticeDays?: number;
+    maxRemindersPerDay?: number;
+    quietHours?: {
+      enabled?: boolean;
+      start?: string;
+      end?: string;
+    };
+    plantSpecificSettings?: {
+      [plantId: string]: {
+        enabled: boolean;
+        customFrequency?: {
+          [reminderType: string]: number;
+        };
+      };
+    };
+  }): Promise<any> {
+    try {
+      const response = await api.put('/users/reminder-preferences', preferences);
+      return response.data.data.preferences;
+    } catch (error) {
+      console.error('Error updating reminder preferences:', getErrorMessage(error));
+      throw error;
+    }
+  },
 };

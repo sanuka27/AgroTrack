@@ -51,6 +51,25 @@ export interface IUser extends Document {
       showPlants: boolean;
       showActivity: boolean;
     };
+    reminders: {
+      enabled: boolean;
+      notificationMethods: ('in-app' | 'browser' | 'email' | 'push')[];
+      advanceNoticeDays: number;
+      maxRemindersPerDay: number;
+      quietHours: {
+        enabled: boolean;
+        start: string;
+        end: string;
+      };
+      plantSpecificSettings: {
+        [plantId: string]: {
+          enabled: boolean;
+          customFrequency?: {
+            [reminderType: string]: number;
+          };
+        };
+      };
+    };
     language: string;
     timezone: string;
   };
@@ -245,6 +264,57 @@ const userSchema = new Schema<IUser>({
       showActivity: {
         type: Boolean,
         default: true
+      }
+    },
+    reminders: {
+      enabled: {
+        type: Boolean,
+        default: true
+      },
+      notificationMethods: {
+        type: [String],
+        enum: ['in-app', 'browser', 'email', 'push'],
+        default: ['in-app', 'browser']
+      },
+      advanceNoticeDays: {
+        type: Number,
+        default: 1,
+        min: 0,
+        max: 30
+      },
+      maxRemindersPerDay: {
+        type: Number,
+        default: 10,
+        min: 1,
+        max: 50
+      },
+      quietHours: {
+        enabled: {
+          type: Boolean,
+          default: false
+        },
+        start: {
+          type: String,
+          default: '22:00'
+        },
+        end: {
+          type: String,
+          default: '08:00'
+        }
+      },
+      plantSpecificSettings: {
+        type: Map,
+        of: {
+          enabled: {
+            type: Boolean,
+            default: true
+          },
+          customFrequency: {
+            type: Map,
+            of: Number
+          }
+        },
+        default: new Map()
       }
     },
     language: {

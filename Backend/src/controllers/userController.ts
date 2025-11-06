@@ -489,6 +489,145 @@ export class UserController {
     }
   }
 
+  /**
+   * Get reminder preferences
+   */
+  static async getReminderPreferences(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+      
+      const user = await User.findById(userId).select('preferences.reminders');
+
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+        return;
+      }
+
+      // Return default preferences if not set
+      const reminderPreferences = user.preferences?.reminders || {
+        enabled: true,
+        notificationMethods: ['in-app', 'browser'],
+        advanceNoticeDays: 1,
+        maxRemindersPerDay: 10,
+        quietHours: {
+          enabled: false,
+          start: '22:00',
+          end: '08:00'
+        },
+        plantSpecificSettings: {}
+      };
+
+      res.status(200).json({
+        success: true,
+        data: { preferences: reminderPreferences }
+      });
+    } catch (error) {
+      logger.error('Get reminder preferences error:', error);
+      next(error);
+    }
+  }
+
+  /**
+   * Update reminder preferences
+   */
+  static async updateReminderPreferences(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = new mongoose.Types.ObjectId((req.user as any)._id!.toString());
+      const { 
+        enabled, 
+        notificationMethods, 
+        advanceNoticeDays, 
+        maxRemindersPerDay, 
+        quietHours,
+        plantSpecificSettings 
+      } = req.body;
+
+      const updateData: any = {};
+      
+      if (enabled !== undefined) {
+        updateData['preferences.reminders.enabled'] = enabled;
+      }
+      
+      if (notificationMethods !== undefined) {
+        // Validate notification methods
+        const validMethods = ['in-app', 'browser', 'email', 'push'];
+        if (!Array.isArray(notificationMethods) || 
+            !notificationMethods.every((m: string) => validMethods.includes(m))) {
+          res.status(400).json({
+            success: false,
+            message: 'Invalid notification methods. Must be array of: in-app, browser, email, push'
+          });
+          return;
+        }
+        updateData['preferences.reminders.notificationMethods'] = notificationMethods;
+      }
+      
+      if (advanceNoticeDays !== undefined) {
+        if (typeof advanceNoticeDays !== 'number' || advanceNoticeDays < 0 || advanceNoticeDays > 30) {
+          res.status(400).json({
+            success: false,
+            message: 'advanceNoticeDays must be a number between 0 and 30'
+          });
+          return;
+        }
+        updateData['preferences.reminders.advanceNoticeDays'] = advanceNoticeDays;
+      }
+      
+      if (maxRemindersPerDay !== undefined) {
+        if (typeof maxRemindersPerDay !== 'number' || maxRemindersPerDay < 1 || maxRemindersPerDay > 50) {
+          res.status(400).json({
+            success: false,
+            message: 'maxRemindersPerDay must be a number between 1 and 50'
+          });
+          return;
+        }
+        updateData['preferences.reminders.maxRemindersPerDay'] = maxRemindersPerDay;
+      }
+      
+      if (quietHours !== undefined) {
+        if (quietHours.enabled !== undefined) {
+          updateData['preferences.reminders.quietHours.enabled'] = quietHours.enabled;
+        }
+        if (quietHours.start !== undefined) {
+          updateData['preferences.reminders.quietHours.start'] = quietHours.start;
+        }
+        if (quietHours.end !== undefined) {
+          updateData['preferences.reminders.quietHours.end'] = quietHours.end;
+        }
+      }
+      
+      if (plantSpecificSettings !== undefined) {
+        updateData['preferences.reminders.plantSpecificSettings'] = plantSpecificSettings;
+      }
+
+      const user = await User.findByIdAndUpdate(
+        userId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      ).select('preferences.reminders');
+
+      if (!user) {
+        res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Reminder preferences updated successfully',
+        data: { preferences: user.preferences?.reminders }
+      });
+    } catch (error) {
+      logger.error('Update reminder preferences error:', error);
+      next(error);
+    }
+  }
+
   // Admin-only endpoints
 
   /**

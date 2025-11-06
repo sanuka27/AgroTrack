@@ -486,4 +486,52 @@ router.put('/notification-preferences',
   UserController.updateNotificationPreferences
 );
 
+// Reminder preferences routes
+router.get('/reminder-preferences',
+  userRateLimit,
+  authMiddleware,
+  UserController.getReminderPreferences
+);
+
+router.put('/reminder-preferences',
+  userRateLimit,
+  authMiddleware,
+  [
+    body('enabled')
+      .optional()
+      .isBoolean()
+      .withMessage('Enabled must be a boolean'),
+    body('notificationMethods')
+      .optional()
+      .isArray()
+      .withMessage('Notification methods must be an array'),
+    body('notificationMethods.*')
+      .optional()
+      .isIn(['in-app', 'browser', 'email', 'push'])
+      .withMessage('Invalid notification method'),
+    body('advanceNoticeDays')
+      .optional()
+      .isInt({ min: 0, max: 30 })
+      .withMessage('Advance notice days must be between 0 and 30'),
+    body('maxRemindersPerDay')
+      .optional()
+      .isInt({ min: 1, max: 50 })
+      .withMessage('Max reminders per day must be between 1 and 50'),
+    body('quietHours.enabled')
+      .optional()
+      .isBoolean()
+      .withMessage('Quiet hours enabled must be a boolean'),
+    body('quietHours.start')
+      .optional()
+      .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .withMessage('Quiet hours start must be in HH:MM format'),
+    body('quietHours.end')
+      .optional()
+      .matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+      .withMessage('Quiet hours end must be in HH:MM format'),
+  ],
+  validate,
+  UserController.updateReminderPreferences
+);
+
 export default router;
