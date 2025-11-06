@@ -802,17 +802,17 @@ const MyPlants = () => {
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-green-200 border-t-green-600"></div>
-            <p className="mt-4 text-gray-600 font-medium">Loading your garden...</p>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-green-200 dark:border-green-800 border-t-green-600"></div>
+            <p className="mt-4 text-muted-foreground font-medium">Loading your garden...</p>
           </div>
         )}
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-6 mb-8 shadow-sm">
+          <div className="bg-red-50 dark:bg-red-950/30 border-l-4 border-red-500 rounded-lg p-6 mb-8 shadow-sm">
             <div className="flex items-center">
-              <AlertTriangle className="w-5 h-5 text-red-500 mr-3" />
-              <p className="text-red-700 font-medium">{error}</p>
+              <AlertTriangle className="w-5 h-5 text-red-500 dark:text-red-400 mr-3" />
+              <p className="text-red-700 dark:text-red-300 font-medium">{error}</p>
             </div>
             <Button
               variant="outline"
@@ -829,7 +829,7 @@ const MyPlants = () => {
   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* AI Plant Analysis - Primary Action */}
           <Link to="/plant-analysis" className="group">
-            <Card className="border-2 border-green-200 hover:border-green-400 transition-all duration-300 hover:shadow-xl cursor-pointer bg-gradient-to-br from-green-50 to-emerald-50">
+            <Card className="border-2 border-green-200 dark:border-green-800 hover:border-green-400 dark:hover:border-green-600 transition-all duration-300 hover:shadow-xl cursor-pointer bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
@@ -837,10 +837,10 @@ const MyPlants = () => {
                       <Leaf className="w-7 h-7 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-green-800 group-hover:text-green-900">
+                      <h3 className="text-xl font-bold text-green-800 dark:text-green-300 group-hover:text-green-900 dark:group-hover:text-green-200">
                         AI Plant Analysis
                       </h3>
-                      <p className="text-sm text-green-600">Scan & identify your plants instantly</p>
+                      <p className="text-sm text-green-600 dark:text-green-400">Scan & identify your plants instantly</p>
                     </div>
                   </div>
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -853,7 +853,7 @@ const MyPlants = () => {
 
           {/* Add New Plant */}
           <Card 
-            className="border-2 border-blue-200 hover:border-blue-400 transition-all duration-300 hover:shadow-xl cursor-pointer bg-gradient-to-br from-blue-50 to-sky-50 group"
+            className="border-2 border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-600 transition-all duration-300 hover:shadow-xl cursor-pointer bg-gradient-to-br from-blue-50 to-sky-50 dark:from-blue-950/30 dark:to-sky-950/30 group"
             onClick={() => handleOpenModal()}
             data-testid="add-plant-btn"
           >
@@ -864,10 +864,10 @@ const MyPlants = () => {
                     <Plus className="w-7 h-7 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-blue-800 group-hover:text-blue-900">
+                    <h3 className="text-xl font-bold text-blue-800 dark:text-blue-300 group-hover:text-blue-900 dark:group-hover:text-blue-200">
                       Add New Plant
                     </h3>
-                    <p className="text-sm text-blue-600">Expand your garden collection</p>
+                    <p className="text-sm text-blue-600 dark:text-blue-400">Expand your garden collection</p>
                   </div>
                 </div>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -881,7 +881,7 @@ const MyPlants = () => {
         {/* Quick access: Reminders Center */}
         <div className="mb-8">
           <Link to="/reminder-test" className="group">
-            <Card className="border-2 border-orange-200 hover:border-orange-400 transition-all duration-300 hover:shadow-xl cursor-pointer bg-gradient-to-br from-orange-50 to-amber-50">
+            <Card className="border-2 border-orange-200 dark:border-orange-800 hover:border-orange-400 dark:hover:border-orange-600 transition-all duration-300 hover:shadow-xl cursor-pointer bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
@@ -889,7 +889,7 @@ const MyPlants = () => {
                       <Bell className="w-7 h-7 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-orange-800 group-hover:text-orange-900">
+                      <h3 className="text-xl font-bold text-orange-800 dark:text-orange-300 group-hover:text-orange-900 dark:group-hover:text-orange-200">
                         Reminders Center
                       </h3>
                       {(() => {
@@ -913,7 +913,7 @@ const MyPlants = () => {
                         });
                         
                         return (
-                          <p className="text-sm text-orange-700">
+                          <p className="text-sm text-orange-700 dark:text-orange-400">
                             {`${activeCount} active`}
                             {overdueDisplay > 0 ? ` • ${overdueDisplay} overdue` : ''}
                           </p>
@@ -933,41 +933,41 @@ const MyPlants = () => {
         {/* Modern Stats Dashboard with Gradients */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {/* Total Plants */}
-          <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-white to-green-50/50 hover:shadow-lg transition-shadow">
+          <Card className="border-l-4 border-l-green-500 dark:border-l-green-600 bg-gradient-to-br from-card to-green-50/50 dark:to-green-950/20 hover:shadow-lg transition-shadow">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-2">
-                <Leaf className="w-6 h-6 text-green-600" />
-                <span className="text-2xl font-bold text-green-700">{plants.length}</span>
+                <Leaf className="w-6 h-6 text-green-600 dark:text-green-400" />
+                <span className="text-2xl font-bold text-green-700 dark:text-green-400">{plants.length}</span>
               </div>
-              <p className="text-sm font-medium text-gray-600">Total Plants</p>
-              <div className="mt-2 h-1 bg-green-200 rounded-full overflow-hidden">
+              <p className="text-sm font-medium text-muted-foreground">Total Plants</p>
+              <div className="mt-2 h-1 bg-green-200 dark:bg-green-900/40 rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-green-500 to-emerald-500 w-full"></div>
               </div>
             </CardContent>
           </Card>
           
           {/* Need Water */}
-          <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-white to-blue-50/50 hover:shadow-lg transition-shadow">
+          <Card className="border-l-4 border-l-blue-500 dark:border-l-blue-600 bg-gradient-to-br from-card to-blue-50/50 dark:to-blue-950/20 hover:shadow-lg transition-shadow">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-2">
-                <Droplets className="w-6 h-6 text-blue-600" />
-                <span className="text-2xl font-bold text-blue-700">
+                <Droplets className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                <span className="text-2xl font-bold text-blue-700 dark:text-blue-400">
                   {filterAndSortPlants(plants, { ...filters, careNeeds: 'needs-water' }).length}
                 </span>
               </div>
-              <p className="text-sm font-medium text-gray-600">Need Water</p>
-              <div className="mt-2 h-1 bg-blue-200 rounded-full overflow-hidden">
+              <p className="text-sm font-medium text-muted-foreground">Need Water</p>
+              <div className="mt-2 h-1 bg-blue-200 dark:bg-blue-900/40 rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-blue-500 to-sky-500 w-3/4"></div>
               </div>
             </CardContent>
           </Card>
           
           {/* Overdue Care */}
-          <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-white to-orange-50/50 hover:shadow-lg transition-shadow">
+          <Card className="border-l-4 border-l-orange-500 dark:border-l-orange-600 bg-gradient-to-br from-card to-orange-50/50 dark:to-orange-950/20 hover:shadow-lg transition-shadow">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-2">
-                <Bell className="w-6 h-6 text-orange-600" />
-                <span className="text-2xl font-bold text-orange-700">
+                <Bell className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                <span className="text-2xl font-bold text-orange-700 dark:text-orange-400">
                   {(() => {
                     const overdueCount = overdueReminders?.length || 0;
                     const overdueFilterCount = filterAndSortPlants(plants, { ...filters, careNeeds: 'overdue' }).length;
@@ -975,24 +975,24 @@ const MyPlants = () => {
                   })()}
                 </span>
               </div>
-              <p className="text-sm font-medium text-gray-600">Needs Attention</p>
-              <div className="mt-2 h-1 bg-orange-200 rounded-full overflow-hidden">
+              <p className="text-sm font-medium text-muted-foreground">Needs Attention</p>
+              <div className="mt-2 h-1 bg-orange-200 dark:bg-orange-900/40 rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-orange-500 to-amber-500 w-1/2"></div>
               </div>
             </CardContent>
           </Card>
           
           {/* Healthy Plants */}
-          <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-white to-purple-50/50 hover:shadow-lg transition-shadow">
+          <Card className="border-l-4 border-l-purple-500 dark:border-l-purple-600 bg-gradient-to-br from-card to-purple-50/50 dark:to-purple-950/20 hover:shadow-lg transition-shadow">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-2">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
-                <span className="text-2xl font-bold text-purple-700">
+                <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                <span className="text-2xl font-bold text-purple-700 dark:text-purple-400">
                   {plants.filter(p => p.health === 'Excellent' || p.health === 'Good').length}
                 </span>
               </div>
-              <p className="text-sm font-medium text-gray-600">Healthy</p>
-              <div className="mt-2 h-1 bg-purple-200 rounded-full overflow-hidden">
+              <p className="text-sm font-medium text-muted-foreground">Healthy</p>
+              <div className="mt-2 h-1 bg-purple-200 dark:bg-purple-900/40 rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 w-full"></div>
               </div>
             </CardContent>
@@ -1002,10 +1002,10 @@ const MyPlants = () => {
         {/* Plant Collection & Care History - Moved to top */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <div className="lg:col-span-2">
-            <Card className="border border-green-200/60 shadow-md hover:shadow-lg transition-all duration-200">
-              <CardHeader className="border-b border-green-100/50 bg-gradient-to-r from-white to-green-50/20">
-                <CardTitle className="text-green-800 text-xl">Your Plant Collection</CardTitle>
-                <CardDescription className="text-green-600/80">Track care history and manage multiple plants</CardDescription>
+            <Card className="border border-border shadow-md hover:shadow-lg transition-all duration-200">
+              <CardHeader className="border-b border-border bg-gradient-to-r from-card to-green-50/20 dark:to-green-950/10">
+                <CardTitle className="text-green-800 dark:text-green-300 text-xl">Your Plant Collection</CardTitle>
+                <CardDescription className="text-green-600 dark:text-green-400/80">Track care history and manage multiple plants</CardDescription>
               </CardHeader>
               <CardContent className="pt-6">{plants.length > 0 ? (
                   <div className="space-y-6">
