@@ -703,7 +703,7 @@ const MyPlants = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-background to-blue-50 dark:from-green-950/20 dark:via-background dark:to-blue-950/20">
       <Header />
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Header (same as Dashboard) */}
