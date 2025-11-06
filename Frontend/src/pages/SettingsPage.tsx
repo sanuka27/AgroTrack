@@ -213,11 +213,11 @@ const SettingsPage: React.FC = () => {
                     <input ref={(el) => fileInputRef.current = el} type="file" accept="image/*" onChange={(e) => handleFileSelection(e.target.files?.[0] || null)} className="hidden" />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2"><Label htmlFor="profile-name">Display Name</Label><Input id="profile-name" type="text" value={name} onChange={(e) => setName(e.target.value)} /></div>
-                      <div className="space-y-2"><Label htmlFor="profile-location">City</Label><Input id="profile-location" type="text" value={location} onChange={(e) => setLocation(e.target.value)} /></div>
+                      <div className="space-y-2"><Label htmlFor="profile-name">Display Name</Label><Input id="profile-name" type="text" className="bg-background" value={name} onChange={(e) => setName(e.target.value)} /></div>
+                      <div className="space-y-2"><Label htmlFor="profile-location">City</Label><Input id="profile-location" type="text" className="bg-background" value={location} onChange={(e) => setLocation(e.target.value)} /></div>
                     </div>
 
-                    <div className="space-y-2"><Label htmlFor="profile-bio">Bio</Label><textarea id="profile-bio" rows={4} className="w-full rounded-md border p-3" value={bio} onChange={(e) => setBio(e.target.value)} /></div>
+                    <div className="space-y-2"><Label htmlFor="profile-bio">Bio</Label><textarea id="profile-bio" rows={4} className="w-full rounded-md border border-input bg-background p-3 text-foreground" value={bio} onChange={(e) => setBio(e.target.value)} /></div>
 
                     <div className="flex justify-end">
                       <Button onClick={async () => {

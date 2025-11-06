@@ -132,10 +132,10 @@ const ReminderTestPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">Loading reminder system...</p>
+          <p className="text-muted-foreground">Loading reminder system...</p>
         </div>
       </div>
     );
@@ -143,9 +143,9 @@ const ReminderTestPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 mb-4">Error: {error}</p>
+          <p className="text-red-600 dark:text-red-400 mb-4">Error: {error}</p>
           <div className="flex items-center justify-center gap-3">
             <Button onClick={() => window.location.reload()}>Retry</Button>
             {!isAuthenticated && (
@@ -165,7 +165,7 @@ const ReminderTestPage = () => {
   // Unauthenticated state: Encourage login for real data (no mock fallback)
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20">
         <Header />
         <main className="container mx-auto px-4 py-20">
           <Card className="max-w-xl mx-auto">
@@ -176,7 +176,7 @@ const ReminderTestPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-center">
-              <p className="text-gray-700">
+              <p className="text-muted-foreground">
                 Please log in to view your plants and personalized reminders.
               </p>
               <Button onClick={() => navigate('/login')}>Go to Login</Button>
@@ -189,7 +189,7 @@ const ReminderTestPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20">
       <Header />
 
       <main className="container mx-auto px-4 py-8">
@@ -215,8 +215,8 @@ const ReminderTestPage = () => {
             <div className="flex items-center gap-3">
               <TestTube className="w-8 h-8 text-blue-600" />
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Smart Reminder System Test</h1>
-                <p className="text-gray-600">Testing intelligent plant care reminders and notifications</p>
+                <h1 className="text-3xl font-bold text-foreground">Smart Reminder System Test</h1>
+                <p className="text-muted-foreground">Testing intelligent plant care reminders and notifications</p>
               </div>
             </div>
             <Button onClick={() => setShowSettings(true)} variant="outline">
