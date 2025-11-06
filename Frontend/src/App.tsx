@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DemoProvider } from "@/contexts/DemoContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { askPermissionAndGetToken, listenForMessages } from "@/lib/notifications";
 import { toast as globalToast } from '@/hooks/use-toast';
 import GuestCTABanner from "@/components/GuestCTABanner";
@@ -94,13 +95,14 @@ const App = () => {
   }, []);
 
   return (
-  <AuthProvider>
-    <DemoProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+  <ThemeProvider>
+    <AuthProvider>
+      <DemoProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>}>
             <Routes>
               <Route path="/" element={<Index />} />
@@ -181,6 +183,7 @@ const App = () => {
     </QueryClientProvider>
     </DemoProvider>
   </AuthProvider>
+  </ThemeProvider>
   );
 };
 

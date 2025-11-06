@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Leaf, Menu, X, User, MessageSquare, BarChart3, LogOut, Shield, Settings, Bot } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -124,6 +125,7 @@ export function Header() {
               <div className="flex items-center space-x-3">
                 {getUserDisplayName()}
                 <NotificationBell />
+                <ThemeToggle />
                 <Button variant="ghost" size="sm" asChild>
                   <NavLink to="/settings">
                     <Settings className="w-4 h-4 mr-2" />
@@ -138,6 +140,7 @@ export function Header() {
               </div>
             ) : (
               <>
+                <ThemeToggle />
                 <Button variant="ghost" size="sm" asChild>
                   <NavLink to="/login">
                     <User className="w-4 h-4 mr-2" />
@@ -192,7 +195,10 @@ export function Header() {
                   <>
                     <div className="py-2 flex items-center justify-between">
                       {getUserDisplayName()}
-                      <NotificationBell />
+                      <div className="flex items-center gap-2">
+                        <NotificationBell />
+                        <ThemeToggle />
+                      </div>
                     </div>
                     <Button variant="ghost" size="sm" className="justify-start" asChild>
                       <NavLink to="/settings" onClick={() => setIsMenuOpen(false)}>
@@ -208,6 +214,9 @@ export function Header() {
                   </>
                 ) : (
                   <>
+                    <div className="flex items-center justify-end mb-2">
+                      <ThemeToggle />
+                    </div>
                     <Button variant="ghost" size="sm" className="justify-start" asChild>
                       <NavLink to="/login">
                         <User className="w-4 h-4 mr-2" />
