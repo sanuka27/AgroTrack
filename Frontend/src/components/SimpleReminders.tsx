@@ -181,7 +181,7 @@ export default function SimpleReminders({ plants }: Props) {
           <div className="grid md:grid-cols-4 gap-3">
             <div className="md:col-span-2">
               <Label htmlFor="title">Title</Label>
-              <Input id="title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Water basil" />
+              <Input id="title" className="bg-background" value={title} onChange={e => setTitle(e.target.value)} placeholder="Water basil" />
             </div>
             <div>
               <Label htmlFor="dueAt">Due at</Label>
@@ -189,7 +189,7 @@ export default function SimpleReminders({ plants }: Props) {
             </div>
             <div>
               <Label htmlFor="plant">Plant (optional)</Label>
-              <select id="plant" className="w-full h-9 border rounded px-2" value={plantId} onChange={e => setPlantId(e.target.value)}>
+              <select id="plant" className="w-full h-9 border border-input bg-background text-foreground rounded px-2" value={plantId} onChange={e => setPlantId(e.target.value)}>
                 <option value="">None</option>
                 {plants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
@@ -197,7 +197,7 @@ export default function SimpleReminders({ plants }: Props) {
           </div>
           <div>
             <Label htmlFor="notes">Notes (optional)</Label>
-            <Input id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="~300ml, avoid leaves" />
+            <Input id="notes" className="bg-background" value={notes} onChange={e => setNotes(e.target.value)} placeholder="~300ml, avoid leaves" />
           </div>
           <div>
             <Button onClick={handleCreate} disabled={loading}>
