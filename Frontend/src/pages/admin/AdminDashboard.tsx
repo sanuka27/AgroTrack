@@ -54,35 +54,35 @@ export function AdminDashboard() {
             <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-5 bg-muted rounded-2xl p-1">
               <TabsTrigger 
                 value="overview" 
-                className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-xl"
+                className="flex items-center gap-2 data-[state=active]:bg-card dark:data-[state=active]:bg-muted data-[state=active]:shadow-sm rounded-xl"
               >
                 <BarChart3 className="w-4 h-4" />
                 <span className="hidden sm:inline">Overview</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="users"
-                className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-xl"
+                className="flex items-center gap-2 data-[state=active]:bg-card dark:data-[state=active]:bg-muted data-[state=active]:shadow-sm rounded-xl"
               >
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Users</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="plants"
-                className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-xl"
+                className="flex items-center gap-2 data-[state=active]:bg-card dark:data-[state=active]:bg-muted data-[state=active]:shadow-sm rounded-xl"
               >
                 <Leaf className="w-4 h-4" />
                 <span className="hidden sm:inline">Plants</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="reports"
-                className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-xl"
+                className="flex items-center gap-2 data-[state=active]:bg-card dark:data-[state=active]:bg-muted data-[state=active]:shadow-sm rounded-xl"
               >
                 <AlertTriangle className="w-4 h-4" />
                 <span className="hidden sm:inline">Reports</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="content"
-                className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-xl"
+                className="flex items-center gap-2 data-[state=active]:bg-card dark:data-[state=active]:bg-muted data-[state=active]:shadow-sm rounded-xl"
               >
                 <FileText className="w-4 h-4" />
                 <span className="hidden sm:inline">Content</span>

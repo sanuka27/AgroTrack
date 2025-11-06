@@ -138,13 +138,13 @@ const Community = () => {
 
         {/* Guest User Compelling Showcase - Only for actions requiring auth */}
         <PermissionCheck permission="forum_participate" fallback={
-          <div className="mb-8 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl p-8">
+          <div className="mb-8 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/30 dark:to-blue-950/30 border border-green-200 dark:border-green-800 rounded-xl p-8">
             <div className="text-center mb-6">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-full mb-4">
                 <MessageSquare className="w-8 h-8" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">🌱 Join the Conversation!</h2>
-              <p className="text-gray-600 text-lg">Sign in to create posts, comment, and vote on community discussions</p>
+              <h2 className="text-2xl font-bold text-foreground mb-2">🌱 Join the Conversation!</h2>
+              <p className="text-muted-foreground text-lg">Sign in to create posts, comment, and vote on community discussions</p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -241,12 +241,12 @@ const Community = () => {
                   </div>
                 ) : posts.length === 0 ? (
                   <div className="text-center py-8">
-                    <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">No posts yet. Be the first to share!</p>
                   </div>
                 ) : (
                   posts.map((post, index) => (
-                    <Card key={post._id} className={`${(post as any).isPinned ? 'border-yellow-300 bg-yellow-50' : ''}`}>
+                    <Card key={post._id} className={`${(post as any).isPinned ? 'border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-950/30' : ''}`}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center space-x-2">
@@ -256,13 +256,13 @@ const Community = () => {
                             </div>
                             <span className={`text-xs px-2 py-0.5 rounded-full ${
                               post.author.role === 'admin' 
-                                ? 'bg-orange-100 text-orange-700'
-                                : 'bg-green-100 text-green-700'
+                                ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
+                                : 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
                             }`}>
                               {post.author.role === 'admin' ? 'Moderator' : 'Member'}
                             </span>
                             {(post as any).isPinned && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300">
                                 Pinned
                               </span>
                             )}

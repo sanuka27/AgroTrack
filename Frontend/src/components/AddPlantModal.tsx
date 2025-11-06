@@ -390,17 +390,17 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-plant-title"
-        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-xl ring-1 ring-slate-200 m-4"
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-card rounded-2xl shadow-xl ring-1 ring-border m-4"
         onKeyDown={handleKeyDown}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 id="add-plant-title" className="text-xl font-semibold text-gray-900">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 id="add-plant-title" className="text-xl font-semibold text-foreground">
             {mode === 'create' ? 'Add New Plant' : 'Edit Plant'}
           </h2>
           <button
             onClick={handleClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -414,7 +414,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
             <div className="relative">
               <button
                 type="button"
-                className="w-28 h-28 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center overflow-hidden"
+                className="w-28 h-28 rounded-full bg-muted/50 border border-border flex items-center justify-center overflow-hidden"
                 onClick={() => fileInputRef.current?.click()}
                 aria-label="Upload plant photo"
               >
@@ -446,7 +446,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
 
           {/* Plant Name */}
           <div className="space-y-2">
-            <Label htmlFor="plant-name" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="plant-name" className="text-sm font-medium text-foreground">
               Plant Name *
             </Label>
             <Input
@@ -498,7 +498,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
           {/* Category and Sunlight */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="plant-category" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="plant-category" className="text-sm font-medium text-foreground">
                 Category *
               </Label>
               <Input
@@ -506,13 +506,13 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
                 value={formData.category}
                 onChange={(e) => handleInputChange('category', e.target.value)}
                 placeholder="e.g., Indoor, Outdoor, Herb"
-                className="w-full bg-gray-50"
+                className="w-full bg-muted/50"
                 readOnly={aiLoading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="plant-sunlight" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="plant-sunlight" className="text-sm font-medium text-foreground">
                 Sunlight Requirements *
               </Label>
               <Input
@@ -520,7 +520,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
                 value={formData.sunlight}
                 onChange={(e) => handleInputChange('sunlight', e.target.value)}
                 placeholder="e.g., Full Sun, Partial Sun"
-                className="w-full bg-gray-50"
+                className="w-full bg-muted/50"
                 readOnly={aiLoading}
               />
             </div>
@@ -529,7 +529,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
           {/* Age and Watering */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="plant-age" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="plant-age" className="text-sm font-medium text-foreground">
                 Age (years)
               </Label>
               <Input
@@ -538,13 +538,13 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
                 value={formData.ageYears}
                 onChange={(e) => handleInputChange('ageYears', e.target.value)}
                 placeholder="e.g., 2"
-                className="w-full bg-gray-50"
+                className="w-full bg-muted/50"
                 readOnly={aiLoading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="watering-days" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="watering-days" className="text-sm font-medium text-foreground">
                 Watering Frequency (every X days) *
               </Label>
               <Input
@@ -553,7 +553,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
                 value={formData.wateringEveryDays}
                 onChange={(e) => handleInputChange('wateringEveryDays', e.target.value)}
                 placeholder="e.g., 7"
-                className="w-full bg-gray-50"
+                className="w-full bg-muted/50"
                 readOnly={aiLoading}
                 required
               />
@@ -563,7 +563,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
           {/* Fertilizer and Soil */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="fertilizer-weeks" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="fertilizer-weeks" className="text-sm font-medium text-foreground">
                 Fertilizer Schedule (every X weeks)
               </Label>
               <Input
@@ -572,13 +572,13 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
                 value={formData.fertilizerEveryWeeks}
                 onChange={(e) => handleInputChange('fertilizerEveryWeeks', e.target.value)}
                 placeholder="e.g., 4"
-                className="w-full bg-gray-50"
+                className="w-full bg-muted/50"
                 readOnly={aiLoading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="plant-soil" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="plant-soil" className="text-sm font-medium text-foreground">
                 Soil Type
               </Label>
               <Input
@@ -586,7 +586,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
                 value={formData.soil}
                 onChange={(e) => handleInputChange('soil', e.target.value)}
                 placeholder="e.g., Well-draining potting mix"
-                className="w-full bg-gray-50"
+                className="w-full bg-muted/50"
                 readOnly={aiLoading}
               />
             </div>
@@ -595,7 +595,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
           {/* Health */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="plant-health" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="plant-health" className="text-sm font-medium text-foreground">
                 Health Status
               </Label>
               <Select
@@ -621,7 +621,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
 
           {/* Notes */}
           <div className="space-y-2">
-            <Label htmlFor="plant-notes" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="plant-notes" className="text-sm font-medium text-foreground">
               Notes
             </Label>
             <Textarea
@@ -635,7 +635,7 @@ export function AddPlantModal({ mode, open, initial, onCancel, onSubmit }: AddPl
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end space-x-3 p-6 border-t bg-gray-50">
+        <div className="flex items-center justify-end space-x-3 p-6 border-t border-border bg-muted/30">
           <Button
             variant="outline"
             onClick={handleClose}

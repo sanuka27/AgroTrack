@@ -708,10 +708,10 @@ const MyPlants = () => {
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Header (same as Dashboard) */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-1">
+          <h1 className="text-3xl font-bold text-foreground mb-1">
             Welcome back, {user?.name?.split(' ')[0] || 'there'} 👋
           </h1>
-          <p className="text-gray-600">Here's everything happening with your garden</p>
+          <p className="text-muted-foreground">Here's everything happening with your garden</p>
         </div>
 
         {/* Stats Overview - show dashboard-style cards */}
@@ -720,8 +720,8 @@ const MyPlants = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Plants</p>
-                  <p className="text-3xl font-bold text-gray-900">{plants.length}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Total Plants</p>
+                  <p className="text-3xl font-bold text-foreground">{plants.length}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                   <Leaf className="w-6 h-6 text-green-600" />
@@ -737,15 +737,15 @@ const MyPlants = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Health Score</p>
-                  <p className="text-3xl font-bold text-gray-900">{analyticsData?.dashboard.healthScore || 0}%</p>
+                  <p className="text-sm text-muted-foreground mb-1">Health Score</p>
+                  <p className="text-3xl font-bold text-foreground">{analyticsData?.dashboard.healthScore || 0}%</p>
                 </div>
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${ (analyticsData?.dashboard.healthScore || 0) >= 80 ? 'bg-green-100' : (analyticsData?.dashboard.healthScore || 0) >= 50 ? 'bg-yellow-100' : 'bg-red-100' }`}>
-                  <TrendingUp className={`w-6 h-6 ${ (analyticsData?.dashboard.healthScore || 0) >= 80 ? 'text-green-600' : (analyticsData?.dashboard.healthScore || 0) >= 50 ? 'text-yellow-600' : 'text-red-600' }`} />
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${ (analyticsData?.dashboard.healthScore || 0) >= 80 ? 'bg-green-100 dark:bg-green-900/40' : (analyticsData?.dashboard.healthScore || 0) >= 50 ? 'bg-yellow-100 dark:bg-yellow-900/40' : 'bg-red-100 dark:bg-red-900/40' }`}>
+                  <TrendingUp className={`w-6 h-6 ${ (analyticsData?.dashboard.healthScore || 0) >= 80 ? 'text-green-600 dark:text-green-400' : (analyticsData?.dashboard.healthScore || 0) >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400' }`} />
                 </div>
               </div>
               <div className="mt-3">
-                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-green-500 to-emerald-500" style={{ width: `${analyticsData?.dashboard.healthScore || 0}%` }} />
                 </div>
               </div>
@@ -756,8 +756,8 @@ const MyPlants = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Active Reminders</p>
-                  <p className="text-3xl font-bold text-gray-900">
+                  <p className="text-sm text-muted-foreground mb-1">Active Reminders</p>
+                  <p className="text-3xl font-bold text-foreground">
                     {(() => {
                       const total = (upcomingReminders?.length || 0) + (overdueReminders?.length || 0);
                       return total > 0 ? total : (analyticsData?.dashboard?.activeReminders || 0);
@@ -774,9 +774,9 @@ const MyPlants = () => {
                   const fallbackOverdue = analyticsData?.dashboard?.overdueReminders || 0;
                   const displayOverdue = overdueCount > 0 ? overdueCount : fallbackOverdue;
                   return displayOverdue > 0 ? (
-                    <span className="text-red-600 font-medium">⚠️ {displayOverdue} overdue</span>
+                    <span className="text-red-600 dark:text-red-400 font-medium">⚠️ {displayOverdue} overdue</span>
                   ) : (
-                    <span className="text-gray-500">All up to date</span>
+                    <span className="text-muted-foreground">All up to date</span>
                   );
                 })()}
               </div>
@@ -787,14 +787,14 @@ const MyPlants = () => {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Care Actions</p>
-                  <p className="text-3xl font-bold text-gray-900">{analyticsData?.dashboard.recentCareLogs || 0}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Care Actions</p>
+                  <p className="text-3xl font-bold text-foreground">{analyticsData?.dashboard.recentCareLogs || 0}</p>
                 </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Activity className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/40 rounded-lg flex items-center justify-center">
+                  <Activity className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
               </div>
-              <div className="mt-3 flex items-center text-sm text-gray-500">This week</div>
+              <div className="mt-3 flex items-center text-sm text-muted-foreground">This week</div>
             </CardContent>
           </Card>
         </div>

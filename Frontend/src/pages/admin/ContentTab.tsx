@@ -200,48 +200,48 @@ export function ContentTab() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-muted/50 dark:bg-muted/30 border-b border-border">
                 <tr>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Title</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Author</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Status</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Score</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Comments</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Created</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Actions</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Title</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Author</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Status</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Score</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Comments</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Created</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {filteredPosts.map((post) => (
                   <tr
                     key={post._id}
-                    className={`hover:bg-gray-50 transition-colors ${
-                      post.status === 'hidden' ? 'bg-amber-50/30' : 
-                      post.status === 'deleted' ? 'bg-rose-50/30' : ''
+                    className={`hover:bg-muted/30 dark:hover:bg-muted/20 transition-colors ${
+                      post.status === 'hidden' ? 'bg-amber-50/30 dark:bg-amber-950/20' : 
+                      post.status === 'deleted' ? 'bg-rose-50/30 dark:bg-rose-950/20' : ''
                     }`}
                   >
                     <td className="py-4 px-6">
-                      <div className="font-medium text-gray-900 max-w-xs truncate" title={post.title}>
+                      <div className="font-medium text-foreground max-w-xs truncate" title={post.title}>
                         {post.title}
                       </div>
-                      <div className="text-sm text-gray-500 max-w-xs truncate" title={post.body}>
+                      <div className="text-sm text-muted-foreground max-w-xs truncate" title={post.body}>
                         {post.body || 'No content'}
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-800">{post.authorName}</div>
+                      <div className="text-foreground">{post.authorName}</div>
                     </td>
                     <td className="py-4 px-6">
                       {getStatusBadge(post.status)}
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-600">{post.score}</div>
+                      <div className="text-muted-foreground">{post.score}</div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-600">{post.commentsCount}</div>
+                      <div className="text-muted-foreground">{post.commentsCount}</div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-600 text-sm">{formatDate(post.createdAt)}</div>
+                      <div className="text-muted-foreground text-sm">{formatDate(post.createdAt)}</div>
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex gap-2">
@@ -295,8 +295,8 @@ export function ContentTab() {
             </table>
             {filteredPosts.length === 0 && (
               <div className="text-center py-12">
-                <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                <p className="text-gray-500">No content found</p>
+                <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">No content found</p>
               </div>
             )}
           </div>
@@ -315,34 +315,34 @@ export function ContentTab() {
             {dialogAction === 'view' && selectedPost ? (
               <div className="space-y-4 text-left pt-4">
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{selectedPost.title}</h3>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <h3 className="text-xl font-semibold text-foreground mb-2">{selectedPost.title}</h3>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <span className="font-medium">By {selectedPost.authorName}</span>
                     <span>•</span>
                     <span>{formatDate(selectedPost.createdAt)}</span>
                     {selectedPost.isSolved && (
                       <>
                         <span>•</span>
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">✓ Solved</Badge>
+                        <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300">✓ Solved</Badge>
                       </>
                     )}
                   </div>
                 </div>
                 
-                <div className="border-t pt-4">
-                  <h4 className="font-medium text-gray-900 mb-2">Post Content:</h4>
-                  <div className="prose max-w-none text-gray-800 whitespace-pre-wrap bg-gray-50 p-4 rounded-lg min-h-[100px]">
+                <div className="border-t border-border pt-4">
+                  <h4 className="font-medium text-foreground mb-2">Post Content:</h4>
+                  <div className="prose max-w-none text-foreground whitespace-pre-wrap bg-muted/50 dark:bg-muted/30 p-4 rounded-lg min-h-[100px]">
                     {selectedPost.body && selectedPost.body.trim().length > 0 ? (
                       selectedPost.body
                     ) : (
-                      <span className="text-gray-400 italic">This post has no text content. It may contain only a title or images.</span>
+                      <span className="text-muted-foreground italic">This post has no text content. It may contain only a title or images.</span>
                     )}
                   </div>
                 </div>
 
                 {selectedPost.images && selectedPost.images.length > 0 && (
-                  <div className="border-t pt-4">
-                    <h4 className="font-medium text-gray-900 mb-2">Images ({selectedPost.images.length}):</h4>
+                  <div className="border-t border-border pt-4">
+                    <h4 className="font-medium text-foreground mb-2">Images ({selectedPost.images.length}):</h4>
                     <div className="grid grid-cols-2 gap-3">
                       {selectedPost.images.map((image, idx) => (
                         <div key={idx} className="border rounded-lg overflow-hidden bg-gray-50">

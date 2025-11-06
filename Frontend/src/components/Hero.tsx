@@ -25,28 +25,28 @@ export function Hero() {
     handleStartGrowing();
   };
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-green-50 via-white to-blue-50">
+    <section className="relative overflow-hidden bg-gradient-to-br from-green-50 via-background to-blue-50 dark:from-green-950/20 dark:via-background dark:to-blue-950/20">
       {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,hsl(120_100%_25%/0.1),transparent_70%)]"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,hsl(120_100%_25%/0.1),transparent_70%)] dark:bg-[radial-gradient(circle_at_50%_120%,hsl(120_100%_25%/0.2),transparent_70%)]"></div>
       
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Content */}
           <div className="space-y-8">
             <div className="space-y-4">
-              <div className="inline-flex items-center space-x-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-medium">
+              <div className="inline-flex items-center space-x-2 bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 px-4 py-2 rounded-full text-sm font-medium">
                 <Sparkles className="w-4 h-4" />
                 <span>AI-Powered Plant Care</span>
               </div>
               
-              <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 leading-tight">
+              <h1 className="text-4xl lg:text-6xl font-bold text-foreground leading-tight">
                 Your Smart
                 <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent"> Gardening</span>
                 <br />
                 Assistant
               </h1>
               
-              <p className="text-lg text-gray-600 max-w-lg">
+              <p className="text-lg text-muted-foreground max-w-lg">
                 Transform your gardening journey with AI-powered plant care, personalized reminders, and a thriving community of plant lovers. Never lose a plant again.
               </p>
             </div>
@@ -56,7 +56,7 @@ export function Hero() {
               {/* Start Growing Today Button */}
               <button
                 onClick={handleStartGrowing}
-                className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 hover:scale-105 hover:shadow-lg transform transition-all duration-200 ease-out group"
+                className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-green-600 dark:bg-green-700 text-white font-semibold rounded-lg hover:bg-green-700 dark:hover:bg-green-600 hover:scale-105 hover:shadow-lg transform transition-all duration-200 ease-out group"
               >
                 {isAuthenticated ? 'Go to Dashboard' : 'Start Growing Today'}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -67,18 +67,18 @@ export function Hero() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-6 pt-8 border-t border-gray-200">
+            <div className="grid grid-cols-3 gap-6 pt-8 border-t border-border">
               <div className="text-center sm:text-left">
-                <div className="text-2xl font-bold text-green-600">10K+</div>
-                <div className="text-sm text-gray-500">Plants Tracked</div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-500">10K+</div>
+                <div className="text-sm text-muted-foreground">Plants Tracked</div>
               </div>
               <div className="text-center sm:text-left">
-                <div className="text-2xl font-bold text-green-600">5K+</div>
-                <div className="text-sm text-gray-500">Happy Gardeners</div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-500">5K+</div>
+                <div className="text-sm text-muted-foreground">Happy Gardeners</div>
               </div>
               <div className="text-center sm:text-left">
-                <div className="text-2xl font-bold text-green-600">95%</div>
-                <div className="text-sm text-gray-500">Plant Survival Rate</div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-500">95%</div>
+                <div className="text-sm text-muted-foreground">Plant Survival Rate</div>
               </div>
             </div>
           </div>
