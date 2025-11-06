@@ -30,20 +30,32 @@ const Community = () => {
         ]);
 
         // Map the response to match expected format
-        const mappedPosts = postsResponse.data.posts.map((post: any) => ({
-          _id: post._id,
-          title: post.title,
-          content: post.bodyMarkdown || post.body,
-          likes: post.voteScore ?? post.score ?? 0,
-          voteScore: post.voteScore ?? post.score ?? 0,
-          userVote: post.userVote,
-          comments: post.commentCount || 0,
-          tags: post.tags || [],
-          isPinned: post.isPinned || false,
-          author: post.author,
-          createdAt: new Date(post.createdAt),
-          updatedAt: new Date(post.updatedAt || post.createdAt),
-        }));
+        const mappedPosts = postsResponse.data.posts.map((post: any) => {
+          // Backend returns voteScore (sum of all votes) and userVote (current user's vote)
+          const score = post.voteScore ?? post.score ?? 0;
+          console.log('📊 Post mapping:', { 
+            title: post.title, 
+            voteScore: post.voteScore, 
+            score: post.score, 
+            finalScore: score,
+            userVote: post.userVote 
+          });
+          
+          return {
+            _id: post._id,
+            title: post.title,
+            content: post.bodyMarkdown || post.body,
+            likes: score,
+            voteScore: score,
+            userVote: post.userVote ?? null,
+            comments: post.commentCount || 0,
+            tags: post.tags || [],
+            isPinned: post.isPinned || false,
+            author: post.author,
+            createdAt: new Date(post.createdAt),
+            updatedAt: new Date(post.updatedAt || post.createdAt),
+          };
+        });
 
         setPosts(mappedPosts);
         
@@ -276,13 +288,19 @@ const Community = () => {
                             <div className="flex items-center">
                               <VoteButton
                                 postId={post._id}
-                                initialScore={(post as any).voteScore ?? (post as any).score ?? post.likes ?? 0}
-                                initialUserVote={(post as any).userVote}
+                                initialScore={(post as any).voteScore ?? post.likes ?? 0}
+                                initialUserVote={(post as any).userVote ?? null}
                                 onVoteChange={(newScore, newVote) => {
+                                  console.log('📊 Vote changed:', { postId: post._id, newScore, newVote });
                                   // Update local state for UI feedback
                                   setPosts(prevPosts =>
                                     prevPosts.map(p =>
-                                      p._id === post._id ? { ...p, likes: newScore, voteScore: newScore, userVote: newVote } : p
+                                      p._id === post._id ? { 
+                                        ...p, 
+                                        likes: newScore, 
+                                        voteScore: newScore, 
+                                        userVote: newVote 
+                                      } : p
                                     )
                                   );
                                 }}

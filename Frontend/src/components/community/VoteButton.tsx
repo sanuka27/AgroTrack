@@ -35,7 +35,9 @@ export default function VoteButton({
     setIsVoting(true);
 
     try {
+      console.log('🗳️ Voting:', { postId, value, currentScore: score, currentUserVote: userVote });
       const response = await communityForumApi.votePost(postId, { value });
+      console.log('🗳️ Vote response:', response.data);
       // Update with server values (server handles all the toggle logic)
       setScore(response.data.voteScore);
       setUserVote(response.data.userVote ?? null);
