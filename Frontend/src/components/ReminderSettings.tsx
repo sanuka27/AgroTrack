@@ -248,6 +248,7 @@ export const ReminderSettings: React.FC<ReminderSettingsProps> = ({
               <Label htmlFor="advance-notice">Advance Notice (Days)</Label>
               <Input
                 id="advance-notice"
+                className="bg-background"
                 type="number"
                 min="0"
                 max="30"
@@ -268,6 +269,7 @@ export const ReminderSettings: React.FC<ReminderSettingsProps> = ({
               <Label htmlFor="max-reminders">Max Reminders Per Day</Label>
               <Input
                 id="max-reminders"
+                className="bg-background"
                 type="number"
                 min="1"
                 max="50"
@@ -356,6 +358,7 @@ export const ReminderSettings: React.FC<ReminderSettingsProps> = ({
                   <Label htmlFor="quiet-start">Start Time</Label>
                   <Input
                     id="quiet-start"
+                    className="bg-background"
                     type="time"
                     value={preferences.quietHours.start}
                     onChange={(e) =>
@@ -370,6 +373,7 @@ export const ReminderSettings: React.FC<ReminderSettingsProps> = ({
                   <Label htmlFor="quiet-end">End Time</Label>
                   <Input
                     id="quiet-end"
+                    className="bg-background"
                     type="time"
                     value={preferences.quietHours.end}
                     onChange={(e) =>
@@ -395,9 +399,9 @@ export const ReminderSettings: React.FC<ReminderSettingsProps> = ({
               {plants.map((plant) => {
                 const plantSettings = preferences.plantSpecificSettings[plant.id] || { enabled: true };
                 return (
-                  <div key={plant.id} className="border rounded-lg p-3">
+                  <div key={plant.id} className="border border-border rounded-lg p-3 bg-muted/30">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium">{plant.name}</h4>
+                      <h4 className="font-medium text-foreground">{plant.name}</h4>
                       <Switch
                         checked={plantSettings.enabled}
                         onCheckedChange={(checked) =>
@@ -420,7 +424,7 @@ export const ReminderSettings: React.FC<ReminderSettingsProps> = ({
       </div>
 
       {/* Save/Cancel Actions */}
-      <div className="flex justify-end gap-2 pt-4 border-t">
+      <div className="flex justify-end gap-2 pt-4 border-t border-border">
         <Button variant="outline" onClick={onClose} disabled={saving}>
           Cancel
         </Button>
