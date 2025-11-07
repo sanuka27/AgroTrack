@@ -71,13 +71,13 @@ const HowItWorksPage = () => {
         {/* Hero Section */}
         <section className="text-center space-y-6" role="banner">
           <div className="space-y-4">
-            <Badge className="bg-green-100 text-green-800 px-4 py-2 text-sm font-medium">
+            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-4 py-2 text-sm font-medium">
               Simple • Smart • Effective
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight dark:text-slate-200">
               How AgroTrack Works
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed dark:text-slate-300">
               Transform your gardening journey with our AI-powered plant care system. 
               From identification to harvest, we guide you every step of the way.
             </p>
@@ -101,10 +101,10 @@ const HowItWorksPage = () => {
         {/* Steps Section */}
         <section className="space-y-8" role="main">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl font-bold text-foreground mb-4 dark:text-slate-200">
               Three Simple Steps to Plant Success
             </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-2xl mx-auto dark:text-slate-300">
               Our streamlined process makes plant care accessible to everyone, 
               from beginners to experienced gardeners.
             </p>
@@ -112,7 +112,7 @@ const HowItWorksPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {steps.map((step, index) => (
-              <Card key={step.step} className="rounded-2xl ring-1 ring-gray-200 shadow-sm hover:shadow-md transition-shadow p-6 relative">
+              <Card key={step.step} className="rounded-2xl ring-1 ring-border bg-card shadow-sm hover:shadow-md transition-shadow p-6 relative">
                 <CardHeader className="text-center pb-4">
                   <div className={`w-16 h-16 mx-auto rounded-full bg-gradient-to-r ${step.color} flex items-center justify-center mb-4`}>
                     <step.icon className="w-8 h-8 text-white" />
@@ -122,18 +122,18 @@ const HowItWorksPage = () => {
                       Step {step.step}
                     </Badge>
                   </div>
-                  <CardTitle className="text-xl font-semibold text-gray-900">
+                  <CardTitle className="text-xl font-semibold text-foreground">
                     {step.title}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-center space-y-4">
-                  <CardDescription className="text-gray-600 leading-relaxed">
+                  <CardDescription className="text-muted-foreground leading-relaxed">
                     {step.description}
                   </CardDescription>
                   
                   <div className="space-y-2">
                     {step.features.map((feature, featureIndex) => (
-                      <div key={featureIndex} className="flex items-center justify-center text-sm text-gray-700">
+                      <div key={featureIndex} className="flex items-center justify-center text-sm text-muted-foreground">
                         <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
                         <span>{feature}</span>
                       </div>
@@ -144,7 +144,7 @@ const HowItWorksPage = () => {
                 {/* Connection Arrow */}
                 {index < steps.length - 1 && (
                   <div className="hidden md:block absolute -right-4 top-1/2 transform -translate-y-1/2">
-                    <ArrowRight className="w-8 h-8 text-gray-300" />
+                    <ArrowRight className="w-8 h-8 text-muted-foreground" />
                   </div>
                 )}
               </Card>
@@ -153,23 +153,23 @@ const HowItWorksPage = () => {
         </section>
 
         {/* Benefits Section */}
-        <section className="bg-green-50 rounded-2xl p-8 space-y-6">
+        <section className="bg-muted/50 rounded-2xl p-8 space-y-6 dark:bg-white/5">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            <h2 className="text-2xl font-bold text-foreground mb-4">
               Why Choose AgroTrack?
             </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-2xl mx-auto">
               Join thousands of successful gardeners who've transformed their plant care with our proven system.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {benefits.map((benefit, index) => (
-              <div key={index} className="flex items-center space-x-3 bg-white rounded-lg p-4 shadow-sm">
-                <div className="bg-green-100 p-2 rounded-lg flex-shrink-0">
-                  <benefit.icon className="w-5 h-5 text-green-600" />
+              <div key={index} className="flex items-center space-x-3 bg-card rounded-lg p-4 shadow-sm">
+                <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg flex-shrink-0">
+                  <benefit.icon className="w-5 h-5 text-green-600 dark:text-green-300" />
                 </div>
-                <span className="text-gray-700 text-sm">{benefit.text}</span>
+                <span className="text-muted-foreground text-sm">{benefit.text}</span>
               </div>
             ))}
           </div>
@@ -187,13 +187,13 @@ const HowItWorksPage = () => {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button asChild size="lg" className="bg-white text-green-600 hover:bg-gray-100">
+            <Button asChild size="lg" className="bg-card text-green-600 hover:bg-muted/50">
               <Link to="/register">
                 Get Started Free
                 <Leaf className="w-5 h-5 ml-2" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="border-white/80 text-white bg-white/10 hover:bg-white hover:text-green-600 backdrop-blur-sm">
+            <Button asChild variant="outline" size="lg" className="border-border text-white bg-white/10 hover:bg-white/20 hover:text-green-600 backdrop-blur-sm dark:border-border">
               <Link to="/contact">
                 Contact Support
               </Link>
