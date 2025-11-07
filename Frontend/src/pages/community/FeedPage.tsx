@@ -201,7 +201,7 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
+    <div className="min-h-screen bg-background">
       <Header />
       
   <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -210,9 +210,9 @@ export default function FeedPage() {
           <div className="w-full flex justify-center">
             <div className="w-full max-w-3xl">
             {/* Header with nature-inspired gradient */}
-            <div className="bg-white rounded-2xl shadow-[0_2px_8px_hsl(120_100%_25%_/_0.08)] border border-green-100 p-6 mb-6 relative overflow-hidden">
+            <div className="bg-card rounded-2xl shadow-[0_2px_8px_hsl(120_100%_25%_/_0.08)] border border-border p-6 mb-6 relative overflow-hidden">
               {/* Background gradient accent */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full blur-3xl opacity-30 -z-10" />
+              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 rounded-full blur-3xl opacity-30 -z-10" />
               
               <div className="flex items-center justify-between mb-4 relative">
                 <div className="flex items-center gap-3">
@@ -236,13 +236,13 @@ export default function FeedPage() {
 
               {/* Filters with AgroTrack styling */}
               <div className="flex items-center gap-4 flex-wrap">
-                <div className="flex items-center gap-2 bg-green-50 rounded-xl p-1.5 border border-green-200">
+                <div className="flex items-center gap-2 bg-muted/50 rounded-xl p-1.5 border border-border">
                   <button
                     onClick={() => handleSortChange('top')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
                       sort === 'top'
-                        ? 'bg-white text-green-800 shadow-[0_2px_8px_hsl(120_100%_25%_/_0.08)] border border-green-200'
-                        : 'text-green-700 hover:text-green-900 hover:bg-green-100'
+                        ? 'bg-card text-foreground shadow-[0_2px_8px_hsl(120_100%_25%_/_0.08)] border border-border'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     }`}
                   >
                     <TrendingUp className="w-4 h-4" />
@@ -252,8 +252,8 @@ export default function FeedPage() {
                     onClick={() => handleSortChange('latest')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
                       sort === 'latest'
-                        ? 'bg-white text-green-800 shadow-[0_2px_8px_hsl(120_100%_25%_/_0.08)] border border-green-200'
-                        : 'text-green-700 hover:text-green-900 hover:bg-green-100'
+                        ? 'bg-card text-foreground shadow-[0_2px_8px_hsl(120_100%_25%_/_0.08)] border border-border'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     }`}
                   >
                     <Clock className="w-4 h-4" />
@@ -262,7 +262,7 @@ export default function FeedPage() {
                 </div>
 
                 {tag && (
-                  <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-100 to-green-100 text-green-800 rounded-lg text-sm border border-green-300">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 text-foreground rounded-lg text-sm border border-border">
                     <Filter className="w-4 h-4" />
                     <span className="font-medium">#{tag}</span>
                     <button
@@ -276,8 +276,8 @@ export default function FeedPage() {
               </div>
 
               {!user && (
-                <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-                  <p className="text-sm text-green-800">
+                <div className="mt-4 p-4 bg-muted/50 border border-border rounded-xl">
+                  <p className="text-sm text-foreground">
                     <button
                         onClick={() => navigate('/login')}
                       className="font-semibold underline hover:no-underline hover:text-green-900 transition-colors"
@@ -290,8 +290,8 @@ export default function FeedPage() {
               )}
 
               {user && (
-                <div className="mt-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-                  <p className="text-xs text-green-700 flex items-center gap-2">
+                <div className="mt-4 p-3 bg-muted/50 border border-border rounded-xl">
+                  <p className="text-xs text-muted-foreground flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />
                     <span><strong>Keyboard shortcuts:</strong> C = new post, J/K = navigate, A/Z = vote, Enter = open</span>
                   </p>
@@ -302,11 +302,11 @@ export default function FeedPage() {
             {/* Posts */}
             <div className="space-y-4 relative">
               {posts.length === 0 && !loading ? (
-                <div className="bg-white rounded-2xl shadow-[0_2px_8px_hsl(120_100%_25%_/_0.08)] border border-green-100 p-16 text-center">
+                <div className="bg-card rounded-2xl shadow-[0_2px_8px_hsl(120_100%_25%_/_0.08)] border border-border p-16 text-center">
                   <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <MessageSquare className="w-8 h-8 text-green-600" />
                   </div>
-                  <p className="text-gray-600 text-lg">
+                  <p className="text-muted-foreground text-lg">
                     {tag ? `No posts found with tag #${tag}` : 'No posts yet. Be the first to share your gardening experience!'}
                   </p>
                 </div>
@@ -328,7 +328,7 @@ export default function FeedPage() {
 
                   {/* Teaser card shown to guests after top 3 */}
                   {!isAuthenticated && (
-                    <div className="bg-white rounded-2xl shadow-[0_8px_32px_hsl(120_100%_25%_/_0.16)] border-2 border-green-300 p-8 mb-4 text-center relative overflow-hidden">
+                    <div className="bg-card rounded-2xl shadow-[0_8px_32px_hsl(120_100%_25%_/_0.16)] border-2 border-border p-8 mb-4 text-center relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full blur-3xl opacity-40 -z-10" />
                       <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-green-50 to-emerald-50 rounded-full blur-2xl opacity-50 -z-10" />
                       
@@ -337,11 +337,11 @@ export default function FeedPage() {
                           <Lock className="w-8 h-8 text-white" />
                         </div>
                         
-                        <h3 className="text-2xl font-bold bg-gradient-to-r from-green-800 to-emerald-700 bg-clip-text text-transparent mb-3">
+                        <h3 className="text-2xl font-bold bg-gradient-to-r from-green-800 to-emerald-700 dark:from-green-300 dark:to-emerald-300 bg-clip-text text-transparent mb-3">
                           Want to see more?
                         </h3>
                         
-                        <p className="text-gray-700 mb-6 leading-relaxed">
+                        <p className="text-muted-foreground mb-6 leading-relaxed">
                           Sign in to view all community posts, share your gardening experiences, vote on topics, and join the conversation!
                         </p>
                         
@@ -355,7 +355,7 @@ export default function FeedPage() {
                           </button>
                           <button
                             onClick={() => navigate('/signup')}
-                            className="px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-800 rounded-xl font-semibold transition-all duration-300 border border-gray-300 hover:shadow-sm"
+                            className="px-6 py-3 bg-muted/50 hover:bg-muted text-foreground rounded-xl font-semibold transition-all duration-300 border border-border hover:shadow-sm"
                           >
                             Sign Up
                           </button>
