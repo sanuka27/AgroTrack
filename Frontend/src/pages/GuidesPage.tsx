@@ -138,10 +138,10 @@ const GuidesPage = () => {
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'Beginner': return 'bg-green-100 text-green-800';
-      case 'Intermediate': return 'bg-yellow-100 text-yellow-800';
-      case 'Advanced': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Beginner': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+      case 'Intermediate': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+      case 'Advanced': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      default: return 'bg-muted/50 text-muted-foreground';
     }
   };
 
@@ -153,13 +153,13 @@ const GuidesPage = () => {
         {/* Hero Section */}
         <section className="text-center space-y-6 mb-12" role="banner">
           <div className="space-y-4">
-            <Badge className="bg-green-100 text-green-800 px-4 py-2 text-sm font-medium">
+            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 px-4 py-2 text-sm font-medium">
               Expert Knowledge
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight">
               Plant Care Guides
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
               Comprehensive guides to help you grow healthy, thriving plants. 
               From beginner tips to advanced techniques, we've got you covered.
             </p>
@@ -170,12 +170,12 @@ const GuidesPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Left Sidebar - Category Filters */}
           <aside className="lg:col-span-1" role="complementary">
-            <Card className="rounded-2xl ring-1 ring-gray-200 shadow-sm p-6 sticky top-8">
+            <Card className="rounded-2xl ring-1 ring-border bg-card shadow-sm p-6 sticky top-8">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-semibold text-gray-900">
+                <CardTitle className="text-lg font-semibold text-foreground">
                   Categories
                 </CardTitle>
-                <CardDescription className="text-sm text-gray-600">
+                <CardDescription className="text-sm text-muted-foreground">
                   Filter guides by topic
                 </CardDescription>
               </CardHeader>
@@ -186,13 +186,13 @@ const GuidesPage = () => {
                     onClick={() => setSelectedCategory(category.id)}
                     className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all text-left ${
                       selectedCategory === category.id
-                        ? 'bg-green-100 text-green-800 ring-1 ring-green-200'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 ring-1 ring-green-200'
+                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                     }`}
                   >
                     <category.icon className="w-5 h-5 flex-shrink-0" />
                     <span className="font-medium">{category.label}</span>
-                    <span className="ml-auto text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">
+                    <span className="ml-auto text-xs bg-muted/50 text-muted-foreground px-2 py-1 rounded-full">
                       {category.id === 'All' 
                         ? mockGuides.length 
                         : mockGuides.filter(g => g.category === category.id).length
@@ -208,10 +208,10 @@ const GuidesPage = () => {
           <section className="lg:col-span-3" role="main">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-semibold text-gray-900">
+                <h2 className="text-2xl font-semibold text-foreground">
                   {selectedCategory === 'All' ? 'All Guides' : `${selectedCategory} Guides`}
                 </h2>
-                <p className="text-gray-600 mt-1">
+                <p className="text-muted-foreground mt-1">
                   {filteredGuides.length} guide{filteredGuides.length !== 1 ? 's' : ''} available
                 </p>
               </div>
@@ -220,14 +220,14 @@ const GuidesPage = () => {
             {/* Guide Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {filteredGuides.map((guide) => (
-                <Card key={guide.id} className="rounded-2xl ring-1 ring-gray-200 shadow-sm hover:shadow-md transition-shadow p-6 group">
+                <Card key={guide.id} className="rounded-2xl ring-1 ring-border bg-card shadow-sm hover:shadow-md transition-shadow p-6 group">
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <CardTitle className="text-lg font-semibold text-gray-900 leading-tight mb-2 group-hover:text-green-600 transition-colors">
+                        <CardTitle className="text-lg font-semibold text-foreground leading-tight mb-2 group-hover:text-green-600 transition-colors">
                           {guide.title}
                         </CardTitle>
-                        <CardDescription className="text-gray-600 leading-relaxed">
+                        <CardDescription className="text-muted-foreground leading-relaxed">
                           {guide.description}
                         </CardDescription>
                       </div>
@@ -245,7 +245,7 @@ const GuidesPage = () => {
                     </div>
 
                     {/* Metadata */}
-                    <div className="flex items-center justify-between text-sm text-gray-500 border-t border-gray-100 pt-4">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground border-t border-border pt-4">
                       <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-1">
                           <User className="w-4 h-4" />
@@ -264,7 +264,7 @@ const GuidesPage = () => {
                     {/* Read More Button */}
                     <Button 
                       disabled 
-                      className="w-full bg-gray-100 text-gray-400 cursor-not-allowed hover:bg-gray-100"
+                      className="w-full bg-muted/50 text-muted-foreground cursor-not-allowed hover:bg-muted/50"
                       size="sm"
                     >
                       Read More
@@ -278,14 +278,14 @@ const GuidesPage = () => {
             {/* Empty State */}
             {filteredGuides.length === 0 && (
               <div className="text-center py-12">
-                <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-foreground mb-2">
                   No guides found
                 </h3>
-                <p className="text-gray-600 mb-6">
+                <p className="text-muted-foreground mb-6">
                   Try selecting a different category to see more guides.
                 </p>
-                <Button onClick={() => setSelectedCategory('All')} variant="outline">
+                <Button onClick={() => setSelectedCategory('All')} variant="outline" className="border-border text-foreground">
                   View All Guides
                 </Button>
               </div>
@@ -294,7 +294,7 @@ const GuidesPage = () => {
         </div>
 
         {/* CTA Section */}
-        <section className="mt-16 text-center bg-gradient-to-r from-green-600 to-emerald-700 rounded-2xl p-8 text-white space-y-6">
+  <section className="mt-16 text-center bg-gradient-to-r from-green-600 to-emerald-700 rounded-2xl p-8 text-white space-y-6">
           <div className="space-y-4">
             <h2 className="text-3xl font-bold">
               Ready to Apply What You've Learned?
@@ -305,13 +305,13 @@ const GuidesPage = () => {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button asChild size="lg" className="bg-white text-green-600 hover:bg-gray-100">
+            <Button asChild size="lg" className="bg-card text-green-600 hover:bg-muted/50">
               <Link to="/register">
                 Start Your Garden
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-green-600">
+            <Button asChild variant="outline" size="lg" className="border-border text-white bg-white/10 hover:bg-white/20 hover:text-green-600">
               <Link to="/how-it-works">
                 How It Works
               </Link>

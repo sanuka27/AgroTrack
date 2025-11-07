@@ -146,14 +146,14 @@ const FAQPage = () => {
         {/* Hero Section */}
         <section className="text-center space-y-6" role="banner">
           <div className="space-y-4">
-            <Badge className="bg-blue-100 text-blue-800 px-4 py-2 text-sm font-medium">
+            <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-4 py-2 text-sm font-medium">
               <HelpCircle className="w-4 h-4 mr-2" />
               Help Center
             </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight">
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight">
               Frequently Asked Questions
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
               Find quick answers to common questions about using AgroTrack. 
               Can't find what you're looking for? We're here to help!
             </p>
@@ -163,13 +163,13 @@ const FAQPage = () => {
         {/* Search Section */}
         <section className="max-w-2xl mx-auto space-y-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
             <Input
               type="text"
               placeholder="Search frequently asked questions..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 py-3 text-lg rounded-2xl ring-1 ring-gray-200 focus:ring-green-500 focus:border-green-500"
+              className="pl-10 py-3 text-lg rounded-2xl ring-1 ring-border focus:ring-green-500 focus:border-green-500 text-muted-foreground bg-card"
               aria-label="Search FAQ questions"
             />
           </div>
@@ -177,7 +177,7 @@ const FAQPage = () => {
           {/* Category Pills */}
           <div className="flex flex-wrap gap-2 justify-center">
             {categories.map((category) => (
-              <Badge key={category.name} className={`${category.color} px-3 py-1 text-sm font-medium`}>
+              <Badge key={category.name} className={`${category.color} dark:bg-white/5 dark:text-muted-foreground px-3 py-1 text-sm font-medium`}>
                 {category.name} ({category.count})
               </Badge>
             ))}
@@ -185,7 +185,7 @@ const FAQPage = () => {
 
           {/* Search Results Info */}
           {searchQuery && (
-            <div className="text-center text-gray-600">
+            <div className="text-center text-muted-foreground">
               {filteredFAQs.length > 0 ? (
                 <span>Found {filteredFAQs.length} question{filteredFAQs.length !== 1 ? 's' : ''} matching "{searchQuery}"</span>
               ) : (
@@ -197,18 +197,18 @@ const FAQPage = () => {
 
         {/* FAQ Content */}
         <section className="max-w-4xl mx-auto space-y-6" role="main">
-          {filteredFAQs.length > 0 ? (
-            <Card className="rounded-2xl ring-1 ring-gray-200 shadow-sm p-6">
+            {filteredFAQs.length > 0 ? (
+            <Card className="rounded-2xl ring-1 ring-border bg-card shadow-sm p-6">
               <Accordion type="single" collapsible className="space-y-4">
                 {filteredFAQs.map((faq) => (
-                  <AccordionItem key={faq.id} value={faq.id} className="border-b border-gray-100 last:border-b-0">
+                  <AccordionItem key={faq.id} value={faq.id} className="border-b border-border last:border-b-0">
                     <AccordionTrigger className="hover:no-underline hover:text-green-600 transition-colors text-left py-4">
                       <div className="flex items-start space-x-3">
-                        <div className="bg-green-100 p-2 rounded-lg flex-shrink-0 mt-1">
-                          <faq.icon className="w-5 h-5 text-green-600" />
+                        <div className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg flex-shrink-0 mt-1">
+                          <faq.icon className="w-5 h-5 text-green-600 dark:text-green-300" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900 leading-tight">
+                          <h3 className="text-lg font-semibold text-foreground leading-tight">
                             {faq.question}
                           </h3>
                           <div className="flex items-center space-x-2 mt-2">
@@ -226,7 +226,7 @@ const FAQPage = () => {
                     </AccordionTrigger>
                     <AccordionContent className="pb-4 pl-14">
                       <div className="prose prose-gray max-w-none">
-                        <p className="text-gray-700 leading-relaxed">
+                        <p className="text-muted-foreground leading-relaxed">
                           {faq.answer}
                         </p>
                       </div>
@@ -237,18 +237,18 @@ const FAQPage = () => {
             </Card>
           ) : (
             /* No Results State */
-            <Card className="rounded-2xl ring-1 ring-gray-200 shadow-sm p-12 text-center">
-              <HelpCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <Card className="rounded-2xl ring-1 ring-border bg-card shadow-sm p-12 text-center">
+              <HelpCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-foreground mb-2">
                 No questions found
               </h3>
-              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                 We couldn't find any FAQ items matching your search. Try different keywords or browse all questions.
               </p>
               <Button 
                 onClick={() => setSearchQuery('')}
                 variant="outline"
-                className="rounded-2xl border-gray-300 text-gray-700 hover:bg-gray-50"
+                className="rounded-2xl border-border text-foreground hover:bg-muted/50"
               >
                 Clear Search
               </Button>
@@ -260,24 +260,24 @@ const FAQPage = () => {
         <section className="max-w-4xl mx-auto space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Contact Support Card */}
-            <Card className="rounded-2xl ring-1 ring-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+            <Card className="rounded-2xl ring-1 ring-border bg-card shadow-sm p-6 hover:shadow-md transition-shadow">
               <CardHeader className="pb-4">
                 <div className="flex items-center space-x-3">
-                  <div className="bg-blue-100 p-3 rounded-lg">
-                    <MessageCircle className="w-6 h-6 text-blue-600" />
+                  <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg">
+                    <MessageCircle className="w-6 h-6 text-blue-600 dark:text-blue-300" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg font-semibold text-gray-900">
+                    <CardTitle className="text-lg font-semibold text-foreground">
                       Still Need Help?
                     </CardTitle>
-                    <CardDescription className="text-gray-600">
+                    <CardDescription className="text-muted-foreground">
                       Get personalized support from our team
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-gray-700 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Can't find the answer you're looking for? Our support team is ready to help with any questions about your plants or account.
                 </p>
                 <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-medium">
@@ -290,27 +290,27 @@ const FAQPage = () => {
             </Card>
 
             {/* Community Card */}
-            <Card className="rounded-2xl ring-1 ring-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+            <Card className="rounded-2xl ring-1 ring-border bg-card shadow-sm p-6 hover:shadow-md transition-shadow">
               <CardHeader className="pb-4">
                 <div className="flex items-center space-x-3">
-                  <div className="bg-green-100 p-3 rounded-lg">
-                    <Users className="w-6 h-6 text-green-600" />
+                  <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg">
+                    <Users className="w-6 h-6 text-green-600 dark:text-green-300" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg font-semibold text-gray-900">
+                    <CardTitle className="text-lg font-semibold text-foreground">
                       Join the Community
                     </CardTitle>
-                    <CardDescription className="text-gray-600">
+                    <CardDescription className="text-muted-foreground">
                       Learn from fellow plant enthusiasts
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-gray-700 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Connect with thousands of gardeners sharing tips, experiences, and advice. Get help with plant identification and care.
                 </p>
-                <Button asChild variant="outline" className="w-full rounded-2xl border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400">
+                <Button asChild variant="outline" className="w-full rounded-2xl border-border text-foreground hover:bg-muted/50 hover:border-border">
                   <Link to="/community">
                     Explore Community
                     <ArrowRight className="w-4 h-4 ml-2" />
