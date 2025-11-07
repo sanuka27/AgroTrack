@@ -210,7 +210,7 @@ export function Overview() {
         </Card>
 
         {/* Recent Activity */}
-        <Card className="rounded-2xl ring-1 ring-slate-200 shadow-sm">
+        <Card className="rounded-2xl ring-1 ring-border shadow-sm">
           <CardHeader>
             <CardTitle className="text-xl font-semibold">Recent Activity</CardTitle>
             <CardDescription>Live system events</CardDescription>

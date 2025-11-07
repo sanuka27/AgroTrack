@@ -365,7 +365,7 @@ export function UsersTab() {
                 <div
                   role="listbox"
                   aria-label="User suggestions"
-                  className="absolute z-50 mt-1 w-full rounded-md bg-white ring-1 ring-black/5 shadow-lg overflow-hidden"
+                  className="absolute z-50 mt-1 w-full rounded-md bg-card border border-border ring-1 ring-black/5 dark:ring-white/10 shadow-lg overflow-hidden"
                 >
                   {suggestions.map((s, i) => (
                     <div
@@ -382,10 +382,10 @@ export function UsersTab() {
                         setTimeout(() => inputRef.current?.focus(), 0);
                       }}
                       onMouseEnter={() => setActiveIndex(i)}
-                      className={`px-3 py-2 cursor-pointer hover:bg-gray-50 flex flex-col ${i === activeIndex ? 'bg-gray-50' : ''}`}
+                      className={`px-3 py-2 cursor-pointer hover:bg-muted flex flex-col ${i === activeIndex ? 'bg-muted' : ''}`}
                     >
-                      <span className="font-medium text-sm text-gray-900">{highlightMatch(s.name, debouncedSearch)}</span>
-                      <span className="text-xs text-gray-500">{highlightMatch(s.email, debouncedSearch)}</span>
+                      <span className="font-medium text-sm text-foreground">{highlightMatch(s.name, debouncedSearch)}</span>
+                      <span className="text-xs text-muted-foreground">{highlightMatch(s.email, debouncedSearch)}</span>
                     </div>
                   ))}
                 </div>
@@ -415,30 +415,30 @@ export function UsersTab() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-muted/50 border-b border-border">
                 <tr>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Name</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Email</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Role</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Status</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Joined</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Actions</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Name</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Email</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Role</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Status</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Joined</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {filteredUsers.map((user, index) => (
                   <tr 
                     key={user._id} 
-                    className={`hover:bg-gray-50 transition-colors ${
+                    className={`hover:bg-muted/50 transition-colors ${
                       index < 3 ? 'animate-[slideIn_0.3s_ease-out]' : ''
                     }`}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <td className="py-4 px-6">
-                      <div className="font-medium text-gray-900">{highlightMatch(user.name, debouncedSearch)}</div>
+                      <div className="font-medium text-foreground">{highlightMatch(user.name, debouncedSearch)}</div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-600">{highlightMatch(user.email, debouncedSearch)}</div>
+                      <div className="text-muted-foreground">{highlightMatch(user.email, debouncedSearch)}</div>
                     </td>
                     <td className="py-4 px-6">
                       {getRoleBadge(user.role)}
@@ -447,7 +447,7 @@ export function UsersTab() {
                       {getStatusBadge(user)}
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-600">{formatDate(user.createdAt)}</div>
+                      <div className="text-muted-foreground">{formatDate(user.createdAt)}</div>
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-2">

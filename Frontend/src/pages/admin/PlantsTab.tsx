@@ -220,24 +220,24 @@ export function PlantsTab() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-muted/50 border-b border-border">
                 <tr>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Plant</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Owner</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Health</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Last Watered</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Sunlight</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Date Added</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Actions</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Plant</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Owner</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Health</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Last Watered</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Sunlight</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Date Added</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {filteredPlants.map((plant) => (
                   <tr
                     key={plant._id}
-                    className={`hover:bg-gray-50 transition-colors ${
-                      plant.health === 'Needs Attention' ? 'bg-amber-50/30' : 
-                      plant.health === 'Critical' ? 'bg-rose-50/30' : ''
+                    className={`hover:bg-muted/50 transition-colors ${
+                      plant.health === 'Needs Attention' ? 'bg-amber-50/30 dark:bg-amber-900/20' : 
+                      plant.health === 'Critical' ? 'bg-rose-50/30 dark:bg-rose-900/20' : ''
                     }`}
                   >
                     <td className="py-4 px-6">
@@ -249,40 +249,40 @@ export function PlantsTab() {
                             className="w-12 h-12 rounded-lg object-cover"
                           />
                         ) : (
-                          <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
-                            <Leaf className="w-6 h-6 text-green-600" />
+                          <div className="w-12 h-12 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                            <Leaf className="w-6 h-6 text-green-600 dark:text-green-400" />
                           </div>
                         )}
                         <div>
-                          <div className="font-medium text-gray-900">{plant.name}</div>
+                          <div className="font-medium text-foreground">{plant.name}</div>
                           {plant.species && (
-                            <div className="text-sm text-gray-500">{plant.species}</div>
+                            <div className="text-sm text-muted-foreground">{plant.species}</div>
                           )}
-                          <div className="text-xs text-gray-400">{plant.category}</div>
+                          <div className="text-xs text-muted-foreground">{plant.category}</div>
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-800">{plant.ownerName}</div>
-                      <div className="text-sm text-gray-500">{plant.ownerEmail}</div>
+                      <div className="text-foreground">{plant.ownerName}</div>
+                      <div className="text-sm text-muted-foreground">{plant.ownerEmail}</div>
                     </td>
                     <td className="py-4 px-6">
                       {getHealthBadge(plant.health)}
                     </td>
                     <td className="py-4 px-6">
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-muted-foreground">
                         <Droplets className="w-4 h-4 text-blue-500" />
                         <span className="text-sm">{formatLastWatered(plant.lastWatered)}</span>
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-muted-foreground">
                         <Sun className="w-4 h-4 text-amber-500" />
                         <span className="text-sm">{plant.sunlight}</span>
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="flex items-center gap-2 text-gray-600 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
                         <Calendar className="w-4 h-4" />
                         {formatDate(plant.createdAt)}
                       </div>
@@ -346,9 +346,9 @@ export function PlantsTab() {
                     </div>
                   )}
                   <div className="flex-1">
-                    <h3 className="text-2xl font-semibold text-gray-900 mb-1">{selectedPlant.name}</h3>
+                    <h3 className="text-2xl font-semibold text-foreground mb-1">{selectedPlant.name}</h3>
                     {selectedPlant.species && (
-                      <p className="text-gray-600 italic mb-2">{selectedPlant.species}</p>
+                      <p className="text-muted-foreground italic mb-2">{selectedPlant.species}</p>
                     )}
                     <div className="flex items-center gap-3">
                       {getHealthBadge(selectedPlant.health)}
@@ -359,51 +359,51 @@ export function PlantsTab() {
                 
                 <div className="border-t pt-4 grid grid-cols-2 gap-4">
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-1">Owner Information</h4>
-                    <p className="text-gray-800">{selectedPlant.ownerName}</p>
-                    <p className="text-sm text-gray-500">{selectedPlant.ownerEmail}</p>
+                    <h4 className="font-medium text-foreground mb-1">Owner Information</h4>
+                    <p className="text-foreground">{selectedPlant.ownerName}</p>
+                    <p className="text-sm text-muted-foreground">{selectedPlant.ownerEmail}</p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-1">Date Added</h4>
-                    <p className="text-gray-800">{formatDate(selectedPlant.createdAt)}</p>
+                    <h4 className="font-medium text-foreground mb-1">Date Added</h4>
+                    <p className="text-foreground">{formatDate(selectedPlant.createdAt)}</p>
                   </div>
                 </div>
 
                 <div className="border-t pt-4 grid grid-cols-3 gap-4">
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-1 flex items-center gap-2">
+                    <h4 className="font-medium text-foreground mb-1 flex items-center gap-2">
                       <Droplets className="w-4 h-4 text-blue-500" />
                       Last Watered
                     </h4>
-                    <p className="text-gray-800">{formatLastWatered(selectedPlant.lastWatered)}</p>
-                    <p className="text-sm text-gray-500">Every {selectedPlant.wateringFrequency} days</p>
+                    <p className="text-foreground">{formatLastWatered(selectedPlant.lastWatered)}</p>
+                    <p className="text-sm text-muted-foreground">Every {selectedPlant.wateringFrequency} days</p>
                   </div>
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-1 flex items-center gap-2">
+                    <h4 className="font-medium text-foreground mb-1 flex items-center gap-2">
                       <Sun className="w-4 h-4 text-amber-500" />
                       Sunlight
                     </h4>
-                    <p className="text-gray-800">{selectedPlant.sunlight}</p>
+                    <p className="text-foreground">{selectedPlant.sunlight}</p>
                   </div>
                   {selectedPlant.ageYears && (
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-1">Age</h4>
-                      <p className="text-gray-800">{selectedPlant.ageYears} years old</p>
+                      <h4 className="font-medium text-foreground mb-1">Age</h4>
+                      <p className="text-foreground">{selectedPlant.ageYears} years old</p>
                     </div>
                   )}
                 </div>
 
                 {selectedPlant.location && (
                   <div className="border-t pt-4">
-                    <h4 className="font-medium text-gray-900 mb-1">Location</h4>
-                    <p className="text-gray-800">{selectedPlant.location}</p>
+                    <h4 className="font-medium text-foreground mb-1">Location</h4>
+                    <p className="text-foreground">{selectedPlant.location}</p>
                   </div>
                 )}
 
                 {selectedPlant.notes && (
                   <div className="border-t pt-4">
-                    <h4 className="font-medium text-gray-900 mb-2">Notes</h4>
-                    <div className="bg-gray-50 p-4 rounded-lg text-gray-800 whitespace-pre-wrap">
+                    <h4 className="font-medium text-foreground mb-2">Notes</h4>
+                    <div className="bg-muted/50 p-4 rounded-lg text-foreground whitespace-pre-wrap">
                       {selectedPlant.notes}
                     </div>
                   </div>
@@ -412,12 +412,12 @@ export function PlantsTab() {
                 <div className="border-t pt-4 text-sm">
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <span className="font-medium text-gray-700">Plant ID:</span>
-                      <p className="text-gray-600 font-mono text-xs mt-1 break-all">{selectedPlant._id}</p>
+                      <span className="font-medium text-foreground">Plant ID:</span>
+                      <p className="text-muted-foreground font-mono text-xs mt-1 break-all">{selectedPlant._id}</p>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-700">Last Updated:</span>
-                      <p className="text-gray-600 mt-1">{formatDate(selectedPlant.updatedAt)}</p>
+                      <span className="font-medium text-foreground">Last Updated:</span>
+                      <p className="text-muted-foreground mt-1">{formatDate(selectedPlant.updatedAt)}</p>
                     </div>
                   </div>
                 </div>
