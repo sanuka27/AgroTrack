@@ -222,18 +222,18 @@ export default function SimpleReminders({ plants }: Props) {
               const plant = plants.find(p => p.id === r.plantId);
               const shortNotes = r.notes ? (r.notes.length > 120 ? r.notes.slice(0, 117) + '…' : r.notes) : '';
               return (
-                <div key={r._id} className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm">
+                <div key={r._id} className="flex items-center justify-between p-3 bg-card rounded-lg border border-border shadow-sm">
                   <div className="flex items-center gap-3">
                     {plant?.imageUrl ? (
-                      <img src={plant.imageUrl} alt={plant.name} className="w-12 h-12 rounded-md object-cover border" />
+                      <img src={plant.imageUrl} alt={plant.name} className="w-12 h-12 rounded-md object-cover border border-border" />
                     ) : (
-                      <div className="w-12 h-12 rounded-md bg-green-50 flex items-center justify-center text-green-600 border">
+                      <div className="w-12 h-12 rounded-md bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-green-600 dark:text-green-400 border border-border">
                         <Bell className="w-5 h-5" />
                       </div>
                     )}
 
                     <div>
-                      <div className="font-medium text-sm">{r.title}{plant ? ` — ${plant.name}` : ''}</div>
+                      <div className="font-medium text-sm text-foreground">{r.title}{plant ? ` — ${plant.name}` : ''}</div>
                       {shortNotes ? (
                         // Prefer to show parsed actionable steps when available
                         (() => {
@@ -251,7 +251,7 @@ export default function SimpleReminders({ plants }: Props) {
                           return <div className="text-xs text-muted-foreground mt-1">{shortNotes}</div>;
                         })()
                       ) : null}
-                      <div className={"text-xs mt-1 " + (highlighted[r._id] ? 'bg-yellow-50 px-1 rounded' : 'text-gray-500')}>Due: {new Date(r.dueAt).toLocaleString()}</div>
+                      <div className={"text-xs mt-1 " + (highlighted[r._id] ? 'bg-yellow-100 dark:bg-yellow-900/40 px-1 rounded' : 'text-muted-foreground')}>Due: {new Date(r.dueAt).toLocaleString()}</div>
                     </div>
                   </div>
 
@@ -287,20 +287,20 @@ export default function SimpleReminders({ plants }: Props) {
               const plant = plants.find(p => p.id === r.plantId);
               const shortNotes = r.notes ? (r.notes.length > 100 ? r.notes.slice(0, 97) + '…' : r.notes) : '';
               return (
-                <div key={r._id} className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm">
+                <div key={r._id} className="flex items-center justify-between p-3 bg-card rounded-lg border border-border shadow-sm">
                   <div className="flex items-center gap-3">
                     {plant?.imageUrl ? (
-                      <img src={plant.imageUrl} alt={plant.name} className="w-12 h-12 rounded-md object-cover border" />
+                      <img src={plant.imageUrl} alt={plant.name} className="w-12 h-12 rounded-md object-cover border border-border" />
                     ) : (
-                      <div className="w-12 h-12 rounded-md bg-amber-50 flex items-center justify-center text-amber-700 border">
+                      <div className="w-12 h-12 rounded-md bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-amber-700 dark:text-amber-400 border border-border">
                         <Bell className="w-5 h-5" />
                       </div>
                     )}
 
                     <div>
-                      <div className="font-medium text-sm">{r.title}{plant ? ` — ${plant.name}` : ''}</div>
-                      {shortNotes ? <div className="text-xs text-amber-700 mt-1">{shortNotes}</div> : null}
-                      <div className="text-xs text-gray-500 mt-1">Overdue since: {new Date(r.dueAt).toLocaleString()}</div>
+                      <div className="font-medium text-sm text-foreground">{r.title}{plant ? ` — ${plant.name}` : ''}</div>
+                      {shortNotes ? <div className="text-xs text-amber-700 dark:text-amber-400 mt-1">{shortNotes}</div> : null}
+                      <div className="text-xs text-muted-foreground mt-1">Overdue since: {new Date(r.dueAt).toLocaleString()}</div>
                     </div>
                   </div>
 

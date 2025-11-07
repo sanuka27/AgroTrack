@@ -92,12 +92,12 @@ const Notifications: React.FC = () => {
 
         <div className="space-y-3">
           {items.map(n => (
-            <div key={n._id} className={`p-3 rounded border ${n.isRead ? 'bg-white' : 'bg-blue-50 border-blue-100'}`}>
+            <div key={n._id} className={`p-3 rounded border ${n.isRead ? 'bg-card border-border' : 'bg-blue-50 dark:bg-blue-950/30 border-blue-100 dark:border-blue-800/50'}`}>
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="font-medium">{n.title}</div>
+                  <div className="font-medium text-foreground">{n.title}</div>
                   <div className="text-sm text-muted-foreground">{n.message}</div>
-                  <div className="text-xs text-gray-500 mt-1">{new Date(n.createdAt).toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground mt-1">{new Date(n.createdAt).toLocaleString()}</div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   {!n.isRead && <Button size="sm" variant="outline" onClick={() => markRead(n._id)}>Mark read</Button>}
