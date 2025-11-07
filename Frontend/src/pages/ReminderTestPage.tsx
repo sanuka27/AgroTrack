@@ -116,7 +116,7 @@ const ReminderTestPage = () => {
 
   if (showSettings) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+      <div className="min-h-screen bg-background bg-gradient-to-br from-green-50 via-background to-blue-50 dark:from-green-950/20 dark:via-background dark:to-blue-950/20">
         <Header />
         <main className="container mx-auto px-4 py-8">
           <ReminderSettings
@@ -132,7 +132,7 @@ const ReminderTestPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 flex items-center justify-center">
+      <div className="min-h-screen bg-background bg-gradient-to-br from-green-50 via-background to-blue-50 dark:from-green-950/20 dark:via-background dark:to-blue-950/20 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
           <p className="text-muted-foreground">Loading reminder system...</p>
@@ -143,7 +143,7 @@ const ReminderTestPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 flex items-center justify-center">
+      <div className="min-h-screen bg-background bg-gradient-to-br from-green-50 via-background to-blue-50 dark:from-green-950/20 dark:via-background dark:to-blue-950/20 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 dark:text-red-400 mb-4">Error: {error}</p>
           <div className="flex items-center justify-center gap-3">
@@ -165,7 +165,7 @@ const ReminderTestPage = () => {
   // Unauthenticated state: Encourage login for real data (no mock fallback)
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20">
+      <div className="min-h-screen bg-background bg-gradient-to-br from-green-50 via-background to-blue-50 dark:from-green-950/20 dark:via-background dark:to-blue-950/20">
         <Header />
         <main className="container mx-auto px-4 py-20">
           <Card className="max-w-xl mx-auto">
@@ -189,7 +189,7 @@ const ReminderTestPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20">
+    <div className="min-h-screen bg-background bg-gradient-to-br from-green-50 via-background to-blue-50 dark:from-green-950/20 dark:via-background dark:to-blue-950/20">
       <Header />
 
       <main className="container mx-auto px-4 py-8">
