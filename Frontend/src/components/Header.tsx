@@ -122,25 +122,25 @@ export function Header() {
           {/* Desktop Auth Section */}
           <div className="hidden md:flex items-center space-x-3">
             {user ? (
+              // Order: User display, notifications, settings, logout, theme toggle (rightmost)
               <div className="flex items-center space-x-3">
                 {getUserDisplayName()}
                 <NotificationBell />
-                <ThemeToggle />
                 <Button variant="ghost" size="sm" asChild>
                   <NavLink to="/settings">
                     <Settings className="w-4 h-4 mr-2" />
                     Settings
                   </NavLink>
                 </Button>
-                {/* Profile link removed — profile is now merged into Settings */}
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Logout
                 </Button>
+                <ThemeToggle />
               </div>
             ) : (
+              // Order: Sign In, Get Started, Theme toggle (rightmost)
               <>
-                <ThemeToggle />
                 <Button variant="ghost" size="sm" asChild>
                   <NavLink to="/login">
                     <User className="w-4 h-4 mr-2" />
@@ -150,6 +150,7 @@ export function Header() {
                 <Button variant="hero" size="sm" asChild>
                   <NavLink to="/register">Get Started</NavLink>
                 </Button>
+                <ThemeToggle />
               </>
             )}
           </div>
@@ -197,6 +198,7 @@ export function Header() {
                       {getUserDisplayName()}
                       <div className="flex items-center gap-2">
                         <NotificationBell />
+                        {/* Theme toggle remains on right for mobile; label inside component */}
                         <ThemeToggle />
                       </div>
                     </div>
