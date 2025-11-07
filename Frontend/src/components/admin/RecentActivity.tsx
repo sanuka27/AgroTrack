@@ -14,42 +14,42 @@ interface Activity {
 const getActivityIcon = (kind: ActivityKind) => {
   switch (kind) {
     case 'report_resolved':
-      return <CheckCircle className="w-4 h-4 text-green-600" />;
+      return <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />;
     case 'user_joined':
-      return <UserPlus className="w-4 h-4 text-blue-600" />;
+      return <UserPlus className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
     case 'report_submitted':
-      return <Flag className="w-4 h-4 text-orange-600" />;
+      return <Flag className="w-4 h-4 text-orange-600 dark:text-orange-400" />;
     case 'post_created':
-      return <FileText className="w-4 h-4 text-purple-600" />;
+      return <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />;
     case 'admin_action':
-      return <Shield className="w-4 h-4 text-indigo-600" />;
+      return <Shield className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />;
     case 'user_updated':
-      return <UserCog className="w-4 h-4 text-amber-600" />;
+      return <UserCog className="w-4 h-4 text-amber-600 dark:text-amber-400" />;
     case 'post_deleted':
-      return <Trash2 className="w-4 h-4 text-red-600" />;
+      return <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />;
     default:
-      return <CheckCircle className="w-4 h-4 text-gray-600" />;
+      return <CheckCircle className="w-4 h-4 text-gray-600 dark:text-gray-400" />;
   }
 };
 
 const getActivityColor = (kind: ActivityKind) => {
   switch (kind) {
     case 'report_resolved':
-      return 'bg-green-50 border-green-200';
+      return 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800/50';
     case 'user_joined':
-      return 'bg-blue-50 border-blue-200';
+      return 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800/50';
     case 'report_submitted':
-      return 'bg-orange-50 border-orange-200';
+      return 'bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800/50';
     case 'post_created':
-      return 'bg-purple-50 border-purple-200';
+      return 'bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800/50';
     case 'admin_action':
-      return 'bg-indigo-50 border-indigo-200';
+      return 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800/50';
     case 'user_updated':
-      return 'bg-amber-50 border-amber-200';
+      return 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50';
     case 'post_deleted':
-      return 'bg-red-50 border-red-200';
+      return 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800/50';
     default:
-      return 'bg-gray-50 border-gray-200';
+      return 'bg-gray-50 dark:bg-gray-950/30 border-gray-200 dark:border-gray-800/50';
   }
 };
 
@@ -96,10 +96,10 @@ export function RecentActivity() {
       <div className="p-4 space-y-3">
         {[...Array(5)].map((_, i) => (
           <div key={i} className="flex items-center space-x-3 animate-pulse">
-            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+            <div className="w-8 h-8 bg-muted rounded-full"></div>
             <div className="flex-1">
-              <div className="h-3 bg-gray-200 rounded w-3/4 mb-1"></div>
-              <div className="h-2 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-3 bg-muted rounded w-3/4 mb-1"></div>
+              <div className="h-2 bg-muted rounded w-1/2"></div>
             </div>
           </div>
         ))}
@@ -116,17 +116,17 @@ export function RecentActivity() {
             className={`flex items-start space-x-3 p-3 rounded-lg border transition-all duration-300 ${
               index === 0 
                 ? `${getActivityColor(activity.kind)} animate-[slideIn_0.3s_ease-out]` 
-                : 'hover:bg-gray-50 border-transparent'
+                : 'hover:bg-muted/50 border-transparent'
             }`}
           >
             <div className="flex-shrink-0 mt-0.5">
               {getActivityIcon(activity.kind)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-900 leading-snug">
+              <p className="text-sm text-foreground leading-snug">
                 {activity.message}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {formatTimeAgo(activity.ts)}
               </p>
             </div>
@@ -134,7 +134,7 @@ export function RecentActivity() {
         ))}
         
         {activities.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-muted-foreground">
             <Flag className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No recent activity</p>
             <p className="text-xs mt-1">Activity from the last 7 days will appear here</p>
