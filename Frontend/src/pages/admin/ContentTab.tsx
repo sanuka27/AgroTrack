@@ -352,7 +352,7 @@ export function ContentTab() {
                             className="w-full h-auto object-cover max-h-48"
                             loading="lazy"
                           />
-                          <div className="px-2 py-1 text-xs text-gray-500 bg-white">
+                          <div className="px-2 py-1 text-xs text-muted-foreground bg-muted/50">
                             {image.width} × {image.height}
                           </div>
                         </div>
@@ -363,7 +363,7 @@ export function ContentTab() {
 
                 {selectedPost.tags && selectedPost.tags.length > 0 && (
                   <div className="border-t pt-4">
-                    <h4 className="font-medium text-gray-900 mb-2">Tags:</h4>
+                    <h4 className="font-medium text-foreground mb-2">Tags:</h4>
                     <div className="flex flex-wrap gap-2">
                       {selectedPost.tags.map((tag, idx) => (
                         <Badge key={idx} variant="outline" className="text-sm">
@@ -376,35 +376,35 @@ export function ContentTab() {
 
                 <div className="border-t pt-4 flex gap-6 text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-700">Score:</span>
+                    <span className="font-medium text-foreground">Score:</span>
                     <Badge variant="secondary" className="text-base">{selectedPost.score}</Badge>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-700">Comments:</span>
+                    <span className="font-medium text-foreground">Comments:</span>
                     <Badge variant="secondary" className="text-base">{selectedPost.commentsCount}</Badge>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-700">Status:</span>
+                    <span className="font-medium text-foreground">Status:</span>
                     {getStatusBadge(selectedPost.status)}
                   </div>
                 </div>
 
                 <div className="border-t pt-4 grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="font-medium text-gray-700">Post ID:</span>
-                    <p className="text-gray-600 font-mono text-xs mt-1 break-all">{selectedPost._id}</p>
+                    <span className="font-medium text-foreground">Post ID:</span>
+                    <p className="text-muted-foreground font-mono text-xs mt-1 break-all">{selectedPost._id}</p>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-700">Author Username:</span>
-                    <p className="text-gray-600 mt-1">{selectedPost.authorUsername || 'N/A'}</p>
+                    <span className="font-medium text-foreground">Author Username:</span>
+                    <p className="text-muted-foreground mt-1">{selectedPost.authorUsername || 'N/A'}</p>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-700">Created:</span>
-                    <p className="text-gray-600 mt-1">{formatDate(selectedPost.createdAt)}</p>
+                    <span className="font-medium text-foreground">Created:</span>
+                    <p className="text-muted-foreground mt-1">{formatDate(selectedPost.createdAt)}</p>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-700">Last Updated:</span>
-                    <p className="text-gray-600 mt-1">{formatDate(selectedPost.updatedAt)}</p>
+                    <span className="font-medium text-foreground">Last Updated:</span>
+                    <p className="text-muted-foreground mt-1">{formatDate(selectedPost.updatedAt)}</p>
                   </div>
                 </div>
               </div>

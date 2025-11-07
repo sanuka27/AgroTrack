@@ -183,40 +183,40 @@ export function ReportsTab() {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-muted/50 border-b border-border">
                 <tr>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">ID</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Reporter</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Target</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Reason</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Status</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Created</th>
-                  <th className="text-left py-3 px-6 font-medium text-gray-600">Actions</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">ID</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Reporter</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Target</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Reason</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Status</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Created</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {filteredReports.map((report, index) => (
                   <tr
                     key={report._id}
-                    className={`hover:bg-gray-50 transition-colors ${
+                    className={`hover:bg-muted/50 transition-colors ${
                       index < 3 ? 'animate-[slideIn_0.3s_ease-out]' : ''
-                    } ${report.status === 'pending' ? 'bg-amber-50/30' : ''}`}
+                    } ${report.status === 'pending' ? 'bg-amber-50/30 dark:bg-amber-900/20' : ''}`}
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <td className="py-4 px-6">
-                      <div className="font-mono text-sm text-gray-600">#{report._id.slice(-6)}</div>
+                      <div className="font-mono text-sm text-muted-foreground">#{report._id.slice(-6)}</div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="font-medium text-gray-900">{report.reporterName}</div>
+                      <div className="font-medium text-foreground">{report.reporterName}</div>
                     </td>
                     <td className="py-4 px-6">
                       <div className="text-sm">
-                        <div className="font-mono text-blue-600">{report.targetId.slice(-6)}</div>
-                        <div className="text-xs text-gray-500 capitalize">{report.targetType}</div>
+                        <div className="font-mono text-blue-600 dark:text-blue-400">{report.targetId.slice(-6)}</div>
+                        <div className="text-xs text-muted-foreground capitalize">{report.targetType}</div>
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-800 max-w-xs truncate" title={report.description}>
+                      <div className="text-foreground max-w-xs truncate" title={report.description}>
                         {report.reason}
                       </div>
                     </td>
@@ -224,7 +224,7 @@ export function ReportsTab() {
                       {getStatusBadge(report.status)}
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-600 text-sm">{formatDate(report.createdAt)}</div>
+                      <div className="text-muted-foreground text-sm">{formatDate(report.createdAt)}</div>
                     </td>
                     <td className="py-4 px-6">
                       {report.status === 'pending' && (
