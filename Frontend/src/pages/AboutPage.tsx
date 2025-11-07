@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 import { Sparkles, Users, Brain, Heart } from 'lucide-react';
 
 const AboutPage = () => {
@@ -8,14 +10,15 @@ const AboutPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
+    <div className="min-h-screen bg-background">
+      <Header />
       {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,hsl(120_100%_25%/0.05),transparent_70%)] pointer-events-none"></div>
+      <div className="absolute inset-0 opacity-10 dark:opacity-20 bg-[radial-gradient(circle_at_50%_120%,hsl(120_100%_25%/0.05),transparent_70%)] pointer-events-none"></div>
 
       <main role="main" className="relative container mx-auto max-w-4xl px-4 py-16">
         {/* Header Section */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center space-x-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-medium mb-6">
+          <div className="inline-flex items-center space-x-2 bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 px-4 py-2 rounded-full text-sm font-medium mb-6">
             <Sparkles className="w-4 h-4" />
             <span>About AgroTrack</span>
           </div>
@@ -30,7 +33,7 @@ const AboutPage = () => {
 
         <div className="space-y-12">
           {/* Mission Section */}
-          <section className="bg-card/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-border/20">
+          <section className="bg-card/80 dark:bg-card/70 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-border/40">
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl flex items-center justify-center">
                 <Heart className="w-6 h-6 text-white" />
@@ -49,7 +52,7 @@ const AboutPage = () => {
           </section>
 
           {/* What AgroTrack Does */}
-          <section className="bg-card/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-border/20">
+          <section className="bg-card/80 dark:bg-card/70 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-border/40">
             <h2 className="text-2xl font-bold text-foreground mb-6">What AgroTrack Does</h2>
             <p className="text-muted-foreground leading-relaxed mb-6 text-lg">
               AgroTrack is your comprehensive digital gardening assistant that combines artificial intelligence
@@ -57,7 +60,7 @@ const AboutPage = () => {
               your plants more effectively than ever before.
             </p>
 
-            <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/30 dark:to-blue-950/30 border border-green-200 dark:border-green-800 rounded-xl p-6">
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/30 dark:to-blue-900/30 border border-green-200 dark:border-border rounded-xl p-6">
               <p className="text-green-800 dark:text-green-300 text-sm font-medium">
                 <strong>💡 Did you know?</strong> Our AI has been trained on thousands of plant species
                 commonly found in Sri Lankan gardens and tropical climates worldwide.
@@ -70,7 +73,7 @@ const AboutPage = () => {
             <h2 className="text-2xl font-bold text-foreground mb-8 text-center">AI-Powered Features</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-card/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-border/20 hover:shadow-xl transition-shadow">
+              <div className="bg-card/80 dark:bg-card/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-border/40 hover:shadow-xl transition-shadow">
                 <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-xl flex items-center justify-center mb-4">
                   <Brain className="w-6 h-6 text-white" />
                 </div>
@@ -81,7 +84,7 @@ const AboutPage = () => {
                 </p>
               </div>
 
-              <div className="bg-card/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-border/20 hover:shadow-xl transition-shadow">
+              <div className="bg-card/80 dark:bg-card/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-border/40 hover:shadow-xl transition-shadow">
                 <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-red-600 rounded-xl flex items-center justify-center mb-4">
                   <span className="text-white text-xl">🏥</span>
                 </div>
@@ -92,7 +95,7 @@ const AboutPage = () => {
                 </p>
               </div>
 
-              <div className="bg-card/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-border/20 hover:shadow-xl transition-shadow">
+              <div className="bg-card/80 dark:bg-card/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-border/40 hover:shadow-xl transition-shadow">
                 <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-4">
                   <span className="text-white text-xl">💧</span>
                 </div>
@@ -106,7 +109,7 @@ const AboutPage = () => {
           </section>
 
           {/* Who We Serve */}
-          <section className="bg-card/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-border/20">
+          <section className="bg-card/80 dark:bg-card/70 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-border/40">
             <div className="flex items-center space-x-3 mb-6">
               <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
                 <Users className="w-6 h-6 text-white" />
@@ -182,16 +185,15 @@ const AboutPage = () => {
               </div>
             </div>
 
-            <Link to="/contact" className="inline-flex items-center px-6 py-3 bg-white dark:bg-white/90 text-green-600 dark:text-green-700 font-semibold rounded-lg hover:bg-green-50 dark:hover:bg-white transition-colors">
+            <Link to="/contact" className="inline-flex items-center px-6 py-3 bg-card text-foreground font-semibold rounded-lg border border-border hover:bg-muted/50 transition-colors">
               Contact Us →
             </Link>
           </section>
         </div>
 
-        <footer className="mt-16 pt-8 border-t border-border text-center">
-          <p className="text-sm text-muted-foreground">Last updated: 2025-08-24</p>
-        </footer>
       </main>
+
+      <Footer />
     </div>
   );
 };

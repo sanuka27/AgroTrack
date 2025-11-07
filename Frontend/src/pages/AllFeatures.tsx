@@ -304,18 +304,18 @@ const AllFeatures = () => {
         </div>
 
         {/* Getting Started Section */}
-        <div className="mt-20 text-center bg-gradient-to-r from-green-50 to-emerald-50 rounded-3xl p-12">
+        <div className="mt-20 text-center bg-gradient-to-r from-green-50 to-emerald-50 dark:from-[#0f2e1d] dark:via-[#123525] dark:to-[#143b29] dark:border dark:border-border rounded-3xl p-12 transition-colors">
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center justify-center mb-6">
-              <div className="flex items-center justify-center w-16 h-16 bg-gradient-hero rounded-full">
+              <div className="flex items-center justify-center w-16 h-16 bg-gradient-hero dark:bg-gradient-to-br dark:from-green-600 dark:to-emerald-600 dark:ring-4 dark:ring-green-500/10 rounded-full shadow-lg">
                 <Leaf className="w-8 h-8 text-white" />
               </div>
             </div>
             
-            <h2 className="text-3xl font-bold text-foreground mb-4">
+            <h2 className="text-3xl font-bold text-foreground mb-4 drop-shadow-sm">
               Ready to Transform Your Plant Care?
             </h2>
-            <p className="text-lg text-muted-foreground mb-8">
+            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
               Join thousands of gardeners who've already discovered the power of AI-assisted plant care. 
               Start your journey with AgroTrack today.
             </p>
@@ -327,7 +327,7 @@ const AllFeatures = () => {
                   <ArrowLeft className="w-4 h-4 ml-2 rotate-180 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
-              <Button variant="outline" size="lg" asChild>
+              <Button variant="outline" size="lg" asChild className="dark:bg-card dark:hover:bg-muted/50">
                 <Link to="/plant-analysis">
                   Try Plant Analysis
                 </Link>
