@@ -171,7 +171,7 @@ const Community = () => {
                 <Users className="w-5 h-5 text-green-600" />
                 <div>
                   <p className="text-sm text-muted-foreground">Members</p>
-                  <p className="text-xl font-bold text-green-800">{stats?.totalMembers || 0}</p>
+                  <p className="text-xl font-bold text-green-800 dark:text-green-400">{stats?.totalMembers || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -183,7 +183,7 @@ const Community = () => {
                 <MessageCircle className="w-5 h-5 text-blue-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Posts Today</p>
-                  <p className="text-xl font-bold text-blue-600">{stats?.postsToday || 0}</p>
+                  <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{stats?.postsToday || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -195,7 +195,7 @@ const Community = () => {
                 <Heart className="w-5 h-5 text-red-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Likes</p>
-                  <p className="text-xl font-bold text-red-600">{stats?.totalLikes || 0}</p>
+                  <p className="text-xl font-bold text-red-600 dark:text-red-400">{stats?.totalLikes || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -207,7 +207,7 @@ const Community = () => {
                 <TrendingUp className="w-5 h-5 text-purple-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Active Now</p>
-                  <p className="text-xl font-bold text-purple-600">{stats?.activeUsers || 0}</p>
+                  <p className="text-xl font-bold text-purple-600 dark:text-purple-400">{stats?.activeUsers || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -222,7 +222,7 @@ const Community = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-green-800">Community Feed</CardTitle>
+                    <CardTitle className="text-green-800 dark:text-green-400">Community Feed</CardTitle>
                     <CardDescription>Latest posts from the community</CardDescription>
                   </div>
                   <RoleGuard roles={['admin']}>
@@ -310,14 +310,14 @@ const Community = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-blue-500 hover:text-blue-600"
+                                className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
                                 onClick={() => toast({ title: 'Please sign in', description: 'Please sign in to comment on posts' })}
                               >
                                 <MessageCircle className="w-4 h-4 mr-1" />
                                 {post.comments}
                               </Button>
                             }>
-                              <Button variant="ghost" size="sm" className="text-blue-500 hover:text-blue-600">
+                              <Button variant="ghost" size="sm" className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
                                 <MessageCircle className="w-4 h-4 mr-1" />
                                 {post.comments}
                               </Button>
@@ -348,7 +348,7 @@ const Community = () => {
             {/* Trending Topics */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-green-800">Trending Topics</CardTitle>
+                <CardTitle className="text-green-800 dark:text-green-400">Trending Topics</CardTitle>
                 <CardDescription>Popular discussions this week</CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -369,7 +369,7 @@ const Community = () => {
             {/* Quick Actions */}
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle className="text-green-800">Quick Actions</CardTitle>
+                <CardTitle className="text-green-800 dark:text-green-400">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 <RoleGuard roles={['user', 'admin']}>
@@ -401,7 +401,7 @@ const Community = () => {
             {user && (
               <Card className="mt-6">
                 <CardHeader>
-                  <CardTitle className="text-green-800">Your Status</CardTitle>
+                  <CardTitle className="text-green-800 dark:text-green-400">Your Status</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-sm space-y-2">
@@ -409,10 +409,10 @@ const Community = () => {
                       <span>Role:</span>
                       <span className={`px-2 py-0.5 rounded-full text-xs ${
                         user.role === 'admin' 
-                          ? 'bg-orange-100 text-orange-700'
+                          ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
                           : user.role === 'user'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-700'
+                          ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                          : 'bg-muted text-muted-foreground'
                       }`}>
                         {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                       </span>
