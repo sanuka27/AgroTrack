@@ -39,7 +39,6 @@ const BugReportsPage = lazy(() => import("./pages/BugReportsPage"));
 const HowItWorksPage = lazy(() => import("./pages/HowItWorksPage"));
 const GuidesPage = lazy(() => import("./pages/GuidesPage"));
 const FAQPage = lazy(() => import("./pages/FAQPage"));
-const StatusPage = lazy(() => import("./pages/StatusPage"));
 const AssistantPage = lazy(() => import("./pages/AssistantPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const CareTestPage = lazy(() => import("./pages/CareTestPage"));
@@ -158,7 +157,6 @@ const App = () => {
               <Route path="/how-it-works" element={<HowItWorksPage />} />
               <Route path="/guides" element={<GuidesPage />} />
               <Route path="/faq" element={<FAQPage />} />
-              <Route path="/status" element={<StatusPage />} />
               <Route path="/assistant" element={<AssistantPage />} />
               <Route path="/care-test" element={<CareTestPage />} />
               <Route path="/reminder-test" element={<ReminderTestPage />} />
