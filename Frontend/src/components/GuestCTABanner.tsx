@@ -10,7 +10,6 @@ export const GuestCTABanner = () => {
   const { isDemoActive } = useDemo();
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
-  const [showSkipMessage, setShowSkipMessage] = useState(false);
 
   useEffect(() => {
     // Don't show if user is logged in or if demo is active
@@ -23,15 +22,9 @@ export const GuestCTABanner = () => {
       return;
     }
 
-    // Show banner after 5 seconds, and check if user might have skipped demo
+    // Show banner after 5 seconds
     const timer = setTimeout(() => {
       setIsVisible(true);
-      // If enough time has passed, assume they might have skipped the demo
-      const demoSkipCheck = setTimeout(() => {
-        setShowSkipMessage(true);
-      }, 10000); // Show skip message after 15 seconds total
-      
-      return () => clearTimeout(demoSkipCheck);
     }, 5000);
 
     return () => clearTimeout(timer);
@@ -47,16 +40,9 @@ export const GuestCTABanner = () => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 animate-in slide-in-from-bottom duration-500">
-      {/* Skip message */}
-      {showSkipMessage && (
-        <div className="bg-gray-100 border-b border-gray-200 px-4 py-2">
-          <p className="text-center text-sm text-gray-600">
-            Did you skip the demo? You can still start now.
-          </p>
-        </div>
-      )}
-      
-      <div className="bg-gradient-to-r from-green-500 via-green-600 to-emerald-600 text-white shadow-2xl border-t border-green-400">
+      {/* Top skip message removed */}
+
+      <div className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-700 dark:from-emerald-700 dark:via-emerald-800 dark:to-emerald-900 text-white shadow-2xl border-t border-emerald-400 dark:border-emerald-700">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -65,7 +51,7 @@ export const GuestCTABanner = () => {
               </div>
               <div>
                 <h3 className="font-semibold text-lg">🌱 Ready to transform your garden?</h3>
-                <p className="text-green-100 text-sm">Join 2,847+ gardeners using AI to grow healthier plants</p>
+                <p className="text-emerald-100 dark:text-emerald-200 text-sm">Join 2,847+ gardeners using AI to grow healthier plants</p>
               </div>
             </div>
             
@@ -74,7 +60,7 @@ export const GuestCTABanner = () => {
                 variant="secondary" 
                 size="lg" 
                 asChild
-                className="bg-white text-green-600 hover:bg-green-50 font-semibold shadow-lg"
+                className="bg-white text-emerald-700 hover:bg-green-50 font-semibold shadow-lg dark:bg-card dark:text-emerald-300 dark:hover:bg-muted/50"
               >
                 <Link to="/register">
                   <Sparkles className="w-4 h-4 mr-2" />
@@ -87,7 +73,7 @@ export const GuestCTABanner = () => {
                 variant="ghost"
                 size="sm"
                 onClick={handleDismiss}
-                className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                className="text-white dark:text-emerald-50 hover:bg-white/20 h-8 w-8 p-0"
               >
                 <X className="w-4 h-4" />
               </Button>
