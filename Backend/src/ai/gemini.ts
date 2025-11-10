@@ -538,3 +538,120 @@ Only respond with the JSON object, no additional text.`;
     };
   }
 }
+
+/**
+ * Generate comprehensive treatment recommendations using AI (no mock data)
+ * @param diseaseName - Name of the detected disease
+ * @param severity - Severity level (mild/moderate/severe/critical)
+ * @param userDescription - User's description of the problem
+ * @param plantName - Name of the affected plant
+ * @returns Treatment recommendations with 4-6 care steps and 4-6 prevention measures
+ */
+export async function generateTreatmentRecommendations(
+  diseaseName: string,
+  severity: string,
+  userDescription: string,
+  plantName: string
+): Promise<any> {
+  if (!model) throw new Error('AI service unavailable');
+
+  const prompt = `You are an expert plant pathologist. Generate comprehensive treatment recommendations for the following plant disease.
+
+Disease: ${diseaseName}
+Severity: ${severity}
+Plant: ${plantName}
+User's description: ${userDescription}
+
+Return ONLY pure JSON (no code fences) with this exact structure:
+{
+  "immediateActions": [string],
+  "treatments": [{
+    "type": "chemical" | "organic" | "cultural" | "biological",
+    "name": string,
+    "description": string,
+    "applicationMethod": string,
+    "frequency": string,
+    "duration": string,
+    "effectiveness": number (0-100),
+    "cost": "low" | "medium" | "high"
+  }],
+  "preventionMeasures": [string],
+  "followUpRequired": boolean,
+  "followUpDays": number,
+  "quarantineRecommended": boolean
+}
+
+CRITICAL REQUIREMENTS:
+- immediateActions: Provide 4-6 specific, actionable treatment steps with timing details
+- preventionMeasures: Provide 4-6 practical prevention tips for future plant health
+- Include specific timing (e.g., "every 7-10 days", "daily for 2 weeks")
+- Include measurements (e.g., "1 inch below affected area", "6-12 inches spacing")
+- Use clear, concise language that home gardeners can follow
+- treatments array should have at least 2 different treatment options
+
+Example immediateActions format:
+[
+  "Immediately isolate the affected plant from other plants to prevent disease spread",
+  "Remove all visibly infected leaves using sterilized pruning shears, cutting 1 inch below affected areas",
+  "Apply fungicide spray (copper-based or neem oil) to all remaining foliage every 7-10 days for 3 weeks",
+  "Reduce watering frequency by 30-40% and ensure soil dries between waterings",
+  "Improve air circulation around the plant by spacing it 6-12 inches from neighbors",
+  "Monitor daily for 2 weeks and remove any new infected growth immediately"
+]
+
+Example preventionMeasures format:
+[
+  "Water only in the morning to allow foliage to dry before nightfall",
+  "Maintain proper spacing between plants (minimum 6 inches) for air circulation",
+  "Inspect plants weekly for early signs of disease or pest activity",
+  "Apply preventive fungicide monthly during humid or rainy seasons",
+  "Avoid overhead watering; use drip irrigation or water at soil level",
+  "Sterilize pruning tools with rubbing alcohol between each cut"
+]
+
+Return comprehensive, detailed recommendations.`;
+
+  try {
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 2048,
+        responseMimeType: 'application/json'
+      }
+    });
+
+    const response = await result.response;
+    let text = response.text().trim();
+
+    // Remove markdown code blocks if present
+    if (text.includes('```')) {
+      const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (match && match[1]) {
+        text = match[1].trim();
+      }
+    }
+
+    // Extract JSON
+    const startIdx = text.indexOf('{');
+    const endIdx = text.lastIndexOf('}');
+    if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+      text = text.substring(startIdx, endIdx + 1);
+    }
+
+    const parsed = JSON.parse(text);
+
+    // Ensure minimum requirements
+    if (!parsed.immediateActions || parsed.immediateActions.length < 4) {
+      throw new Error('AI did not provide enough immediate actions');
+    }
+    if (!parsed.preventionMeasures || parsed.preventionMeasures.length < 4) {
+      throw new Error('AI did not provide enough prevention measures');
+    }
+
+    return parsed;
+  } catch (err) {
+    console.error('generateTreatmentRecommendations error:', err);
+    throw err;
+  }
+}

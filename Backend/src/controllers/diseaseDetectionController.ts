@@ -313,14 +313,28 @@ export class DiseaseDetectionController {
         } as any;
       }
 
-      // Generate treatment recommendations based on detection
+      // Generate treatment recommendations based on detection using AI (no mocks)
       if (aiResults && aiResults.diseaseDetected && aiResults.primaryDisease) {
-        const recommendations = await DiseaseDetectionController.generateTreatmentRecommendations(
-          aiResults.primaryDisease.name,
-          aiResults.primaryDisease.severity,
-          plantId
-        );
-        detection.treatmentRecommendations = recommendations;
+        try {
+          const { generateTreatmentRecommendations } = await import('../ai/gemini');
+          const recommendations = await generateTreatmentRecommendations(
+            aiResults.primaryDisease.name,
+            aiResults.primaryDisease.severity,
+            description || '',
+            plantName || ''
+          );
+          detection.treatmentRecommendations = recommendations;
+        } catch (recErr) {
+          logger.warn('AI recommendations failed, using fallback:', recErr);
+          detection.treatmentRecommendations = {
+            immediateActions: ['Isolate the affected plant', 'Remove visibly diseased parts'],
+            treatments: [],
+            preventionMeasures: ['Monitor regularly', 'Improve growing conditions'],
+            followUpRequired: true,
+            followUpDays: 7,
+            quarantineRecommended: aiResults.primaryDisease.severity === 'severe' || aiResults.primaryDisease.severity === 'critical'
+          };
+        }
       }
 
       // Update plant information

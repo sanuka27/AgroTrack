@@ -429,15 +429,43 @@ export const analyzePlant = async (req: Request, res: Response): Promise<void> =
       });
     }
     parts.push({
-      text: `Return ONLY pure JSON (no code fences) with this exact shape:
+      text: `You are an expert plant pathologist. Analyze this plant issue and return ONLY pure JSON (no code fences).
+
+Required JSON structure:
 {
   "likelyDiseases": [{"name": string, "confidence": "low"|"medium"|"high", "why": string}],
   "urgency": "low"|"medium"|"high",
   "careSteps": [string],
   "prevention": [string]
 }
-If information is missing, return an empty array or a sensible default.
-User description: ${description}`,
+
+IMPORTANT - You MUST provide detailed arrays:
+- careSteps: MUST contain at least 4-6 specific, actionable treatment steps with timing details
+- prevention: MUST contain at least 4-6 practical prevention measures for future plant health
+
+Example careSteps format:
+[
+  "Immediately isolate the affected plant from other plants to prevent disease spread",
+  "Remove all visibly infected leaves using sterilized pruning shears, cutting 1 inch below affected areas",
+  "Apply fungicide spray (copper-based or neem oil) to all remaining foliage every 7-10 days for 3 weeks",
+  "Reduce watering frequency by 30-40% and ensure soil dries between waterings",
+  "Improve air circulation around the plant by spacing it 6-12 inches from neighbors",
+  "Monitor daily for 2 weeks and remove any new infected growth immediately"
+]
+
+Example prevention format:
+[
+  "Water only in the morning to allow foliage to dry before nightfall",
+  "Maintain proper spacing between plants (minimum 6 inches) for air circulation",
+  "Inspect plants weekly for early signs of disease or pest activity",
+  "Apply preventive fungicide monthly during humid or rainy seasons",
+  "Avoid overhead watering; use drip irrigation or water at soil level",
+  "Sterilize pruning tools with rubbing alcohol between each cut"
+]
+
+User's plant issue description: ${description}
+
+Provide comprehensive, actionable guidance with specific timing and measurements.`,
     });
 
     const model = genAI.getGenerativeModel({ model: MODEL });
