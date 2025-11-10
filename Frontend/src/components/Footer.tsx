@@ -3,6 +3,10 @@ import { Link } from "react-router-dom";
 export function Footer() {
   const currentYear = new Date().getFullYear();
 
+  const handleLinkClick = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <footer
       role="contentinfo"
@@ -17,17 +21,15 @@ export function Footer() {
             <h3 className="text-white font-semibold mb-3">Platform</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/plants" className="text-sm text-white/80 hover:text-white transition">
+                <Link to="/plants" onClick={handleLinkClick} className="text-sm text-white/80 hover:text-white transition">
                   My Plants
                 </Link>
               </li>
               <li>
-                <Link to="/assistant" className="text-sm text-white/80 hover:text-white transition">
-                  AI Assistant
-                </Link>
+                {/* AI Assistant link removed */}
               </li>
               <li>
-                <Link to="/community" className="text-sm text-white/80 hover:text-white transition">
+                <Link to="/community" onClick={handleLinkClick} className="text-sm text-white/80 hover:text-white transition">
                   Community
                 </Link>
               </li>
@@ -40,17 +42,17 @@ export function Footer() {
             <h3 className="text-white font-semibold mb-3">Resources</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/guides" className="text-sm text-white/80 hover:text-white transition">
+                <Link to="/guides" onClick={handleLinkClick} className="text-sm text-white/80 hover:text-white transition">
                   Plant Care Guide
                 </Link>
               </li>
               <li>
-                <Link to="/how-it-works" className="text-sm text-white/80 hover:text-white transition">
+                <Link to="/how-it-works" onClick={handleLinkClick} className="text-sm text-white/80 hover:text-white transition">
                   How it Works
                 </Link>
               </li>
               <li>
-                <Link to="/faq" className="text-sm text-white/80 hover:text-white transition">
+                <Link to="/faq" onClick={handleLinkClick} className="text-sm text-white/80 hover:text-white transition">
                   FAQ
                 </Link>
               </li>
@@ -62,7 +64,7 @@ export function Footer() {
             <h3 className="text-white font-semibold mb-3">Support</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/help" className="text-sm text-white/80 hover:text-white transition">
+                <Link to="/help" onClick={handleLinkClick} className="text-sm text-white/80 hover:text-white transition">
                   Help Center
                 </Link>
               </li>
@@ -75,7 +77,7 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <Link to="/bug-reports" className="text-sm text-white/80 hover:text-white transition">
+                <Link to="/bug-reports" onClick={handleLinkClick} className="text-sm text-white/80 hover:text-white transition">
                   Bug Reports
                 </Link>
               </li>
@@ -95,17 +97,17 @@ export function Footer() {
             <h3 className="text-white font-semibold mb-3">Company</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/about" className="text-sm text-white/80 hover:text-white transition">
+                <Link to="/about" onClick={handleLinkClick} className="text-sm text-white/80 hover:text-white transition">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link to="/privacy" className="text-sm text-white/80 hover:text-white transition">
+                <Link to="/privacy" onClick={handleLinkClick} className="text-sm text-white/80 hover:text-white transition">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link to="/terms" className="text-sm text-white/80 hover:text-white transition">
+                <Link to="/terms" onClick={handleLinkClick} className="text-sm text-white/80 hover:text-white transition">
                   Terms of Service
                 </Link>
               </li>

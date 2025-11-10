@@ -68,7 +68,7 @@ export function PlantCard({
   
   return (
     <TooltipProvider delayDuration={300}>
-      <Card className={`group relative overflow-hidden transition-all duration-300 hover:shadow-xl bg-white ${healthColor.border} ${
+      <Card className={`group relative overflow-hidden transition-all duration-300 hover:shadow-xl ${healthColor.border} ${
         isSelected ? 'ring-2 ring-green-500 shadow-xl scale-[0.98]' : ''
       }`}>
         {/* Selection Checkbox */}
@@ -83,7 +83,7 @@ export function PlantCard({
         )}
         
         {/* Plant Image */}
-        <div className="relative h-48 overflow-hidden bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 p-4 flex items-center justify-center">
+        <div className="relative h-48 overflow-hidden bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950/20 dark:via-emerald-950/20 dark:to-teal-950/20 p-4 flex items-center justify-center">
           {plant.imageUrl && !imgError ? (
             <img
               src={plant.imageUrl}
@@ -95,7 +95,7 @@ export function PlantCard({
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <Leaf className="w-16 h-16 text-green-400/40" />
+              <Leaf className="w-16 h-16 text-green-400/40 dark:text-green-500/30" />
             </div>
           )}
           
@@ -111,47 +111,47 @@ export function PlantCard({
         <CardContent className="p-4 space-y-3">
           {/* Plant Info Header */}
           <div className="space-y-1">
-            <h3 className="font-bold text-lg text-gray-900 truncate">
+            <h3 className="font-bold text-lg text-foreground truncate">
               {plant.name}
             </h3>
-            <p className="text-xs text-gray-600 flex items-center gap-1.5">
-              <Leaf className="w-3.5 h-3.5 text-green-600" />
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <Leaf className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
               <span className="font-medium">{plant.category}</span>
-              {plant.ageYears && <span className="text-gray-400">• {plant.ageYears}yr old</span>}
+              {plant.ageYears && <span className="text-muted-foreground/70">• {plant.ageYears}yr old</span>}
             </p>
           </div>
 
           {/* Plant Details Grid */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-blue-50 border border-blue-100">
-              <span className="flex items-center gap-2 text-blue-700 text-xs font-medium">
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50">
+              <span className="flex items-center gap-2 text-blue-700 dark:text-blue-400 text-xs font-medium">
                 <Droplets className="w-4 h-4" />
                 Last watered
               </span>
-              <span className="text-blue-900 text-xs font-bold">
+              <span className="text-blue-900 dark:text-blue-300 text-xs font-bold">
                 {formatLastWatered(plant.lastWatered)}
               </span>
             </div>
             
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50 border border-amber-100">
-              <span className="flex items-center gap-2 text-amber-700 text-xs font-medium">
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50">
+              <span className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-xs font-medium">
                 <Sun className="w-4 h-4" />
                 Light needs
               </span>
-              <span className="text-amber-900 text-xs font-bold">
+              <span className="text-amber-900 dark:text-amber-300 text-xs font-bold">
                 {plant.sunlight}
               </span>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-2 pt-2 border-t border-gray-100">
+          <div className="flex gap-2 pt-2 border-t border-border">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   onClick={handleWatered}
                   size="sm"
-                  className="flex-1 h-9 text-xs font-semibold bg-blue-500 hover:bg-blue-600 text-white shadow-sm"
+                  className="flex-1 h-9 text-xs font-semibold bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white shadow-sm"
                 >
                   <Droplets className="w-3.5 h-3.5 mr-1.5" />
                   Water
@@ -167,7 +167,7 @@ export function PlantCard({
                 <Button
                   onClick={() => onSetReminder?.(plant)}
                   size="sm"
-                  className="flex-1 h-9 text-xs font-semibold bg-blue-100 text-blue-700 hover:bg-blue-500 hover:text-white border border-blue-200 hover:border-blue-500"
+                  className="flex-1 h-9 text-xs font-semibold bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-500 hover:text-white border border-blue-200 dark:border-blue-900/50 hover:border-blue-500"
                 >
                   <Bell className="w-3.5 h-3.5 mr-1.5" />
                   Remind
@@ -183,7 +183,7 @@ export function PlantCard({
                 <Button
                   onClick={() => onSetFertilizerReminder?.(plant)}
                   size="sm"
-                  className="flex-1 h-9 text-xs font-semibold bg-green-100 text-green-700 hover:bg-green-500 hover:text-white border border-green-200 hover:border-green-500"
+                  className="flex-1 h-9 text-xs font-semibold bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 hover:bg-green-500 hover:text-white border border-green-200 dark:border-green-900/50 hover:border-green-500"
                 >
                   <Sprout className="w-3.5 h-3.5 mr-1.5" />
                   Feed
@@ -203,7 +203,7 @@ export function PlantCard({
                   onClick={() => onEdit(plant)}
                   size="sm"
                   variant="ghost"
-                  className="flex-1 h-8 text-xs font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                  className="flex-1 h-8 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
                 >
                   <Edit className="w-3.5 h-3.5 mr-1" />
                   Edit
@@ -220,7 +220,7 @@ export function PlantCard({
                   onClick={handleDelete}
                   size="sm"
                   variant="ghost"
-                  className="flex-1 h-8 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
+                  className="flex-1 h-8 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30"
                 >
                   <Trash2 className="w-3.5 h-3.5 mr-1" />
                   Delete
@@ -237,7 +237,7 @@ export function PlantCard({
                   <Button
                     onClick={() => onViewDetails ? onViewDetails(plant) : (onViewAll ? onViewAll() : window.location.assign('/plants'))}
                     size="sm"
-                    className="flex-1 h-8 text-xs font-semibold bg-green-600 hover:bg-green-700 text-white"
+                    className="flex-1 h-8 text-xs font-semibold bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white"
                   >
                     View Details
                   </Button>

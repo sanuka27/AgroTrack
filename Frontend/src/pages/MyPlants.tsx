@@ -56,6 +56,21 @@ const mapToApiCategory = (frontendCategory: string): string => {
   return 'Other';
 };
 
+// Helper function to get time ago string
+const getTimeAgo = (date: Date): string => {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
+};
+
 const MyPlants = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -723,8 +738,8 @@ const MyPlants = () => {
                   <p className="text-sm text-muted-foreground mb-1">Total Plants</p>
                   <p className="text-3xl font-bold text-foreground">{plants.length}</p>
                 </div>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Leaf className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-950/40 rounded-lg flex items-center justify-center">
+                  <Leaf className="w-6 h-6 text-green-600 dark:text-green-400" />
                 </div>
               </div>
               <div className="mt-3 flex items-center text-sm">
@@ -764,8 +779,8 @@ const MyPlants = () => {
                     })()}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Bell className="w-6 h-6 text-blue-600" />
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-950/40 rounded-lg flex items-center justify-center">
+                  <Bell className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
               </div>
               <div className="mt-3 flex items-center text-sm">
@@ -1058,14 +1073,14 @@ const MyPlants = () => {
                   </div>
                 ) : (
                   <div className="text-center py-12">
-                    <div className="inline-block p-6 bg-green-50 rounded-full mb-4">
-                      <Leaf className="w-16 h-16 text-green-600" />
+                    <div className="inline-block p-6 bg-green-50 dark:bg-green-950/30 rounded-full mb-4">
+                      <Leaf className="w-16 h-16 text-green-600 dark:text-green-400" />
                     </div>
-                    <h3 className="text-xl font-semibold text-green-900 mb-2">No plants yet</h3>
-                    <p className="text-green-600/70 mb-6">
+                    <h3 className="text-xl font-semibold text-green-900 dark:text-green-300 mb-2">No plants yet</h3>
+                    <p className="text-green-600/70 dark:text-green-400/70 mb-6">
                       Start your plant collection by adding your first plant
                     </p>
-                    <Button onClick={() => handleOpenModal()} className="bg-green-600 hover:bg-green-700">
+                    <Button onClick={() => handleOpenModal()} className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600">
                       <Plus className="w-4 h-4 mr-2" />
                       Add Your First Plant
                     </Button>
@@ -1086,8 +1101,8 @@ const MyPlants = () => {
                 <div className="space-y-4">
                   {plants.slice(0, 3).map((plant) => (
                     <div key={plant.id} className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
-                      <div className="p-2 bg-green-100 rounded-full">
-                        <Droplets className="w-4 h-4 text-green-600" />
+                      <div className="p-2 bg-green-100 dark:bg-green-950/40 rounded-full">
+                        <Droplets className="w-4 h-4 text-green-600 dark:text-green-400" />
                       </div>
                       <div className="flex-1">
                         <p className="font-medium text-sm">{plant.name}</p>
@@ -1109,71 +1124,81 @@ const MyPlants = () => {
               </CardContent>
             </Card>
 
-            {/* Move Smart Care Suggestions up into the sidebar to avoid large white gaps */}
+            {/* AI Analysis History */}
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle>Smart Care Suggestions</CardTitle>
-                <CardDescription>Personalized tips from your AI analyses and saved results</CardDescription>
+                <CardTitle>AI Analysis History</CardTitle>
+                <CardDescription>Your recent plant disease analyses and care recommendations</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {aiRecommendations && aiRecommendations.length > 0 ? (
-                  aiRecommendations.slice(0, 3).map((rec) => {
-                    const label = rec.recommendations?.followUpRequired ? '⚠️ Alert' : (rec.recommendations?.immediateActions?.length ? '💡 Pro Tip' : '🌱 Insight');
-                    const bg = label.includes('Alert') ? 'from-orange-50 to-yellow-50' : label.includes('Pro Tip') ? 'from-green-50 to-blue-50' : 'from-purple-50 to-pink-50';
-                    const textColor = label.includes('Alert') ? 'text-orange-800' : label.includes('Pro Tip') ? 'text-green-800' : 'text-purple-800';
-                    const summary = (
-                      rec.recommendations?.immediateActions?.[0]
+                  aiRecommendations.slice(0, 5).map((rec) => {
+                    const label = rec.recommendations?.followUpRequired ? '⚠️ Alert' : (rec.recommendations?.immediateActions?.length ? '💡 Analysis' : '🌱 Insight');
+                    const bg = label.includes('Alert') 
+                      ? 'from-orange-50 to-yellow-50 dark:from-orange-950/20 dark:to-yellow-950/20' 
+                      : label.includes('Analysis') 
+                      ? 'from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20' 
+                      : 'from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20';
+                    const textColor = label.includes('Alert') 
+                      ? 'text-orange-800 dark:text-orange-300' 
+                      : label.includes('Analysis') 
+                      ? 'text-green-800 dark:text-green-300' 
+                      : 'text-purple-800 dark:text-purple-300';
+                    
+                    // Get disease name from detectionResults
+                    const diseaseName = rec.detectionResults?.primaryDisease?.name;
+                    const summary = diseaseName || rec.recommendations?.immediateActions?.[0]
                       || rec.recommendations?.preventionMeasures?.[0]
-                      || rec.detectionResults?.primaryDisease?.name
                       || rec.description
-                      || 'Recommendation available'
-                    );
+                      || 'Analysis available';
+
+                    // Format date
+                    const date = new Date(rec.createdAt);
+                    const timeAgo = getTimeAgo(date);
 
                     return (
-                      <div key={rec._id} className={`p-3 bg-gradient-to-r ${bg} rounded-lg border flex items-start gap-3`}>
-                        <div className="flex-shrink-0 w-12 h-12 overflow-hidden rounded-lg bg-white/70 border">
-                          {rec.imageUrl ? (
-                            <img src={rec.imageUrl} alt={rec.plantName || 'plant'} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-sm text-muted-foreground">🌿</div>
-                          )}
-                        </div>
-
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className={`text-sm font-medium ${textColor} mb-1`}>{label}</p>
-                              <div className="text-sm text-neutral-800 font-semibold">{rec.plantName || 'Saved Analysis'}</div>
+                      <div key={rec._id} className={`p-3 bg-gradient-to-r ${bg} rounded-lg border border-border dark:border-border hover:shadow-md transition-shadow`}>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-xs font-medium ${textColor}`}>{label}</p>
+                              <div className="text-sm text-foreground font-semibold truncate">{rec.plantName || 'Plant Analysis'}</div>
                             </div>
-                            <span className="text-xs text-neutral-600">Saved</span>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">{timeAgo}</span>
                           </div>
 
-                          <p className="mt-2 text-sm text-muted-foreground">{summary}</p>
+                          {diseaseName && (
+                            <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">
+                              Disease: {diseaseName}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground line-clamp-2">{summary}</p>
 
                           <div className="mt-2">
-                            <Link to={`/plant-analysis?rec=${rec._id}`} className="text-sm text-blue-600">View details</Link>
+                            <Link 
+                              to={`/plant-analysis?rec=${rec._id}`} 
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                            >
+                              View full analysis →
+                            </Link>
                           </div>
                         </div>
                       </div>
                     );
                   })
                 ) : (
-                  <>
-                    <div className="p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border">
-                      <p className="text-sm font-medium text-green-800 mb-1">💡 Pro Tip</p>
-                      <p className="text-sm text-green-700">Your Fiddle Leaf Fig shows signs of overwatering. Reduce frequency by 2 days.</p>
+                  <div className="text-center py-8">
+                    <div className="inline-block p-4 bg-muted rounded-full mb-3">
+                      <Leaf className="w-8 h-8 text-muted-foreground" />
                     </div>
-                    
-                    <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border">
-                      <p className="text-sm font-medium text-purple-800 mb-1">🌱 Growth Insight</p>
-                      <p className="text-sm text-purple-700">Plants near the east window are growing 23% faster this month!</p>
-                    </div>
-                    
-                    <div className="p-3 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-lg border">
-                      <p className="text-sm font-medium text-orange-800 mb-1">⚠️ Alert</p>
-                      <p className="text-sm text-orange-700">Basil leaves showing early pest signs. Check undersides.</p>
-                    </div>
-                  </>
+                    <p className="text-sm text-muted-foreground mb-2">No AI analyses yet</p>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Use the Plant Analysis tool to diagnose plant issues
+                    </p>
+                    <Button asChild size="sm" variant="outline">
+                      <Link to="/plant-analysis">Start Analysis</Link>
+                    </Button>
+                  </div>
                 )}
               </CardContent>
             </Card>
