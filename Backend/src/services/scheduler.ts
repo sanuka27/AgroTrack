@@ -14,8 +14,9 @@ export class Scheduler {
   static startAll(): void {
     logger.info('🕐 Starting scheduler...');
 
-    // Check for upcoming reminders every 15 minutes
-    const reminderTask = cron.schedule('*/15 * * * *', async () => {
+    // Check for upcoming reminders every 5 minutes for better accuracy
+    // This ensures we catch reminders that need to be sent 1 hour before their due time
+    const reminderTask = cron.schedule('*/5 * * * *', async () => {
       logger.info('⏰ Running reminder notification job...');
       try {
         await ReminderNotificationService.checkAndNotifyUpcomingReminders();
@@ -25,7 +26,7 @@ export class Scheduler {
     });
 
     this.tasks.push(reminderTask);
-    logger.info('✅ Reminder notification scheduler started (runs every 15 minutes)');
+    logger.info('✅ Reminder notification scheduler started (runs every 5 minutes for 1-hour advance notifications)');
 
     // Optional: Clear notification cache daily at midnight
     const cleanupTask = cron.schedule('0 0 * * *', () => {

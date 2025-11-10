@@ -14,33 +14,36 @@ export class ReminderNotificationService {
 
   /**
    * Find reminders that are due in the next hour and haven't been notified yet
+   * Sends notification exactly 1 hour before the reminder time
    */
   static async findUpcomingReminders(): Promise<any[]> {
     try {
       const now = new Date();
-      const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour ahead
-      const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes buffer
+      
+      // Calculate the time window for notifications
+      // We want to notify reminders that are due between 55 minutes and 65 minutes from now
+      // This gives us a 10-minute window to catch the 1-hour mark
+      const fiftyFiveMinutesFromNow = new Date(now.getTime() + 55 * 60 * 1000);
+      const sixtyFiveMinutesFromNow = new Date(now.getTime() + 65 * 60 * 1000);
 
       // Find reminders that:
       // 1. Are not completed
-      // 2. Are due between 5 minutes and 65 minutes from now (to catch the 1-hour window)
+      // 2. Haven't been notified yet (notificationSent is false or null)
+      // 3. Are due between 55-65 minutes from now (to catch the 1-hour mark)
       const reminders = await Reminder.find({
         completed: false,
+        notificationSent: { $ne: true }, // Only get reminders that haven't been notified
         dueAt: {
-          $gte: fiveMinutesFromNow,
-          $lte: oneHourFromNow
+          $gte: fiftyFiveMinutesFromNow,
+          $lte: sixtyFiveMinutesFromNow
         }
       })
       .populate('userId', 'fcmToken name email preferences')
       .populate('plantId', 'name')
       .lean();
 
-      // Filter out already notified reminders
-      const newReminders = reminders.filter(reminder => 
-        !this.notifiedReminders.has(reminder._id.toString())
-      );
-
-      return newReminders;
+      logger.info(`Found ${reminders.length} reminders due in approximately 1 hour`);
+      return reminders;
     } catch (error) {
       logger.error('Error finding upcoming reminders:', error);
       return [];
@@ -144,7 +147,7 @@ export class ReminderNotificationService {
         const sent = await this.sendPushNotification(user.fcmToken, title, body, data);
         
         if (sent) {
-          logger.info(`Reminder notification sent to user ${user._id} for reminder ${reminder._id}`);
+          logger.info(`Firebase push notification sent to user ${user._id} for reminder ${reminder._id}`);
         }
       } else {
         logger.info(`No FCM token for user ${user._id}, skipping push notification`);
@@ -167,10 +170,21 @@ export class ReminderNotificationService {
         logger.error('Error creating in-app notification:', error);
       }
 
-      // Mark as notified
+      // Mark reminder as notified in the database
+      try {
+        await Reminder.findByIdAndUpdate(reminder._id, {
+          notificationSent: true,
+          notifiedAt: new Date()
+        });
+        logger.info(`Reminder ${reminder._id} marked as notified in database`);
+      } catch (error) {
+        logger.error(`Error marking reminder ${reminder._id} as notified:`, error);
+      }
+
+      // Also add to in-memory cache as backup
       this.notifiedReminders.add(reminder._id.toString());
       
-      // Clean up old notified reminders (keep only last 1000)
+      // Clean up old notified reminders from cache (keep only last 1000)
       if (this.notifiedReminders.size > 1000) {
         const toDelete = Array.from(this.notifiedReminders).slice(0, 100);
         toDelete.forEach(id => this.notifiedReminders.delete(id));

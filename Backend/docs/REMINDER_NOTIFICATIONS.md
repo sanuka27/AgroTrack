@@ -15,7 +15,7 @@ The AgroTrack reminder notification system automatically sends push notification
    - Tracks already-notified reminders to prevent duplicates
 
 2. **Scheduler** (`src/services/scheduler.ts`)
-   - Runs the reminder check every 15 minutes
+   - Runs the reminder check every 5 minutes for better accuracy
    - Performs daily cleanup at midnight
    - Provides manual trigger capability for testing
 
@@ -27,15 +27,15 @@ The AgroTrack reminder notification system automatically sends push notification
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Scheduled Job (runs every 15 minutes)                      │
+│  Scheduled Job (runs every 5 minutes)                       │
 └───────────────────────────┬─────────────────────────────────┘
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Find reminders due in next 1 hour                          │
+│  Find reminders due in approximately 1 hour                 │
 │  - Not completed                                             │
-│  - Between 5 and 65 minutes from now                        │
-│  - Not already notified                                      │
+│  - Between 55 and 65 minutes from now (10-min window)       │
+│  - notificationSent is false or null                        │
 └───────────────────────────┬─────────────────────────────────┘
                             │
                             ▼
@@ -44,7 +44,7 @@ The AgroTrack reminder notification system automatically sends push notification
 │  1. Check user notification preferences                      │
 │  2. Send FCM push notification (if user has token)          │
 │  3. Create in-app notification                              │
-│  4. Mark as notified                                         │
+│  4. Mark as notified in database (notificationSent=true)    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -56,42 +56,51 @@ The AgroTrack reminder notification system automatically sends push notification
 - Task: Water the Monstera plant
 
 **System behavior:**
-- At **4:00 PM** (or within 15 minutes after), the scheduler job runs
-- Finds this reminder (due in ~1 hour)
-- Sends push notification: "⏰ Reminder in 1 Hour"
+- At **4:00 PM** (or within 5 minutes after), the scheduler job runs
+- Finds this reminder (due in approximately 1 hour, within the 55-65 minute window)
+- Sends Firebase push notification: "⏰ Reminder in 1 Hour"
 - Message: "Water the Monstera for Monstera at 5:00 PM"
 - Creates in-app notification for the user
+- Marks the reminder as notified in the database to prevent duplicates
 
 ## Configuration
 
 ### Scheduler Frequency
 
-The reminder check runs every **15 minutes**. You can adjust this in `src/services/scheduler.ts`:
+The reminder check runs every **5 minutes** for better accuracy. You can adjust this in `src/services/scheduler.ts`:
 
 ```typescript
-// Current: Every 15 minutes
-cron.schedule('*/15 * * * *', ...)
+// Current: Every 5 minutes (recommended for 1-hour advance notifications)
+cron.schedule('*/5 * * * *', ...)
 
 // Options:
-// Every 5 minutes:  '*/5 * * * *'
+// Every 10 minutes: '*/10 * * * *'
+// Every 15 minutes: '*/15 * * * *'
 // Every 30 minutes: '*/30 * * * *'
 // Every hour:       '0 * * * *'
 ```
 
+**Note:** Running every 5 minutes ensures reminders are caught within a 10-minute window (55-65 minutes before due time), providing accurate 1-hour advance notifications.
+
 ### Notification Window
 
-The system checks for reminders due in the next **1 hour**. You can adjust this in `src/services/reminderNotificationService.ts`:
+The system checks for reminders due in approximately **1 hour** (between 55-65 minutes from now). This 10-minute window ensures accurate notification timing. You can adjust this in `src/services/reminderNotificationService.ts`:
 
 ```typescript
-// Current: 1 hour
-const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+// Current: 1 hour (with 10-minute window)
+const fiftyFiveMinutesFromNow = new Date(now.getTime() + 55 * 60 * 1000);
+const sixtyFiveMinutesFromNow = new Date(now.getTime() + 65 * 60 * 1000);
 
-// To change to 30 minutes:
-const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000);
+// To change to 30 minutes before:
+const twentyFiveMinutesFromNow = new Date(now.getTime() + 25 * 60 * 1000);
+const thirtyFiveMinutesFromNow = new Date(now.getTime() + 35 * 60 * 1000);
 
-// To change to 2 hours:
-const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+// To change to 2 hours before:
+const oneHundredFifteenMinutesFromNow = new Date(now.getTime() + 115 * 60 * 1000);
+const oneHundredTwentyFiveMinutesFromNow = new Date(now.getTime() + 125 * 60 * 1000);
 ```
+
+**Important:** The system uses the `notificationSent` field in the database to prevent duplicate notifications, ensuring each reminder is notified only once.
 
 ## Testing
 
@@ -128,7 +137,7 @@ Authorization: Bearer <your-token>
 }
 ```
 
-2. **Wait for the next scheduled check (max 15 minutes)**
+2. **Wait for the next scheduled check (max 5 minutes)**
    - Or use the manual trigger endpoint above
 
 3. **Check your device for the push notification**
@@ -254,22 +263,26 @@ console.log('Push enabled:', user.preferences?.notifications?.push);
 
 ### Duplicate notifications
 
-The service tracks notified reminders in memory. If the server restarts, this cache is cleared. To prevent duplicates after restart:
+The service prevents duplicate notifications using two mechanisms:
 
-- The service includes a 5-minute buffer to avoid re-notifying recently sent reminders
-- The cache is cleared daily at midnight automatically
+1. **Database tracking:** The `notificationSent` field in the Reminder model is set to `true` when a notification is sent, preventing the same reminder from being notified again even after server restarts.
+
+2. **In-memory cache:** As a backup, the service also tracks notified reminders in memory. This cache is cleared daily at midnight automatically.
+
+This dual-layer approach ensures reliable duplicate prevention across server restarts and deployments.
 
 ## Future Enhancements
 
 Potential improvements:
 
-1. **Persistent notification tracking** - Store notified reminders in database
+1. ✅ **Persistent notification tracking** - ~~Store notified reminders in database~~ (IMPLEMENTED)
 2. **Customizable notification timing** - Let users choose when to receive notifications (15min, 30min, 1hr, etc.)
 3. **Multiple notifications** - Send reminders at different intervals (1 day before, 1 hour before, etc.)
 4. **SMS/Email notifications** - In addition to push notifications
 5. **Smart scheduling** - AI-powered optimal notification times based on user behavior
 6. **Notification templates** - Customizable message templates
 7. **Snooze functionality** - Allow users to snooze notifications
+8. **Notification analytics** - Track delivery rates, open rates, and user engagement
 
 ## API Integration
 
