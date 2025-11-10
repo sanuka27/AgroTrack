@@ -546,11 +546,12 @@ const MyPlants = () => {
     // Water reminders - blue theme
     if (lowerTitle.includes('water')) {
       return {
-        bgGradient: 'from-white to-blue-50',
-        borderColor: 'border-blue-400',
-        iconBg: 'bg-blue-500',
-        textColor: 'text-blue-800',
-        subtextColor: 'text-blue-600',
+        // light -> subtle pastel gradient, dark -> low-contrast dark gradient
+        bgGradient: 'from-white to-blue-50 dark:from-white/5 dark:to-blue-900/20',
+        borderColor: 'border-blue-400 dark:border-blue-700',
+        iconBg: 'bg-blue-500 dark:bg-blue-600',
+        textColor: 'text-blue-800 dark:text-blue-200',
+        subtextColor: 'text-blue-600 dark:text-blue-300/80',
         icon: Droplets,
       };
     }
@@ -558,11 +559,11 @@ const MyPlants = () => {
     // Fertilizer reminders - green theme
     if (lowerTitle.includes('fertiliz')) {
       return {
-        bgGradient: 'from-white to-green-50',
-        borderColor: 'border-green-400',
-        iconBg: 'bg-green-500',
-        textColor: 'text-green-800',
-        subtextColor: 'text-green-600',
+        bgGradient: 'from-white to-green-50 dark:from-white/5 dark:to-green-900/20',
+        borderColor: 'border-green-400 dark:border-green-700',
+        iconBg: 'bg-green-500 dark:bg-green-600',
+        textColor: 'text-green-800 dark:text-green-200',
+        subtextColor: 'text-green-600 dark:text-green-300/80',
         icon: Sprout,
       };
     }
@@ -570,11 +571,11 @@ const MyPlants = () => {
     // Pruning reminders - purple theme
     if (lowerTitle.includes('prun') || lowerTitle.includes('trim')) {
       return {
-        bgGradient: 'from-white to-purple-50',
-        borderColor: 'border-purple-400',
-        iconBg: 'bg-purple-500',
-        textColor: 'text-purple-800',
-        subtextColor: 'text-purple-600',
+        bgGradient: 'from-white to-purple-50 dark:from-white/5 dark:to-purple-900/20',
+        borderColor: 'border-purple-400 dark:border-purple-700',
+        iconBg: 'bg-purple-500 dark:bg-purple-600',
+        textColor: 'text-purple-800 dark:text-purple-200',
+        subtextColor: 'text-purple-600 dark:text-purple-300/80',
         icon: Scissors,
       };
     }
@@ -582,22 +583,22 @@ const MyPlants = () => {
     // Pest/disease reminders - orange theme
     if (lowerTitle.includes('pest') || lowerTitle.includes('disease') || lowerTitle.includes('check')) {
       return {
-        bgGradient: 'from-white to-orange-50',
-        borderColor: 'border-orange-400',
-        iconBg: 'bg-orange-500',
-        textColor: 'text-orange-800',
-        subtextColor: 'text-orange-600',
+        bgGradient: 'from-white to-orange-50 dark:from-white/5 dark:to-orange-900/20',
+        borderColor: 'border-orange-400 dark:border-orange-700',
+        iconBg: 'bg-orange-500 dark:bg-orange-600',
+        textColor: 'text-orange-800 dark:text-orange-200',
+        subtextColor: 'text-orange-600 dark:text-orange-300/80',
         icon: Bug,
       };
     }
     
     // Default - teal theme for other reminders
     return {
-      bgGradient: 'from-white to-teal-50',
-      borderColor: 'border-teal-400',
-      iconBg: 'bg-teal-500',
-      textColor: 'text-teal-800',
-      subtextColor: 'text-teal-600',
+      bgGradient: 'from-white to-teal-50 dark:from-white/5 dark:to-teal-900/20',
+      borderColor: 'border-teal-400 dark:border-teal-700',
+      iconBg: 'bg-teal-500 dark:bg-teal-600',
+      textColor: 'text-teal-800 dark:text-teal-200',
+      subtextColor: 'text-teal-600 dark:text-teal-300/80',
       icon: Bell,
     };
   };
