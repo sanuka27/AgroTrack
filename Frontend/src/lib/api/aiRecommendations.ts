@@ -26,6 +26,22 @@ export const aiRecommendationApi = {
       console.error('Error fetching AI recommendations:', getErrorMessage(err));
       return [];
     }
+  },
+
+  async saveAnalysis(data: {
+    plantName: string;
+    plantId?: string;
+    imageUrl: string;
+    description?: string;
+    analysisData: any;
+  }): Promise<AiRecommendation> {
+    try {
+      const resp = await api.post('/ai-recommendations/save', data);
+      return resp.data?.data?.recommendation;
+    } catch (err) {
+      console.error('Error saving AI analysis:', getErrorMessage(err));
+      throw err;
+    }
   }
 };
 

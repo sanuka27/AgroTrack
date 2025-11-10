@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +11,7 @@ import { Camera, Image as ImageIcon, Send, Sparkles, Bot, Loader2, Leaf, AlertTr
 import api, { analyzePlant } from "@/lib/api";
 import { remindersApi } from '@/lib/api/reminders';
 import plantsApi from "@/lib/api/plants";
+import aiRecommendationApi from "@/lib/api/aiRecommendations";
 import { useToast } from '@/hooks/use-toast';
 import { PlantAnalysis } from "@/types/plant";
 import PlantAnalysisCard from "./PlantAnalysisCard";
@@ -28,6 +29,7 @@ interface AnalysisResult extends PlantAnalysis {
 
 export function AIAssistant() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
@@ -233,10 +235,39 @@ export function AIAssistant() {
             const rec = resp.data?.data || resp.data || null;
             if (rec) {
               setFullRec(rec);
+              
+              // Build likelyDiseases array from detectionResults
+              const diseases = [];
+              if (rec.detectionResults?.primaryDisease) {
+                const pd = rec.detectionResults.primaryDisease;
+                diseases.push({
+                  name: pd.name,
+                  confidence: pd.confidence >= 80 ? 'high' : pd.confidence >= 50 ? 'medium' : 'low',
+                  why: pd.category || 'fungal'
+                });
+              }
+              if (rec.detectionResults?.alternativeDiagnoses) {
+                rec.detectionResults.alternativeDiagnoses.forEach((alt: any) => {
+                  diseases.push({
+                    name: alt.name,
+                    confidence: alt.confidence >= 80 ? 'high' : alt.confidence >= 50 ? 'medium' : 'low',
+                    why: alt.category || 'unknown'
+                  });
+                });
+              }
+              
+              // Determine urgency from severity
+              let urgency: 'low' | 'medium' | 'high' = 'medium';
+              if (rec.detectionResults?.primaryDisease?.severity === 'critical' || rec.detectionResults?.primaryDisease?.severity === 'severe') {
+                urgency = 'high';
+              } else if (rec.detectionResults?.primaryDisease?.severity === 'mild') {
+                urgency = 'low';
+              }
+              
               // Map detectionResults/recommendations into result for the summary card
               setResult({
-                likelyDiseases: (rec.detectionResults?.diseases || []).map((d:any) => ({ name: d.name, confidence: d.confidence || 'medium', why: d.reason || '' })),
-                urgency: rec.recommendations?.urgency || 'medium',
+                likelyDiseases: diseases,
+                urgency: urgency,
                 careSteps: rec.recommendations?.immediateActions || [],
                 prevention: rec.recommendations?.preventionMeasures || [],
                 detectionResults: rec.detectionResults
@@ -255,59 +286,60 @@ export function AIAssistant() {
 
   const saveResults = async () => {
     if (!result) return;
-    // Require a selected plant to attach the analysis to
+    
     if (!plantId) {
-      // Ask user to pick a plant or create one
-      toast({ title: 'Select a plant', description: 'Please select a plant from the dropdown to save analysis results.' });
+      toast({ 
+        title: 'Select a plant', 
+        description: 'Please select a plant from the dropdown to save the analysis.' 
+      });
       return;
     }
-
+    
     try {
-      const summaryLines: string[] = [];
-      if (result.likelyDiseases && result.likelyDiseases.length) {
-        summaryLines.push('Likely diseases: ' + result.likelyDiseases.map(d => `${d.name} (${d.confidence})`).join('; '));
+      // Use the image URL from the AI detection result (already uploaded to Firebase during analysis)
+      const imageUrl = (result as any).imageUrl || '';
+      
+      if (!imageUrl || imageUrl.startsWith('blob:')) {
+        console.error('[saveResults] No valid permanent image URL available. Result:', result);
+        toast({ 
+          title: 'No image', 
+          description: 'Could not find uploaded image. Please try analyzing again.' 
+        });
+        return;
       }
-      summaryLines.push('Urgency: ' + result.urgency);
-      if (result.careSteps && result.careSteps.length) {
-        summaryLines.push('Care Steps: ' + result.careSteps.join(' | '));
-      }
-      if (result.prevention && result.prevention.length) {
-        summaryLines.push('Prevention: ' + result.prevention.join(' | '));
-      }
+      
+      console.log('[saveResults] ✅ Using permanent Firebase image URL:', imageUrl);
 
-      const notes = summaryLines.join('\n');
+      // Get plant name
+      const selectedPlant = plants.find(p => p.id === plantId);
+      const plantName = selectedPlant?.name || 'Unknown Plant';
 
-      // Patch plant notes with AI summary (non-destructive: prepend timestamp)
-      const timestamp = new Date().toLocaleString();
-      const NOTES_MARKER = 'ANALYSIS_IMAGE:';
-  const payload: any = { notes: `${timestamp} - AI Analysis:\n${notes}` };
-      // Optionally set healthStatus based on urgency
-      if (result.urgency === 'high') payload.healthStatus = 'Poor';
+      // Save to AI recommendations collection with permanent image URL
+      const saveData = {
+        plantName,
+        plantId: plantId,
+        imageUrl,
+        description: prompt || undefined,
+        analysisData: result
+      };
+      console.log('[saveResults] Saving analysis to database with data:', saveData);
+      
+      const savedRec = await aiRecommendationApi.saveAnalysis(saveData);
+      console.log('[saveResults] ✅ Saved successfully:', savedRec);
 
-      // If there's an uploaded file, upload it as the plant's image so it will be shown for saved analysis
-      if (file) {
-        try {
-          const updatedPlant = await plantsApi.uploadImage(plantId, file);
-          const imageUrl = (updatedPlant as any).imageUrl || '';
-          // Append a marker to notes so note-based recommendations can reference the uploaded image
-          payload.notes = `${payload.notes}\n${NOTES_MARKER}${imageUrl}`;
-          await plantsApi.updatePlant(plantId, payload);
-          setPreview(imageUrl || preview);
-        } catch (uploadErr) {
-          console.warn('Failed to upload analysis image, saving notes only', uploadErr);
-          await plantsApi.updatePlant(plantId, payload);
-        }
-      } else {
-        await plantsApi.updatePlant(plantId, payload);
-      }
-
-      toast({ title: 'Saved', description: 'AI analysis and image saved to the selected plant.' });
-      // Optionally navigate to plants page so the user sees it immediately
-      // Keep UX simple: open plants page in same tab
-      window.location.href = '/plants';
+      toast({ 
+        title: '✅ Saved to History', 
+        description: 'AI analysis has been saved. View it in your dashboard under AI Analysis History.' 
+      });
+      
+      // Navigate to plants page to see the saved analysis
+      setTimeout(() => navigate('/plants'), 1000);
     } catch (err: any) {
-      console.error('Failed to save AI results to plant:', err);
-      toast({ title: 'Save failed', description: err?.response?.data?.message || err?.message || 'Failed to save results. Please try again.' });
+      console.error('Failed to save AI results:', err);
+      toast({ 
+        title: 'Save failed', 
+        description: err?.response?.data?.message || err?.message || 'Failed to save results. Please try again.' 
+      });
     }
   };
 
@@ -591,52 +623,43 @@ export function AIAssistant() {
 
                   {/* Full Recommendation Details (when opened via View details) */}
                   {fullRec && (() => {
-                    // Parse the description field to extract structured data
-                    const desc = fullRec.description || '';
-                    const lines = desc.split('\n').map((l: string) => l.trim()).filter(Boolean);
+                    // Use structured data from detectionResults and recommendations
+                    const primaryDisease = fullRec.detectionResults?.primaryDisease;
+                    const altDiagnoses = fullRec.detectionResults?.alternativeDiagnoses || [];
+                    const careSteps = fullRec.recommendations?.immediateActions || [];
+                    const prevention = fullRec.recommendations?.preventionMeasures || [];
                     
-                    let diseases = '';
-                    let urgency = '';
-                    let careSteps: string[] = [];
-                    let prevention: string[] = [];
-                    
-                    lines.forEach((line: string) => {
-                      if (line.startsWith('Likely diseases:')) {
-                        diseases = line.replace('Likely diseases:', '').trim();
-                      } else if (line.startsWith('Urgency:')) {
-                        urgency = line.replace('Urgency:', '').trim();
-                      } else if (line.startsWith('Care Steps:')) {
-                        const stepsStr = line.replace('Care Steps:', '').trim();
-                        careSteps = stepsStr.split('|').map(s => s.trim()).filter(Boolean);
-                      } else if (line.startsWith('Prevention:')) {
-                        const prevStr = line.replace('Prevention:', '').trim();
-                        prevention = prevStr.split('|').map(s => s.trim()).filter(Boolean);
-                      }
-                    });
+                    // Determine urgency from severity
+                    let urgency = 'medium';
+                    if (primaryDisease?.severity === 'critical' || primaryDisease?.severity === 'severe') {
+                      urgency = 'high';
+                    } else if (primaryDisease?.severity === 'mild') {
+                      urgency = 'low';
+                    }
 
                     return (
-                      <div className="bg-white border border-green-100 shadow-sm rounded-lg overflow-hidden">
+                      <div className="bg-card border border-border shadow-sm rounded-lg overflow-hidden">
                         {/* Header with plant name and badges */}
-                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 border-b border-green-100">
+                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-4 border-b border-border">
                           <div className="flex items-start justify-between">
                             <div>
-                              <h3 className="text-xl font-semibold text-green-900 flex items-center gap-2">
-                                <Leaf className="w-5 h-5 text-green-600" />
+                              <h3 className="text-xl font-semibold text-green-900 dark:text-green-300 flex items-center gap-2">
+                                <Leaf className="w-5 h-5 text-green-600 dark:text-green-400" />
                                 {fullRec.plantName || 'Saved Analysis'}
                               </h3>
-                              <p className="text-sm text-green-600 mt-1">{new Date(fullRec.createdAt || Date.now()).toLocaleString()}</p>
+                              <p className="text-sm text-green-600 dark:text-green-400 mt-1">{new Date(fullRec.createdAt || Date.now()).toLocaleString()}</p>
                             </div>
                             <div className="flex items-center gap-2">
                               {urgency && (
                                 <Badge className={
-                                  urgency.toLowerCase() === 'high' ? 'bg-red-100 text-red-700 border-red-200' : 
-                                  urgency.toLowerCase() === 'medium' ? 'bg-amber-100 text-amber-700 border-amber-200' : 
-                                  'bg-green-100 text-green-700 border-green-200'
+                                  urgency.toLowerCase() === 'high' ? 'bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900/50' : 
+                                  urgency.toLowerCase() === 'medium' ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-900/50' : 
+                                  'bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-900/50'
                                 }>
                                   {urgency.toUpperCase()}
                                 </Badge>
                               )}
-                              <Badge className="bg-green-100 text-green-800 border-green-200">Saved</Badge>
+                              <Badge className="bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300 border-green-200 dark:border-green-900/50">Saved</Badge>
                             </div>
                           </div>
                         </div>
@@ -648,51 +671,70 @@ export function AIAssistant() {
                               <img 
                                 src={fullRec.imageUrl} 
                                 alt={fullRec.plantName || 'plant'} 
-                                className="w-40 h-40 object-cover rounded-lg shadow-md border-2 border-green-100" 
+                                className="w-40 h-40 object-cover rounded-lg shadow-md border-2 border-green-100 dark:border-green-900/50" 
+                                onError={(e) => {
+                                  console.error('Image failed to load:', fullRec.imageUrl);
+                                  e.currentTarget.style.display = 'none';
+                                }}
                               />
                             </div>
                           )}
 
                           {/* Diagnosis Section */}
-                          {diseases && (
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                              <h4 className="font-semibold text-red-800 flex items-center gap-2 mb-2">
+                          {primaryDisease && (
+                            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-lg p-4">
+                              <h4 className="font-semibold text-red-800 dark:text-red-300 flex items-center gap-2 mb-2">
                                 <AlertTriangle className="w-5 h-5" />
                                 Detected Issue
                               </h4>
-                              <p className="text-red-700">{diseases}</p>
+                              <p className="text-red-700 dark:text-red-400 font-medium">{primaryDisease.name}</p>
+                              {primaryDisease.scientificName && (
+                                <p className="text-sm text-red-600 dark:text-red-500 italic mt-1">({primaryDisease.scientificName})</p>
+                              )}
+                              {primaryDisease.category && (
+                                <p className="text-sm text-red-600 dark:text-red-500 mt-1">Type: {primaryDisease.category}</p>
+                              )}
+                              {altDiagnoses.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-900/50">
+                                  <p className="text-sm text-red-700 dark:text-red-400 font-medium mb-1">Alternative diagnoses:</p>
+                                  <ul className="text-sm text-red-600 dark:text-red-500 space-y-1">
+                                    {altDiagnoses.slice(0, 2).map((alt: any, i: number) => (
+                                      <li key={i}>• {alt.name} ({alt.confidence}% confidence)</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
                             </div>
                           )}
 
                           {/* Care Steps Section */}
                           {careSteps.length > 0 && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                              <h4 className="font-semibold text-blue-800 flex items-center gap-2 mb-3">
+                            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-lg p-4">
+                              <h4 className="font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-2 mb-3">
                                 <Sparkles className="w-5 h-5" />
                                 Immediate Care Steps
                               </h4>
-                              <ul className="space-y-2">
+                              <ol className="space-y-2 list-decimal list-inside">
                                 {careSteps.map((step: string, i: number) => (
-                                  <li key={i} className="flex items-start gap-2 text-blue-700">
-                                    <span className="text-blue-500 mt-0.5">•</span>
-                                    <span className="text-sm">{step}</span>
+                                  <li key={i} className="text-blue-700 dark:text-blue-400 text-sm">
+                                    {step}
                                   </li>
                                 ))}
-                              </ul>
+                              </ol>
                             </div>
                           )}
 
                           {/* Prevention Section */}
                           {prevention.length > 0 && (
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                              <h4 className="font-semibold text-green-800 flex items-center gap-2 mb-3">
+                            <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50 rounded-lg p-4">
+                              <h4 className="font-semibold text-green-800 dark:text-green-300 flex items-center gap-2 mb-3">
                                 <Leaf className="w-5 h-5" />
                                 Prevention Measures
                               </h4>
                               <ul className="space-y-2">
                                 {prevention.map((measure: string, i: number) => (
-                                  <li key={i} className="flex items-start gap-2 text-green-700">
-                                    <span className="text-green-500 mt-0.5">•</span>
+                                  <li key={i} className="flex items-start gap-2 text-green-700 dark:text-green-400">
+                                    <span className="text-green-500 dark:text-green-600 mt-0.5">•</span>
                                     <span className="text-sm">{measure}</span>
                                   </li>
                                 ))}

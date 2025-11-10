@@ -205,11 +205,13 @@ export const analyzePlant = async (formData: FormData) => {
   
   if (det?.detectionResults) {
     const r = det.detectionResults;
-    const result = {
+    const result: any = {
       likelyDiseases: [] as { name: string; confidence: 'low'|'medium'|'high'; why: string }[],
       urgency: 'low' as 'low'|'medium'|'high',
       careSteps: [] as string[],
       prevention: [] as string[],
+      imageUrl: det.imageUrl || '', // Include the Firebase Storage URL
+      detectionResults: r, // Include full detection results for reference
     };
     if (r.diseaseDetected && r.primaryDisease) {
       result.likelyDiseases = [
@@ -224,6 +226,7 @@ export const analyzePlant = async (formData: FormData) => {
       ];
       result.prevention = det.treatmentRecommendations.preventionMeasures || [];
     }
+    console.log('[AI Debug] Returning result with imageUrl:', result.imageUrl);
     return result;
   }
   // Fallback to AI chat format if not present
