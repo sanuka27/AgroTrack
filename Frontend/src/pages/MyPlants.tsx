@@ -1282,19 +1282,30 @@ const MyPlants = () => {
                     })}
 
                     {overdueReminders.map(rem => {
-                      const style = getReminderStyle(rem.title);
-                      const IconComponent = style.icon;
-                      
+                      // For overdue reminders we want a clear "urgent" styling that
+                      // works in both light and dark themes. Use a red-themed
+                      // gradient + darker borders in dark mode to avoid a pale
+                      // white card on dark backgrounds.
+                      const overdueStyle = {
+                        bgGradient: 'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-950/30',
+                        borderColor: 'border-red-400 dark:border-red-700',
+                        iconBg: 'bg-red-500 dark:bg-red-600',
+                        titleColor: 'text-red-800 dark:text-red-200',
+                        noteColor: 'text-red-600 dark:text-red-300/80',
+                      };
+
+                      const IconComponent = getReminderStyle(rem.title).icon;
+
                       return (
-                        <div key={rem._id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
+                        <div key={rem._id} className={`flex items-center justify-between p-3 bg-gradient-to-r ${overdueStyle.bgGradient} rounded-lg border-l-4 ${overdueStyle.borderColor} hover:shadow-md transition-shadow`}>
                           <div className="flex items-center space-x-3">
-                            <div className="p-2 bg-red-500 rounded-lg">
+                            <div className={`${overdueStyle.iconBg} p-2 rounded-lg`}> 
                               <IconComponent className="w-4 h-4 text-white" />
                             </div>
                             <div>
-                              <p className="font-medium text-red-800">{rem.title}</p>
-                              <p className="text-sm text-red-600">{rem.notes || 'Reminder'}</p>
-                              <p className="text-xs text-gray-500">Overdue since: {new Date(rem.dueAt).toLocaleString()}</p>
+                              <p className={`font-medium ${overdueStyle.titleColor}`}>{rem.title}</p>
+                              <p className={`text-sm ${overdueStyle.noteColor}`}>{rem.notes || 'Reminder'}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">Overdue since: {new Date(rem.dueAt).toLocaleString()}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
