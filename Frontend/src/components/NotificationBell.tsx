@@ -99,11 +99,11 @@ export function NotificationBell() {
     // Admin actions get special styling
     if (type === 'admin_action') {
       return isRead 
-        ? 'bg-orange-50 border-l-4 border-orange-400'
-        : 'bg-orange-100 border-l-4 border-orange-500';
+        ? 'bg-orange-50 dark:bg-transparent border-l-4 border-orange-400 dark:border-orange-700'
+        : 'bg-orange-100 dark:bg-orange-900/20 border-l-4 border-orange-500 dark:border-orange-600';
     }
     // Other notifications
-    return isRead ? '' : 'bg-blue-50/50';
+    return isRead ? '' : 'bg-blue-50/50 dark:bg-transparent dark:backdrop-blur-sm dark:bg-opacity-5';
   };
 
   if (!user) return null;
@@ -163,7 +163,7 @@ export function NotificationBell() {
                       )}
                     </div>
                     <p className={`text-sm mb-1 whitespace-pre-wrap break-words ${
-                      notification.type === 'admin_action' ? 'text-gray-700 font-medium' : 'text-muted-foreground'
+                      notification.type === 'admin_action' ? 'text-gray-700 font-medium dark:text-gray-200' : 'text-muted-foreground'
                     }`}>
                       {notification.message}
                     </p>
