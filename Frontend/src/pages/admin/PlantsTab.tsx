@@ -224,9 +224,7 @@ export function PlantsTab() {
                 <tr>
                   <th className="text-left py-3 px-6 font-medium text-muted-foreground">Plant</th>
                   <th className="text-left py-3 px-6 font-medium text-muted-foreground">Owner</th>
-                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Health</th>
-                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Last Watered</th>
-                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Sunlight</th>
+                  <th className="text-left py-3 px-6 font-medium text-muted-foreground">Email</th>
                   <th className="text-left py-3 px-6 font-medium text-muted-foreground">Date Added</th>
                   <th className="text-left py-3 px-6 font-medium text-muted-foreground">Actions</th>
                 </tr>
@@ -264,22 +262,9 @@ export function PlantsTab() {
                     </td>
                     <td className="py-4 px-6">
                       <div className="text-foreground">{plant.ownerName}</div>
+                    </td>
+                    <td className="py-4 px-6">
                       <div className="text-sm text-muted-foreground">{plant.ownerEmail}</div>
-                    </td>
-                    <td className="py-4 px-6">
-                      {getHealthBadge(plant.health)}
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Droplets className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm">{formatLastWatered(plant.lastWatered)}</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Sun className="w-4 h-4 text-amber-500" />
-                        <span className="text-sm">{plant.sunlight}</span>
-                      </div>
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-2 text-muted-foreground text-sm">
