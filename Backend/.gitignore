@@ -67,3 +67,6 @@ temp/
 # Test files
 *.test.js
 *.spec.js
+
+#docs
+C:\Users\sanuk\OneDrive\Desktop\AgroTrack\Backend\docs
