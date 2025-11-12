@@ -2,7 +2,7 @@
 
 <div align="center">
 
-🎓 University Final Year Project – Full Stack Web Application
+🎓 University Second Year Project – Full Stack Web Application
 🌿 AI-powered gardening platform built with React, Node.js, MongoDB, Firebase & Gemini AI
 
 </div>
@@ -81,21 +81,58 @@ AgroTrack/
 ├── Backend/   → Node.js + Express + MongoDB + Gemini Integration
 ├── Frontend/  → React + Vite + Tailwind + Shadcn/UI
 ├── public/    → Assets & static files
+├── screenshots/ → Project screenshots
 └── README.md  → Documentation (You're here!)
 ```
 
 ## 📸 Screenshots
 
-*Add your screenshots here (UI previews, dashboards, AI analysis results, etc.)*
+### 🏠 **Home & Landing**
+![Home Page](screenshots/HomePage.png)
+*Main landing page showcasing AgroTrack's features and navigation*
 
-```
-📁 screenshots/
- ├── home.png
- ├── dashboard.png
- ├── ai-diagnosis.png
- ├── community.png
- └── admin-panel.png
-```
+### 👤 **User Dashboard**
+![User Dashboard](screenshots/UserDashboard.png)
+*Personalized dashboard with plant overview and quick actions*
+
+### 🌱 **Plant Management**
+![Plant Management](screenshots/PlantManagement.png)
+*Comprehensive plant collection management interface*
+
+![Plant Section](screenshots/PlantSection.png)
+*Detailed plant information and care tracking*
+
+![Add Plant](screenshots/AddPlant.png)
+*Add new plants to your digital garden*
+
+### 🤖 **AI Features**
+![AI Analyzer](screenshots/AIAnalyzer.png)
+*AI-powered plant disease detection and analysis*
+
+### 👥 **Community**
+![Community Forum](screenshots/CommunityForum.png)
+*Interactive community forum for gardening enthusiasts*
+
+### 🔔 **Notifications & Reminders**
+![Notifications](screenshots/NotificationPage.png)
+*Smart notification system for plant care*
+
+![Reminders](screenshots/ReminderPage.png)
+*Automated reminder system for watering and care tasks*
+
+### 🛠️ **Admin Panel**
+![Admin Overview](screenshots/AdminOverview.png)
+*Administrative dashboard for platform management*
+
+![User Management](screenshots/UserManagement.png)
+*User management and moderation tools*
+
+### 📋 **Additional Features**
+![Features](screenshots/Features.png)
+*Overview of platform features and capabilities*
+
+![Get Started](screenshots/GetStartedPage.png)
+*Getting started guide for new users*
 
 ## 📘 University Information
 
