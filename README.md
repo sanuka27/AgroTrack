@@ -149,6 +149,6 @@ Licensed under the MIT License — for educational and open demonstration purpos
 🌿 AgroTrack – Elegant Learning for the Digital Age 🌿
 AI + Gardening + Community
 
-⬆️ Back to Top
+[⬆️ Back to Top](#-agrotrack--ai-powered-smart-gardening-assistant)
 
 </div>
