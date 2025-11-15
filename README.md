@@ -88,50 +88,61 @@ AgroTrack/
 ## 📸 Screenshots
 
 ### 🏠 **Home & Landing**
-![Home Page](screenshots/HomePage.png)
+![Home Page Light](screenshots/HomePage.png)
+![Home Page Dark](screenshots/HomePage_DarkMode.png)
 *Main landing page showcasing AgroTrack's features and navigation*
 
 ### 👤 **User Dashboard**
-![User Dashboard](screenshots/UserDashboard.png)
+![User Dashboard Light](screenshots/UserDashboard.png)
+![User Dashboard Dark](screenshots/UserDashboard_DarkMode.png)
 *Personalized dashboard with plant overview and quick actions*
 
 ### 🌱 **Plant Management**
 ![Plant Management](screenshots/PlantManagement.png)
 *Comprehensive plant collection management interface*
 
-![Plant Section](screenshots/PlantSection.png)
+![Plant Section Light](screenshots/PlantSection.png)
+![Plant Section Dark](screenshots/PlantCard_DarkMode.png)
 *Detailed plant information and care tracking*
 
-![Add Plant](screenshots/AddPlant.png)
+![Add Plant Light](screenshots/AddPlant.png)
+![Add Plant Dark](screenshots/AddPlant_DarkMode.png)
 *Add new plants to your digital garden*
 
 ### 🤖 **AI Features**
-![AI Analyzer](screenshots/AIAnalyzer.png)
+![AI Analyzer Light](screenshots/AIAnalyzer.png)
+![AI Analyzer Dark](screenshots/AIAnalyzer_DarkMode.png)
 *AI-powered plant disease detection and analysis*
 
 ### 👥 **Community**
-![Community Forum](screenshots/CommunityForum.png)
+![Community Forum Light](screenshots/CommunityForum.png)
+![Community Forum Dark](screenshots/Community_DarkMode.png)
 *Interactive community forum for gardening enthusiasts*
 
 ### 🔔 **Notifications & Reminders**
 ![Notifications](screenshots/NotificationPage.png)
 *Smart notification system for plant care*
 
-![Reminders](screenshots/ReminderPage.png)
+![Reminders Light](screenshots/ReminderPage.png)
+![Reminders Dark](screenshots/Reminder_DarkMode.png)
 *Automated reminder system for watering and care tasks*
 
 ### 🛠️ **Admin Panel**
-![Admin Overview](screenshots/AdminOverview.png)
+![Admin Overview Light](screenshots/AdminOverview.png)
+![Admin Overview Dark](screenshots/AdminDashboard_DarkMode.png)
 *Administrative dashboard for platform management*
 
-![User Management](screenshots/UserManagement.png)
+![User Management Light](screenshots/UserManagement.png)
+![User Management Dark](screenshots/UserManagment_DarkMode.png)
 *User management and moderation tools*
 
 ### 📋 **Additional Features**
-![Features](screenshots/Features.png)
+![Features Light](screenshots/Features.png)
+![Features Dark](screenshots/Features_DarkMode.png)
 *Overview of platform features and capabilities*
 
-![Get Started](screenshots/GetStartedPage.png)
+![Get Started Light](screenshots/GetStartedPage.png)
+![Get Started Dark](screenshots/GetStarted_DarkMode.png)
 *Getting started guide for new users*
 
 ## 📘 University Information
